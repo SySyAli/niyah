@@ -1,6 +1,6 @@
-# NIYA
+# NIYA - نیت - नीयत - নিয়ত — _Intention_
 
-**Put your money where your focus is. Earn it back, and more, by staying focused.**
+**Put your money where your mind is. Earn it back, and more, by staying focused.**
 
 ## Problem
 

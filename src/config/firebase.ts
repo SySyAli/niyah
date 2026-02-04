@@ -1,18 +1,11 @@
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
-
-// Complete auth session for web browser
 WebBrowser.maybeCompleteAuthSession();
 
-// Google OAuth Client IDs from Google Cloud Console
-// Get these from: https://console.cloud.google.com/apis/credentials
 const GOOGLE_CLIENT_IDS = {
-  // iOS Client ID (from GoogleService-Info.plist or Google Cloud Console)
   iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  // Android Client ID (from google-services.json or Google Cloud Console)
   androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-  // Web Client ID (for Expo Go development)
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
 };
 

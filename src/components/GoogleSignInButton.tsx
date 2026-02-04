@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from "react";
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  View,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
-import { Colors, Spacing, Typography, Radius } from "../constants/colors";
+import { Alert, View, ActivityIndicator, StyleSheet } from "react-native";
 import { useAuthStore } from "../store/authStore";
 import { useGoogleAuth } from "../config/firebase";
-
+import {
+  GoogleSignin,
+  statusCodes,
+  GoogleSigninButton,
+} from "@react-native-google-signin/google-signin";
 interface GoogleSignInButtonProps {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
@@ -22,7 +18,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
-  const { request, response, promptAsync, isReady } = useGoogleAuth();
+  const { response, promptAsync, isReady } = useGoogleAuth();
 
   // Handle the auth response
   useEffect(() => {
@@ -74,70 +70,29 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="small" color="#4285F4" />
+      </View>
+    );
+  }
+
   return (
-    <TouchableOpacity
-      style={styles.button}
+    <GoogleSigninButton
+      size={GoogleSigninButton.Size.Wide}
+      color={GoogleSigninButton.Color.Dark}
       onPress={handlePress}
-      disabled={isLoading || !isReady}
-      activeOpacity={0.8}
-    >
-      {isLoading ? (
-        <ActivityIndicator size="small" color={Colors.text} />
-      ) : (
-        <>
-          <View style={styles.iconContainer}>
-            <GoogleIcon />
-          </View>
-          <Text style={styles.text}>Continue with Google</Text>
-        </>
-      )}
-    </TouchableOpacity>
+      disabled={!isReady}
+    />
   );
 };
 
-// Simple Google "G" icon using shapes
-const GoogleIcon = () => (
-  <View style={googleIconStyles.container}>
-    <Text style={googleIconStyles.letter}>G</Text>
-  </View>
-);
-
-const googleIconStyles = StyleSheet.create({
-  container: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  letter: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#4285F4",
-  },
-});
-
 const styles = StyleSheet.create({
-  button: {
-    flexDirection: "row",
-    alignItems: "center",
+  loadingContainer: {
+    height: 48,
     justifyContent: "center",
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    minHeight: 52,
-  },
-  iconContainer: {
-    marginRight: Spacing.sm,
-  },
-  text: {
-    fontSize: Typography.bodyLarge,
-    fontWeight: "600",
-    color: Colors.text,
+    alignItems: "center",
   },
 });
 

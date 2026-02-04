@@ -24,12 +24,12 @@ All distracting apps are blocked by default. Want to scroll? Tap "Take a break" 
 
 ## Ways to Start
 
-| Option | How It Works |
-|--------|--------------|
-| Deposit Match | Put in $30, we add $10. Earn back $40 or more. |
-| Locked Card | Get a prepaid Visa that unlocks as you focus. |
-| Try First | Free for 7 days. See what you'd earn. Then deposit to collect. |
-| Defend Credit | Start with $30 credit. Lose $1 each day you fail. |
+| Option        | How It Works                                                   |
+| ------------- | -------------------------------------------------------------- |
+| Deposit Match | Put in $30, we add $10. Earn back $40 or more.                 |
+| Locked Card   | Get a prepaid Visa that unlocks as you focus.                  |
+| Try First     | Free for 7 days. See what you'd earn. Then deposit to collect. |
+| Defend Credit | Start with $30 credit. Lose $1 each day you fail.              |
 
 ## How We Make Money
 
@@ -37,11 +37,11 @@ Users who don't finish streaks lose some of their deposit. That funds bonuses fo
 
 ## Why This Works
 
-| Other Apps | NIYA |
-|------------|------|
-| Guilt and reminders | Real money on the line |
+| Other Apps                       | NIYA                          |
+| -------------------------------- | ----------------------------- |
+| Guilt and reminders              | Real money on the line        |
 | Track your usage (broken on iOS) | Track your surrenders (works) |
-| Nothing to lose | Something to rescue and grow |
+| Nothing to lose                  | Something to rescue and grow  |
 
 ## Open Source
 

@@ -1,63 +1,64 @@
-import { firebase } from "@react-native-firebase/app";
-import auth from "@react-native-firebase/auth";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import { makeRedirectUri } from "expo-auth-session";
 
-// Initialize Google Sign-In
-// You'll get this webClientId from Firebase Console > Authentication > Sign-in method > Google
-export const configureGoogleSignIn = () => {
-  GoogleSignin.configure({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    offlineAccess: true,
-  });
+// Complete auth session for web browser
+WebBrowser.maybeCompleteAuthSession();
+
+// Google OAuth Client IDs from Google Cloud Console
+// Get these from: https://console.cloud.google.com/apis/credentials
+const GOOGLE_CLIENT_IDS = {
+  // iOS Client ID (from GoogleService-Info.plist or Google Cloud Console)
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  // Android Client ID (from google-services.json or Google Cloud Console)
+  androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  // Web Client ID (for Expo Go development)
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
 };
 
-// Sign in with Google
-export const signInWithGoogle = async () => {
+// Hook for Google authentication
+export const useGoogleAuth = () => {
+  const redirectUri = makeRedirectUri({
+    scheme: "niyah",
+  });
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    iosClientId: GOOGLE_CLIENT_IDS.iosClientId,
+    androidClientId: GOOGLE_CLIENT_IDS.androidClientId,
+    webClientId: GOOGLE_CLIENT_IDS.webClientId,
+  });
+
+  return {
+    request,
+    response,
+    promptAsync,
+    isReady: !!request,
+  };
+};
+
+// Extract user info from Google token
+export const getGoogleUserInfo = async (accessToken: string) => {
   try {
-    // Check if device supports Google Play
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    const response = await fetch("https://www.googleapis.com/userinfo/v2/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
-    // Get the user's ID token
-    const signInResult = await GoogleSignin.signIn();
-
-    // Get the id token
-    const idToken = signInResult.data?.idToken;
-    if (!idToken) {
-      throw new Error("No ID token found");
+    if (!response.ok) {
+      throw new Error("Failed to fetch user info");
     }
 
-    // Create a Google credential with the token
-    const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-
-    // Sign-in the user with the credential
-    const userCredential = await auth().signInWithCredential(googleCredential);
-
-    return userCredential.user;
-  } catch (error: any) {
-    console.error("Google Sign-In Error:", error);
-    throw error;
-  }
-};
-
-// Sign out
-export const signOut = async () => {
-  try {
-    await GoogleSignin.signOut();
-    await auth().signOut();
+    return await response.json();
   } catch (error) {
-    console.error("Sign-Out Error:", error);
+    console.error("Error fetching Google user info:", error);
     throw error;
   }
 };
 
-// Get current user
-export const getCurrentUser = () => {
-  return auth().currentUser;
-};
-
-// Auth state listener
-export const onAuthStateChanged = (callback: (user: any) => void) => {
-  return auth().onAuthStateChanged(callback);
-};
-
-export { auth, firebase };
+export interface GoogleUser {
+  id: string;
+  email: string;
+  name: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+}

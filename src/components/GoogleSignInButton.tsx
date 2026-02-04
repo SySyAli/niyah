@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   TouchableOpacity,
   Text,
@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Colors, Spacing, Typography, Radius } from "../constants/colors";
 import { useAuthStore } from "../store/authStore";
+import { useGoogleAuth } from "../config/firebase";
 
 interface GoogleSignInButtonProps {
   onSuccess?: () => void;
@@ -21,22 +22,33 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
+  const { request, response, promptAsync, isReady } = useGoogleAuth();
 
-  const handlePress = async () => {
-    setIsLoading(true);
+  // Handle the auth response
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        handleGoogleLogin(authentication.accessToken);
+      }
+    } else if (response?.type === "error") {
+      setIsLoading(false);
+      Alert.alert(
+        "Sign In Failed",
+        response.error?.message || "Unable to sign in with Google.",
+      );
+      onError?.(new Error(response.error?.message || "Google sign in failed"));
+    } else if (response?.type === "dismiss") {
+      setIsLoading(false);
+    }
+  }, [response]);
+
+  const handleGoogleLogin = async (accessToken: string) => {
     try {
-      await loginWithGoogle();
+      await loginWithGoogle(accessToken);
       onSuccess?.();
     } catch (error: any) {
       console.error("Google Sign-In failed:", error);
-
-      // Handle specific error codes
-      if (error.code === "SIGN_IN_CANCELLED") {
-        // User cancelled, don't show error
-        setIsLoading(false);
-        return;
-      }
-
       Alert.alert(
         "Sign In Failed",
         error.message || "Unable to sign in with Google. Please try again.",
@@ -47,11 +59,26 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     }
   };
 
+  const handlePress = async () => {
+    if (!isReady) {
+      Alert.alert("Please wait", "Google Sign-In is initializing...");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await promptAsync();
+    } catch (error: any) {
+      setIsLoading(false);
+      console.error("Prompt error:", error);
+    }
+  };
+
   return (
     <TouchableOpacity
       style={styles.button}
       onPress={handlePress}
-      disabled={isLoading}
+      disabled={isLoading || !isReady}
       activeOpacity={0.8}
     >
       {isLoading ? (

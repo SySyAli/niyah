@@ -6,7 +6,7 @@ export const CADENCES = {
     id: "daily",
     name: "Daily",
     duration: 24 * 60 * 60 * 1000, // 24 hours in ms
-    demoDuration: 30 * 1000, // 30 seconds for demo
+    demoDuration: 10 * 1000, // 10 seconds for demo
     stake: 500, // $5.00 in cents - each partner stakes this
   },
   weekly: {

@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   Pressable,
   Linking,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Colors,
@@ -89,8 +89,13 @@ export default function SurrenderScreen() {
     );
   };
 
+  useEffect(() => {
+    if (!activeDuoSession && !showPayment) {
+      router.replace("/(tabs)");
+    }
+  }, [activeDuoSession, showPayment]);
+
   if (!activeDuoSession && !showPayment) {
-    router.replace("/(tabs)");
     return null;
   }
 

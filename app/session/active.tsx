@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, SafeAreaView } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Colors,
@@ -8,34 +9,35 @@ import {
   Radius,
 } from "../../src/constants/colors";
 import { Card, Button, Timer } from "../../src/components";
-import { useSessionStore } from "../../src/store/sessionStore";
+import { usePartnerStore } from "../../src/store/partnerStore";
 import { useCountdown } from "../../src/hooks/useCountdown";
 import { formatMoney } from "../../src/utils/format";
 
 export default function ActiveSessionScreen() {
   const router = useRouter();
-  const { currentSession, completeSession } = useSessionStore();
+  const { activeDuoSession, completeDuoSession } = usePartnerStore();
 
   const { timeRemaining, start } = useCountdown({
     onComplete: () => {
-      completeSession();
+      completeDuoSession(true, true); // User completed, assume partner completed for demo
       router.replace("/session/complete");
     },
   });
 
   useEffect(() => {
-    if (currentSession) {
-      start(currentSession.endsAt);
+    if (activeDuoSession) {
+      start(activeDuoSession.endsAt);
+    } else {
+      router.replace("/(tabs)");
     }
-  }, [currentSession]);
+  }, [activeDuoSession]);
 
-  if (!currentSession) {
-    router.replace("/(tabs)");
+  if (!activeDuoSession) {
     return null;
   }
 
   const totalDuration =
-    currentSession.endsAt.getTime() - currentSession.startedAt.getTime();
+    activeDuoSession.endsAt.getTime() - activeDuoSession.startedAt.getTime();
   const progress = 1 - timeRemaining / totalDuration;
   const progressPercent = Math.min(
     100,
@@ -77,9 +79,9 @@ export default function ActiveSessionScreen() {
 
         {/* Payout Card */}
         <Card style={styles.payoutCard}>
-          <Text style={styles.payoutLabel}>Complete to earn</Text>
+          <Text style={styles.payoutLabel}>Complete to keep</Text>
           <Text style={styles.payoutAmount}>
-            {formatMoney(currentSession.potentialPayout)}
+            {formatMoney(activeDuoSession.stakeAmount)}
           </Text>
         </Card>
 
@@ -110,7 +112,7 @@ export default function ActiveSessionScreen() {
           />
           <Text style={styles.warningText}>
             Warning: Surrendering forfeits your{" "}
-            {formatMoney(currentSession.stakeAmount)} stake
+            {formatMoney(activeDuoSession.stakeAmount)} stake
           </Text>
         </View>
       </View>

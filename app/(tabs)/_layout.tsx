@@ -1,5 +1,7 @@
 import { Tabs } from "expo-router";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet, Animated } from "react-native";
+import { useRef, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography, Spacing } from "../../src/constants/colors";
 
 export default function TabsLayout() {
@@ -11,6 +13,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarLabelStyle: styles.tabBarLabel,
+        tabBarShowLabel: true,
       }}
     >
       <Tabs.Screen
@@ -23,7 +26,13 @@ export default function TabsLayout() {
           }: {
             color: string;
             focused: boolean;
-          }) => <TabIcon label="H" color={color} focused={focused} />,
+          }) => (
+            <AnimatedTabIcon
+              name={focused ? "home" : "home-outline"}
+              color={color}
+              focused={focused}
+            />
+          ),
         }}
       />
       <Tabs.Screen
@@ -36,7 +45,13 @@ export default function TabsLayout() {
           }: {
             color: string;
             focused: boolean;
-          }) => <TabIcon label="F" color={color} focused={focused} />,
+          }) => (
+            <AnimatedTabIcon
+              name={focused ? "timer" : "timer-outline"}
+              color={color}
+              focused={focused}
+            />
+          ),
         }}
       />
       <Tabs.Screen
@@ -49,23 +64,77 @@ export default function TabsLayout() {
           }: {
             color: string;
             focused: boolean;
-          }) => <TabIcon label="P" color={color} focused={focused} />,
+          }) => (
+            <AnimatedTabIcon
+              name={focused ? "person" : "person-outline"}
+              color={color}
+              focused={focused}
+            />
+          ),
         }}
       />
     </Tabs>
   );
 }
 
-interface TabIconProps {
-  label: string;
+interface AnimatedTabIconProps {
+  name: keyof typeof Ionicons.glyphMap;
   color: string;
   focused: boolean;
 }
 
-const TabIcon: React.FC<TabIconProps> = ({ label, color, focused }) => {
+const AnimatedTabIcon: React.FC<AnimatedTabIconProps> = ({
+  name,
+  color,
+  focused,
+}) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(focused ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (focused) {
+      // Bounce animation when tab becomes active
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.2,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 4,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [focused]);
+
   return (
-    <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
-      <Text style={[styles.iconText, { color }]}>{label}</Text>
+    <View style={styles.iconWrapper}>
+      <Animated.View
+        style={[
+          styles.iconBackground,
+          {
+            opacity: opacityAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      />
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <Ionicons name={name} size={24} color={color} />
+      </Animated.View>
     </View>
   );
 };
@@ -81,21 +150,19 @@ const styles = StyleSheet.create({
   },
   tabBarLabel: {
     fontSize: Typography.labelSmall,
-    fontWeight: "500",
+    fontWeight: "600",
   },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  iconWrapper: {
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "transparent",
   },
-  iconContainerActive: {
+  iconBackground: {
+    position: "absolute",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.primaryMuted,
-  },
-  iconText: {
-    fontSize: Typography.bodyMedium,
-    fontWeight: "600",
   },
 });

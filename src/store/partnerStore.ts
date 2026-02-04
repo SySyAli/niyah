@@ -55,9 +55,9 @@ interface PartnerInvite {
 const DEMO_PARTNER: Partner = {
   id: "demo-partner-1",
   oderId: "partner-user-1",
-  name: "Alex Chen",
-  email: "alex@example.com",
-  venmoHandle: "@alex-chen-demo",
+  name: "Fardeen Bablu",
+  email: "fardeen@example.com",
+  venmoHandle: "@fardeen-demo",
   reputation: {
     score: 72,
     level: "tree",

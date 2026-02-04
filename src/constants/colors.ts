@@ -1,59 +1,59 @@
-// NIYAH Color System - Inspired by Robinhood/Kalshi
-// Clean, minimal, professional fintech aesthetic
+// NIYAH Color System - Warm, earthy tones with green accent
+// Clean, minimal, calming aesthetic
 
 export const Colors = {
-  // Backgrounds - Deep, clean blacks
-  background: "#000000",
-  backgroundElevated: "#0D0D0D",
-  backgroundCard: "#161616",
-  backgroundSecondary: "#1C1C1E",
-  backgroundTertiary: "#2C2C2E",
+  // Backgrounds - Warm beige/tan tones
+  background: "#C9C2B4",
+  backgroundElevated: "#D4CEC1",
+  backgroundCard: "#DED9CD",
+  backgroundSecondary: "#E8E4DA",
+  backgroundTertiary: "#F2EFE8",
 
-  // Primary brand color - Vibrant green (money/success)
-  primary: "#00D632",
-  primaryDark: "#00B52B",
-  primaryLight: "#33E05C",
-  primaryMuted: "rgba(0, 214, 50, 0.15)",
+  // Primary brand color - Natural green (growth/money)
+  primary: "#7CB564",
+  primaryDark: "#5A9A42",
+  primaryLight: "#9BC887",
+  primaryMuted: "rgba(124, 181, 100, 0.20)",
 
-  // Text hierarchy
-  text: "#FFFFFF",
-  textPrimary: "#FFFFFF",
-  textSecondary: "#8E8E93",
-  textTertiary: "#636366",
-  textMuted: "#48484A",
+  // Text hierarchy - Dark for contrast on light bg
+  text: "#1A1A1A",
+  textPrimary: "#1A1A1A",
+  textSecondary: "#4A4A4A",
+  textTertiary: "#6B6B6B",
+  textMuted: "#8C8C8C",
 
   // Money colors (critical for financial UI)
-  gain: "#00D632",
-  gainLight: "rgba(0, 214, 50, 0.12)",
-  loss: "#FF3B30",
-  lossLight: "rgba(255, 59, 48, 0.12)",
+  gain: "#7CB564",
+  gainLight: "rgba(124, 181, 100, 0.15)",
+  loss: "#D64545",
+  lossLight: "rgba(214, 69, 69, 0.15)",
 
   // Status colors
-  success: "#00D632",
-  warning: "#FF9500",
-  warningLight: "rgba(255, 149, 0, 0.12)",
-  danger: "#FF3B30",
-  dangerLight: "rgba(255, 59, 48, 0.12)",
-  info: "#007AFF",
-  infoLight: "rgba(0, 122, 255, 0.12)",
+  success: "#7CB564",
+  warning: "#E6A23C",
+  warningLight: "rgba(230, 162, 60, 0.15)",
+  danger: "#D64545",
+  dangerLight: "rgba(214, 69, 69, 0.15)",
+  info: "#5B8DEF",
+  infoLight: "rgba(91, 141, 239, 0.15)",
 
   // Interactive elements
-  buttonPrimary: "#00D632",
-  buttonSecondary: "#1C1C1E",
-  buttonDisabled: "#2C2C2E",
+  buttonPrimary: "#7CB564",
+  buttonSecondary: "#DED9CD",
+  buttonDisabled: "#B8B2A5",
 
   // Borders - subtle dividers
-  border: "#2C2C2E",
-  borderLight: "#3A3A3C",
-  borderFocused: "#00D632",
+  border: "#B8B2A5",
+  borderLight: "#C9C2B4",
+  borderFocused: "#7CB564",
 
   // Overlays
-  overlay: "rgba(0, 0, 0, 0.6)",
-  overlayLight: "rgba(0, 0, 0, 0.4)",
+  overlay: "rgba(0, 0, 0, 0.5)",
+  overlayLight: "rgba(0, 0, 0, 0.3)",
 
   // Special
-  shimmer: "#2C2C2E",
-  skeleton: "#1C1C1E",
+  shimmer: "#DED9CD",
+  skeleton: "#D4CEC1",
 } as const;
 
 // Spacing system (8px grid)

@@ -24,6 +24,7 @@
     "test:components": "vitest run --testPathPattern=components"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~54.0.33",
     "expo-auth-session": "^7.0.10",

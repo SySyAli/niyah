@@ -29,7 +29,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       id: Math.random().toString(36).substr(2, 9),
       cadence,
       stakeAmount: config.stake,
-      potentialPayout: config.basePayout,
+      potentialPayout: config.stake, // stickK model: payout = stake (no 2x bonus)
       startedAt: new Date(),
       endsAt: new Date(Date.now() + duration),
       status: "active",

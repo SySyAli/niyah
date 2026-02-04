@@ -14,6 +14,12 @@ interface WalletState {
   deductStake: (amount: number, sessionId: string) => void;
   creditPayout: (amount: number, sessionId: string) => void;
   recordForfeit: (amount: number, sessionId: string) => void;
+  recordSettlement: (
+    amount: number,
+    sessionId: string,
+    partnerId: string,
+    description: string,
+  ) => void;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -128,5 +134,34 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     set((state) => ({
       transactions: [transaction, ...state.transactions],
     }));
+  },
+
+  recordSettlement: (
+    amount: number,
+    sessionId: string,
+    partnerId: string,
+    description: string,
+  ) => {
+    // Positive amount = received payment, negative = paid out
+    const transaction: Transaction = {
+      id: Math.random().toString(36).substr(2, 9),
+      type: amount > 0 ? "settlement_received" : "settlement_paid",
+      amount,
+      description,
+      sessionId,
+      duoSessionId: sessionId,
+      partnerId,
+      createdAt: new Date(),
+    };
+
+    set((state) => ({
+      balance: state.balance + amount,
+      transactions: [transaction, ...state.transactions],
+    }));
+
+    // Update user balance
+    useAuthStore.getState().updateUser({
+      balance: get().balance,
+    });
   },
 }));

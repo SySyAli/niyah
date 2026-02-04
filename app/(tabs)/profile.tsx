@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -18,12 +19,17 @@ import {
 import { Card, Balance } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
+import { usePartnerStore } from "../../src/store/partnerStore";
 import { formatMoney, formatRelativeTime } from "../../src/utils/format";
+import { REPUTATION_LEVELS } from "../../src/constants/config";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, setVenmoHandle } = useAuthStore();
   const { balance, transactions, pendingWithdrawal } = useWalletStore();
+  const { partners, duoSessionHistory } = usePartnerStore();
+  const [showVenmoInput, setShowVenmoInput] = useState(false);
+  const [venmoInput, setVenmoInput] = useState(user?.venmoHandle || "");
 
   const handleLogout = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -44,6 +50,26 @@ export default function ProfileScreen() {
       ? Math.round((user.completedSessions / user.totalSessions) * 100)
       : 0;
 
+  const reputation = user?.reputation;
+  const reputationLevel = reputation?.level || "sapling";
+  const reputationInfo =
+    REPUTATION_LEVELS[reputationLevel as keyof typeof REPUTATION_LEVELS];
+
+  const getReputationColor = (score: number) => {
+    if (score >= 80) return Colors.gain;
+    if (score >= 60) return Colors.primary;
+    if (score >= 40) return Colors.warning;
+    return Colors.loss;
+  };
+
+  const handleSaveVenmo = () => {
+    if (venmoInput) {
+      const handle = venmoInput.startsWith("@") ? venmoInput : `@${venmoInput}`;
+      setVenmoHandle(handle);
+      setShowVenmoInput(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -60,7 +86,117 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
+
+          {/* Reputation Badge */}
+          <View style={styles.reputationBadge}>
+            <View
+              style={[
+                styles.reputationDot,
+                {
+                  backgroundColor: getReputationColor(reputation?.score || 50),
+                },
+              ]}
+            />
+            <Text style={styles.reputationText}>
+              {reputationInfo?.label || "Sapling"} - {reputation?.score || 50}
+              /100
+            </Text>
+          </View>
         </View>
+
+        {/* Reputation Card */}
+        <Card style={styles.reputationCard}>
+          <View style={styles.reputationHeader}>
+            <Text style={styles.reputationTitle}>Social Credit</Text>
+            <Text style={styles.reputationDescription}>
+              {reputationInfo?.description || "Building trust"}
+            </Text>
+          </View>
+
+          {/* Progress bar */}
+          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${reputation?.score || 50}%`,
+                    backgroundColor: getReputationColor(
+                      reputation?.score || 50,
+                    ),
+                  },
+                ]}
+              />
+            </View>
+            <View style={styles.progressLabels}>
+              <Text style={styles.progressLabel}>Seed</Text>
+              <Text style={styles.progressLabel}>Oak</Text>
+            </View>
+          </View>
+
+          {/* Payment stats */}
+          <View style={styles.paymentStats}>
+            <View style={styles.paymentStat}>
+              <Text style={[styles.paymentValue, { color: Colors.gain }]}>
+                {reputation?.paymentsCompleted || 0}
+              </Text>
+              <Text style={styles.paymentLabel}>Paid</Text>
+            </View>
+            <View style={styles.paymentStat}>
+              <Text style={[styles.paymentValue, { color: Colors.loss }]}>
+                {reputation?.paymentsMissed || 0}
+              </Text>
+              <Text style={styles.paymentLabel}>Missed</Text>
+            </View>
+            <View style={styles.paymentStat}>
+              <Text style={styles.paymentValue}>{partners.length}</Text>
+              <Text style={styles.paymentLabel}>Partners</Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* Venmo Handle */}
+        <Card style={styles.venmoCard}>
+          <Text style={styles.venmoTitle}>Venmo Handle</Text>
+          {showVenmoInput ? (
+            <View style={styles.venmoInputRow}>
+              <TextInput
+                style={styles.venmoInput}
+                placeholder="@your-handle"
+                placeholderTextColor={Colors.textMuted}
+                value={venmoInput}
+                onChangeText={setVenmoInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Pressable
+                style={styles.venmoSaveButton}
+                onPress={handleSaveVenmo}
+              >
+                <Text style={styles.venmoSaveText}>Save</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              style={styles.venmoDisplay}
+              onPress={() => setShowVenmoInput(true)}
+            >
+              <Text
+                style={
+                  user?.venmoHandle
+                    ? styles.venmoHandleText
+                    : styles.venmoPlaceholder
+                }
+              >
+                {user?.venmoHandle || "Tap to add"}
+              </Text>
+              <Text style={styles.venmoEditText}>Edit</Text>
+            </Pressable>
+          )}
+          <Text style={styles.venmoNote}>
+            Partners use this to pay you when they lose
+          </Text>
+        </Card>
 
         {/* Balance Card */}
         <Card style={styles.balanceCard}>
@@ -195,6 +331,150 @@ const styles = StyleSheet.create({
     fontSize: Typography.bodySmall,
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
+  },
+  // Reputation badge in header
+  reputationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.backgroundCard,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+    marginTop: Spacing.md,
+  },
+  reputationDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: Spacing.sm,
+  },
+  reputationText: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+    fontWeight: "500",
+  },
+  // Reputation card
+  reputationCard: {
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  reputationHeader: {
+    marginBottom: Spacing.md,
+  },
+  reputationTitle: {
+    fontSize: Typography.titleSmall,
+    fontWeight: "600",
+    color: Colors.text,
+  },
+  reputationDescription: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
+  },
+  progressBarContainer: {
+    marginBottom: Spacing.md,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: Colors.border,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  progressLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: Spacing.xs,
+  },
+  progressLabel: {
+    fontSize: 10,
+    color: Colors.textMuted,
+  },
+  paymentStats: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  paymentStat: {
+    alignItems: "center",
+  },
+  paymentValue: {
+    fontSize: Typography.titleMedium,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  paymentLabel: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
+  },
+  // Venmo card
+  venmoCard: {
+    marginBottom: Spacing.md,
+  },
+  venmoTitle: {
+    fontSize: Typography.titleSmall,
+    fontWeight: "600",
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
+  venmoInputRow: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+  },
+  venmoInput: {
+    flex: 1,
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    fontSize: Typography.bodyMedium,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  venmoSaveButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    justifyContent: "center",
+  },
+  venmoSaveText: {
+    fontSize: Typography.labelMedium,
+    fontWeight: "600",
+    color: Colors.text,
+  },
+  venmoDisplay: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: Colors.backgroundCard,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  venmoHandleText: {
+    fontSize: Typography.bodyMedium,
+    color: Colors.primary,
+    fontWeight: "600",
+  },
+  venmoPlaceholder: {
+    fontSize: Typography.bodyMedium,
+    color: Colors.textMuted,
+  },
+  venmoEditText: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+  },
+  venmoNote: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textMuted,
+    marginTop: Spacing.sm,
   },
   balanceCard: {
     marginBottom: Spacing.md,

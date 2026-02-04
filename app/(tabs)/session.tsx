@@ -16,7 +16,7 @@ import {
   Radius,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
-import { useSessionStore } from "../../src/store/sessionStore";
+import { usePartnerStore } from "../../src/store/partnerStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { CADENCES } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
@@ -47,7 +47,8 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   };
 
-  const roi = ((config.basePayout / config.stake - 1) * 100).toFixed(0);
+  // stickK model: stake = stake (no ROI, just keep your stake on completion)
+  // In duo mode, winner takes loser's stake
 
   return (
     <Pressable
@@ -62,14 +63,14 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
         >
           <View style={styles.cadenceHeader}>
             <Text style={styles.cadenceName}>{config.name}</Text>
-            <View style={styles.roiBadge}>
-              <Text style={styles.roiText}>{roi}% return</Text>
+            <View style={styles.duoBadge}>
+              <Text style={styles.duoBadgeText}>Duo Session</Text>
             </View>
           </View>
 
           <View style={styles.cadenceDetails}>
             <View style={styles.cadenceColumn}>
-              <Text style={styles.columnLabel}>You stake</Text>
+              <Text style={styles.columnLabel}>Your Stake</Text>
               <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
             </View>
             <View style={styles.arrowContainer}>
@@ -77,12 +78,14 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
               <View style={styles.arrowHead} />
             </View>
             <View style={[styles.cadenceColumn, styles.cadenceColumnRight]}>
-              <Text style={styles.columnLabel}>You earn</Text>
-              <Text style={styles.earnValue}>
-                {formatMoney(config.basePayout)}
-              </Text>
+              <Text style={styles.columnLabel}>Partner's Stake</Text>
+              <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
             </View>
           </View>
+
+          <Text style={styles.outcomeHint}>
+            Win = Partner pays you | Lose = You pay partner
+          </Text>
 
           <View style={styles.cadenceMeta}>
             <Text style={styles.metaText}>
@@ -105,17 +108,17 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
 
 export default function SessionTabScreen() {
   const router = useRouter();
-  const currentSession = useSessionStore((state) => state.currentSession);
+  const { activeDuoSession, currentPartner } = usePartnerStore();
   const balance = useWalletStore((state) => state.balance);
 
-  if (currentSession) {
+  if (activeDuoSession) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
           <View style={styles.activeHeader}>
-            <Text style={styles.title}>Session Active</Text>
+            <Text style={styles.title}>Duo Session Active</Text>
             <Text style={styles.subtitle}>
-              You have an active focus session
+              Focus session with {activeDuoSession.partnerName}
             </Text>
           </View>
 
@@ -125,12 +128,12 @@ export default function SessionTabScreen() {
               <View style={styles.pulseInner} />
             </View>
             <Text style={styles.activeTitle}>
-              {currentSession.cadence.charAt(0).toUpperCase() +
-                currentSession.cadence.slice(1)}{" "}
+              {activeDuoSession.cadence.charAt(0).toUpperCase() +
+                activeDuoSession.cadence.slice(1)}{" "}
               Session
             </Text>
             <Text style={styles.activeSubtitle}>
-              Potential payout: {formatMoney(currentSession.potentialPayout)}
+              Stake: {formatMoney(activeDuoSession.stakeAmount)}
             </Text>
           </Card>
 
@@ -240,16 +243,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.text,
   },
-  roiBadge: {
+  duoBadge: {
     backgroundColor: Colors.primaryMuted,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: Radius.full,
   },
-  roiText: {
+  duoBadgeText: {
     color: Colors.primary,
     fontSize: Typography.labelSmall,
     fontWeight: "600",
+  },
+  outcomeHint: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
   },
   cadenceDetails: {
     flexDirection: "row",

@@ -15,10 +15,10 @@ import {
   Spacing,
   Radius,
 } from "../../src/constants/colors";
-import { Card, Balance, Button } from "../../src/components";
+import { Card, Balance, Button, MoneyPlant } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
-import { useSessionStore } from "../../src/store/sessionStore";
+import { usePartnerStore } from "../../src/store/partnerStore";
 import { formatMoney, formatRelativeTime } from "../../src/utils/format";
 
 interface ActionButtonProps {
@@ -88,8 +88,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const balance = useWalletStore((state) => state.balance);
-  const currentSession = useSessionStore((state) => state.currentSession);
-  const sessionHistory = useSessionStore((state) => state.sessionHistory);
+  const { activeDuoSession, duoSessionHistory, partners } = usePartnerStore();
 
   const completionRate =
     user && user.totalSessions > 0
@@ -97,6 +96,10 @@ export default function DashboardScreen() {
       : 0;
 
   const totalEarnings = user?.totalEarnings || 0;
+
+  // Calculate money plant stats
+  const totalLeaves = duoSessionHistory.filter((s) => s.userCompleted).length;
+  const growthStage = Math.min(5, Math.floor(totalLeaves / 3) + 1);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -144,21 +147,21 @@ export default function DashboardScreen() {
         </Card>
 
         {/* Active Session Banner */}
-        {currentSession && (
+        {activeDuoSession && (
           <Pressable onPress={() => router.push("/session/active")}>
             <Card style={styles.activeSessionCard}>
               <View style={styles.activeSessionIndicator} />
               <View style={styles.activeSessionContent}>
                 <Text style={styles.activeSessionLabel}>
-                  SESSION IN PROGRESS
+                  DUO SESSION IN PROGRESS
                 </Text>
                 <Text style={styles.activeSessionText}>
-                  {currentSession.cadence.charAt(0).toUpperCase() +
-                    currentSession.cadence.slice(1)}{" "}
-                  Focus Session
+                  {activeDuoSession.cadence.charAt(0).toUpperCase() +
+                    activeDuoSession.cadence.slice(1)}{" "}
+                  Focus with {activeDuoSession.partnerName}
                 </Text>
                 <Text style={styles.activeSessionPayout}>
-                  Potential: {formatMoney(currentSession.potentialPayout)}
+                  Stake: {formatMoney(activeDuoSession.stakeAmount)}
                 </Text>
               </View>
               <Text style={styles.activeSessionArrow}>View</Text>
@@ -167,14 +170,14 @@ export default function DashboardScreen() {
         )}
 
         {/* Quick Start CTA */}
-        {!currentSession && (
+        {!activeDuoSession && (
           <Card style={styles.ctaCard}>
             <Text style={styles.ctaTitle}>Ready to focus?</Text>
             <Text style={styles.ctaSubtitle}>
-              Start a session and earn money for staying focused
+              Start a duo session with your accountability partner
             </Text>
             <Button
-              title="Start Focus Session"
+              title="Start Duo Session"
               onPress={() => router.push("/session/select")}
               size="large"
             />
@@ -200,18 +203,31 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {/* Money Plant Section */}
+        <View style={styles.plantSection}>
+          <Text style={styles.sectionTitle}>Your Money Plant</Text>
+          <Card style={styles.plantCard}>
+            <MoneyPlant
+              partners={partners}
+              totalLeaves={totalLeaves}
+              growthStage={growthStage}
+              totalEarned={totalEarnings}
+            />
+          </Card>
+        </View>
+
         {/* Recent Activity */}
-        {sessionHistory.length > 0 && (
+        {duoSessionHistory.length > 0 && (
           <View style={styles.recentSection}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-            {sessionHistory.slice(0, 3).map((session) => (
+            <Text style={styles.sectionTitle}>Recent Duo Sessions</Text>
+            {duoSessionHistory.slice(0, 3).map((session) => (
               <Card key={session.id} style={styles.activityCard}>
                 <View style={styles.activityRow}>
                   <View style={styles.activityInfo}>
                     <Text style={styles.activityTitle}>
                       {session.cadence.charAt(0).toUpperCase() +
                         session.cadence.slice(1)}{" "}
-                      Session
+                      with {session.partnerName}
                     </Text>
                     <Text style={styles.activityDate}>
                       {session.completedAt
@@ -220,16 +236,18 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                   <View style={styles.activityResult}>
-                    {session.status === "completed" ? (
+                    {session.userCompleted ? (
                       <>
                         <Text style={styles.activityEarned}>
-                          +{formatMoney(session.actualPayout || 0)}
+                          {session.amountOwed && session.amountOwed < 0
+                            ? `Won ${formatMoney(Math.abs(session.amountOwed))}`
+                            : "Stake kept"}
                         </Text>
                         <View style={styles.statusBadge}>
                           <Text style={styles.statusSuccess}>Completed</Text>
                         </View>
                       </>
-                    ) : session.status === "surrendered" ? (
+                    ) : (
                       <>
                         <Text style={styles.activityLost}>
                           -{formatMoney(session.stakeAmount)}
@@ -240,7 +258,7 @@ export default function DashboardScreen() {
                           <Text style={styles.statusFailed}>Surrendered</Text>
                         </View>
                       </>
-                    ) : null}
+                    )}
                   </View>
                 </View>
               </Card>
@@ -387,6 +405,12 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
     marginBottom: Spacing.lg,
     textAlign: "center",
+  },
+  plantSection: {
+    marginBottom: Spacing.lg,
+  },
+  plantCard: {
+    padding: Spacing.md,
   },
   statsSection: {
     marginBottom: Spacing.lg,

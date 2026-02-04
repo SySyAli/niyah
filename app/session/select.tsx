@@ -17,9 +17,9 @@ import {
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
-import { useAuthStore } from "../../src/store/authStore";
+import { usePartnerStore } from "../../src/store/partnerStore";
 import { CADENCES, CadenceId, DEMO_MODE } from "../../src/constants/config";
-import { formatMoney, getStreakMultiplier } from "../../src/utils/format";
+import { formatMoney } from "../../src/utils/format";
 
 interface CadenceOptionProps {
   cadenceKey: CadenceId;
@@ -82,18 +82,18 @@ const CadenceOption: React.FC<CadenceOptionProps> = ({
           </Text>
           <View style={styles.optionPricing}>
             <View style={styles.priceColumn}>
-              <Text style={styles.priceLabel}>Stake</Text>
+              <Text style={styles.priceLabel}>Your Stake</Text>
               <Text style={styles.stakeAmount}>
                 {formatMoney(config.stake)}
               </Text>
             </View>
-            <View style={styles.arrowContainer}>
-              <View style={styles.arrowLine} />
+            <View style={styles.vsContainer}>
+              <Text style={styles.vsText}>vs</Text>
             </View>
             <View style={[styles.priceColumn, styles.priceColumnRight]}>
-              <Text style={styles.priceLabel}>Earn</Text>
-              <Text style={styles.earnAmount}>
-                {formatMoney(config.basePayout)}
+              <Text style={styles.priceLabel}>Partner's Stake</Text>
+              <Text style={styles.stakeAmount}>
+                {formatMoney(config.stake)}
               </Text>
             </View>
           </View>
@@ -110,7 +110,7 @@ export default function SelectCadenceScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const balance = useWalletStore((state) => state.balance);
-  const user = useAuthStore((state) => state.user);
+  const { currentPartner } = usePartnerStore();
 
   const [selectedCadence, setSelectedCadence] = useState<CadenceId>(
     (params.cadence as CadenceId) || "daily",
@@ -118,11 +118,6 @@ export default function SelectCadenceScreen() {
 
   const config = CADENCES[selectedCadence];
   const canAfford = balance >= config.stake;
-  const streakMultiplier = getStreakMultiplier(
-    user?.currentStreak || 0,
-    selectedCadence,
-  );
-  const actualPayout = Math.round(config.basePayout * streakMultiplier);
 
   const handleContinue = () => {
     if (canAfford) {
@@ -163,31 +158,34 @@ export default function SelectCadenceScreen() {
 
         {/* Summary */}
         <Card style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Session Summary</Text>
+          <Text style={styles.summaryTitle}>Duo Session Summary</Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Your stake</Text>
             <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Base payout</Text>
-            <Text style={styles.summaryValue}>
-              {formatMoney(config.basePayout)}
-            </Text>
+            <Text style={styles.summaryLabel}>Partner's stake</Text>
+            <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
           </View>
-          {streakMultiplier > 1 && (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>
-                Streak bonus ({user?.currentStreak}d)
-              </Text>
-              <Text style={[styles.summaryValue, styles.bonusValue]}>
-                x{streakMultiplier.toFixed(2)}
+          <View style={styles.divider} />
+          <View style={styles.outcomeSection}>
+            <Text style={styles.outcomeTitle}>Possible Outcomes</Text>
+            <View style={styles.outcomeRow}>
+              <Text style={styles.outcomeLabel}>Both complete:</Text>
+              <Text style={styles.outcomeValue}>Both keep stakes</Text>
+            </View>
+            <View style={styles.outcomeRow}>
+              <Text style={styles.outcomeLabel}>You win:</Text>
+              <Text style={[styles.outcomeValue, { color: Colors.gain }]}>
+                Partner pays you {formatMoney(config.stake)}
               </Text>
             </View>
-          )}
-          <View style={styles.divider} />
-          <View style={styles.summaryRow}>
-            <Text style={styles.totalLabel}>You will earn</Text>
-            <Text style={styles.totalValue}>{formatMoney(actualPayout)}</Text>
+            <View style={styles.outcomeRow}>
+              <Text style={styles.outcomeLabel}>You lose:</Text>
+              <Text style={[styles.outcomeValue, { color: Colors.loss }]}>
+                You pay partner {formatMoney(config.stake)}
+              </Text>
+            </View>
           </View>
         </Card>
       </ScrollView>
@@ -311,13 +309,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.gain,
   },
-  arrowContainer: {
+  vsContainer: {
     paddingHorizontal: Spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  arrowLine: {
-    width: 50,
-    height: 2,
-    backgroundColor: Colors.border,
+  vsText: {
+    fontSize: Typography.labelMedium,
+    fontWeight: "600",
+    color: Colors.textMuted,
   },
   insufficientText: {
     color: Colors.loss,
@@ -356,15 +356,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     marginVertical: Spacing.md,
   },
-  totalLabel: {
-    fontSize: Typography.bodyMedium,
+  outcomeSection: {
+    marginTop: Spacing.sm,
+  },
+  outcomeTitle: {
+    fontSize: Typography.labelMedium,
     fontWeight: "600",
     color: Colors.text,
+    marginBottom: Spacing.sm,
   },
-  totalValue: {
-    fontSize: Typography.titleMedium,
-    fontWeight: "700",
-    color: Colors.gain,
+  outcomeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: Spacing.xs,
+  },
+  outcomeLabel: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+  },
+  outcomeValue: {
+    fontSize: Typography.labelSmall,
+    fontWeight: "500",
+    color: Colors.text,
   },
   footer: {
     padding: Spacing.lg,

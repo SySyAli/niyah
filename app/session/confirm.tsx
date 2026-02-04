@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   Pressable,
   ScrollView,
+  Image,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -15,10 +16,15 @@ import {
   Radius,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
-import { useSessionStore } from "../../src/store/sessionStore";
+import { usePartnerStore } from "../../src/store/partnerStore";
 import { useAuthStore } from "../../src/store/authStore";
-import { CADENCES, CadenceId, DEMO_MODE } from "../../src/constants/config";
-import { formatMoney, getStreakMultiplier } from "../../src/utils/format";
+import {
+  CADENCES,
+  CadenceId,
+  DEMO_MODE,
+  REPUTATION_LEVELS,
+} from "../../src/constants/config";
+import { formatMoney } from "../../src/utils/format";
 
 const BLOCKED_APPS = [
   "Instagram",
@@ -32,20 +38,20 @@ const BLOCKED_APPS = [
 export default function ConfirmSessionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const startSession = useSessionStore((state) => state.startSession);
+  const { currentPartner, startDuoSession } = usePartnerStore();
   const user = useAuthStore((state) => state.user);
 
   const cadence = (params.cadence as CadenceId) || "daily";
   const config = CADENCES[cadence];
-  const streakMultiplier = getStreakMultiplier(
-    user?.currentStreak || 0,
-    cadence,
-  );
-  const actualPayout = Math.round(config.basePayout * streakMultiplier);
 
   const handleConfirm = () => {
-    startSession(cadence);
-    router.replace("/session/active");
+    if (currentPartner) {
+      startDuoSession(cadence);
+      router.replace("/session/active");
+    } else {
+      // No partner selected - go to partner selection
+      router.push("/session/partner" as any);
+    }
   };
 
   const getDurationText = () => {
@@ -60,6 +66,12 @@ export default function ConfirmSessionScreen() {
       default:
         return "";
     }
+  };
+
+  const getReputationLabel = (level: string) => {
+    const levelInfo =
+      REPUTATION_LEVELS[level as keyof typeof REPUTATION_LEVELS];
+    return levelInfo?.label || level;
   };
 
   return (
@@ -79,8 +91,46 @@ export default function ConfirmSessionScreen() {
         {/* Title */}
         <View style={styles.titleSection}>
           <Text style={styles.title}>Ready to Focus?</Text>
-          <Text style={styles.subtitle}>Review your session details</Text>
+          <Text style={styles.subtitle}>Review your duo session details</Text>
         </View>
+
+        {/* Partner Card */}
+        {currentPartner ? (
+          <Card style={styles.partnerCard}>
+            <Text style={styles.partnerLabel}>Your Accountability Partner</Text>
+            <View style={styles.partnerInfo}>
+              <View style={styles.partnerAvatar}>
+                <Text style={styles.partnerInitial}>
+                  {currentPartner.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.partnerDetails}>
+                <Text style={styles.partnerName}>{currentPartner.name}</Text>
+                <View style={styles.reputationBadge}>
+                  <Text style={styles.reputationText}>
+                    {getReputationLabel(currentPartner.reputation.level)} (
+                    {currentPartner.reputation.score}/100)
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <Pressable
+              style={styles.changePartnerButton}
+              onPress={() => router.push("/session/partner" as any)}
+            >
+              <Text style={styles.changePartnerText}>Change Partner</Text>
+            </Pressable>
+          </Card>
+        ) : (
+          <Card style={styles.noPartnerCard}>
+            <Text style={styles.noPartnerText}>No partner selected</Text>
+            <Button
+              title="Select Partner"
+              onPress={() => router.push("/session/partner" as any)}
+              variant="secondary"
+            />
+          </Card>
+        )}
 
         {/* Session Details */}
         <Card style={styles.detailsCard}>
@@ -98,17 +148,48 @@ export default function ConfirmSessionScreen() {
             <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Your Payout</Text>
-            <Text style={styles.payoutValue}>{formatMoney(actualPayout)}</Text>
+            <Text style={styles.detailLabel}>Partner's Stake</Text>
+            <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
           </View>
-          {streakMultiplier > 1 && (
-            <View style={styles.bonusBadge}>
-              <Text style={styles.bonusText}>
-                {user?.currentStreak}-day streak bonus:{" "}
-                {streakMultiplier.toFixed(2)}x
-              </Text>
-            </View>
-          )}
+        </Card>
+
+        {/* How It Works */}
+        <Card style={styles.howItWorksCard}>
+          <Text style={styles.howItWorksTitle}>How Duo Sessions Work</Text>
+          <View style={styles.outcomeRow}>
+            <View style={styles.outcomeDot} />
+            <Text style={styles.outcomeText}>
+              <Text style={styles.outcomeHighlight}>Both complete:</Text> You
+              both keep your stakes
+            </Text>
+          </View>
+          <View style={styles.outcomeRow}>
+            <View
+              style={[styles.outcomeDot, { backgroundColor: Colors.gain }]}
+            />
+            <Text style={styles.outcomeText}>
+              <Text style={styles.outcomeHighlight}>You win:</Text> Partner pays
+              you {formatMoney(config.stake)} via Venmo
+            </Text>
+          </View>
+          <View style={styles.outcomeRow}>
+            <View
+              style={[styles.outcomeDot, { backgroundColor: Colors.loss }]}
+            />
+            <Text style={styles.outcomeText}>
+              <Text style={styles.outcomeHighlight}>You lose:</Text> You pay
+              partner {formatMoney(config.stake)} via Venmo
+            </Text>
+          </View>
+          <View style={styles.outcomeRow}>
+            <View
+              style={[styles.outcomeDot, { backgroundColor: Colors.textMuted }]}
+            />
+            <Text style={styles.outcomeText}>
+              <Text style={styles.outcomeHighlight}>Both fail:</Text> Both
+              stakes forfeited
+            </Text>
+          </View>
         </Card>
 
         {/* Warning */}
@@ -116,7 +197,8 @@ export default function ConfirmSessionScreen() {
           <Text style={styles.warningTitle}>Important</Text>
           <Text style={styles.warningText}>
             Once you start, distracting apps will be blocked. If you surrender
-            early, you will lose your entire {formatMoney(config.stake)} stake.
+            early, you'll owe your partner {formatMoney(config.stake)}. Your
+            reputation score will be affected by payment reliability.
           </Text>
         </Card>
 
@@ -139,9 +221,12 @@ export default function ConfirmSessionScreen() {
       {/* Footer */}
       <View style={styles.footer}>
         <Button
-          title="Start Focus Session"
+          title={
+            currentPartner ? "Start Duo Session" : "Select a Partner First"
+          }
           onPress={handleConfirm}
           size="large"
+          disabled={!currentPartner}
         />
         <Text style={styles.disclaimer}>
           Your {formatMoney(config.stake)} stake will be deducted immediately
@@ -185,6 +270,79 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
+  // Partner card styles
+  partnerCard: {
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  partnerLabel: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+  },
+  partnerInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  partnerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: Spacing.md,
+  },
+  partnerInitial: {
+    fontSize: Typography.titleMedium,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  partnerDetails: {
+    flex: 1,
+  },
+  partnerName: {
+    fontSize: Typography.titleSmall,
+    fontWeight: "600",
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  reputationBadge: {
+    backgroundColor: Colors.backgroundCard,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.sm,
+    alignSelf: "flex-start",
+  },
+  reputationText: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+  },
+  changePartnerButton: {
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  changePartnerText: {
+    fontSize: Typography.labelMedium,
+    color: Colors.primary,
+    fontWeight: "500",
+  },
+  noPartnerCard: {
+    marginBottom: Spacing.md,
+    alignItems: "center",
+    paddingVertical: Spacing.xl,
+  },
+  noPartnerText: {
+    fontSize: Typography.bodyMedium,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+  },
+  // Details card
   detailsCard: {
     marginBottom: Spacing.md,
   },
@@ -213,23 +371,39 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.text,
   },
-  payoutValue: {
-    fontSize: Typography.titleMedium,
-    fontWeight: "700",
-    color: Colors.gain,
+  // How it works card
+  howItWorksCard: {
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.backgroundCard,
   },
-  bonusBadge: {
-    backgroundColor: Colors.primaryMuted,
-    padding: Spacing.sm,
-    borderRadius: Radius.sm,
-    marginTop: Spacing.sm,
-    alignItems: "center",
-  },
-  bonusText: {
-    fontSize: Typography.labelSmall,
+  howItWorksTitle: {
+    fontSize: Typography.titleSmall,
     fontWeight: "600",
-    color: Colors.primary,
+    color: Colors.text,
+    marginBottom: Spacing.md,
   },
+  outcomeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  outcomeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    marginRight: Spacing.sm,
+  },
+  outcomeText: {
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    flex: 1,
+  },
+  outcomeHighlight: {
+    fontWeight: "600",
+    color: Colors.text,
+  },
+  // Warning card
   warningCard: {
     backgroundColor: Colors.warningLight,
     borderWidth: 1,

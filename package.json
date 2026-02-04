@@ -7,7 +7,15 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run --testPathPattern=unit",
+    "test:integration": "vitest run --testPathPattern=integration",
+    "test:stores": "vitest run --testPathPattern=store",
+    "test:components": "vitest run --testPathPattern=components"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -30,9 +38,17 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
+    "@testing-library/react-hooks": "^8.0.1",
+    "@testing-library/react-native": "^12.9.0",
     "@types/react": "~19.1.17",
+    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/ui": "^2.1.8",
     "babel-preset-expo": "^54.0.10",
-    "typescript": "~5.9.3"
+    "jsdom": "^25.0.1",
+    "react-native-web": "^0.19.13",
+    "react-test-renderer": "^19.1.0",
+    "typescript": "~5.9.3",
+    "vitest": "^2.1.8"
   },
   "private": true
 }

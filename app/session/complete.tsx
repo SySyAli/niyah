@@ -1,5 +1,13 @@
 import React, { useRef, useEffect, useState } from "react";
-import { View, Text, StyleSheet, SafeAreaView, Animated } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Animated,
+  Linking,
+  Pressable,
+} from "react-native";
 import { useRouter } from "expo-router";
 import {
   Colors,
@@ -9,16 +17,23 @@ import {
 } from "../../src/constants/colors";
 import { Card, Button, Balance, Confetti } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
-import { useSessionStore } from "../../src/store/sessionStore";
+import { usePartnerStore } from "../../src/store/partnerStore";
 import { formatMoney } from "../../src/utils/format";
 
 export default function CompleteScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const sessionHistory = useSessionStore((state) => state.sessionHistory);
+  const { duoSessionHistory, getVenmoPayLink, markSettlementReceived } =
+    usePartnerStore();
   const [showConfetti, setShowConfetti] = useState(true);
 
-  const lastSession = sessionHistory[0];
+  const lastSession = duoSessionHistory[0];
+
+  // Determine outcome
+  const userWon = lastSession?.userCompleted && !lastSession?.partnerCompleted;
+  const bothCompleted =
+    lastSession?.userCompleted && lastSession?.partnerCompleted;
+  const amountOwed = lastSession?.amountOwed || 0;
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -47,13 +62,29 @@ export default function CompleteScreen() {
     router.replace("/(tabs)");
   };
 
+  const handleMarkReceived = () => {
+    if (lastSession) {
+      markSettlementReceived(lastSession.id);
+    }
+  };
+
   const getStreakMessage = () => {
     const streak = user?.currentStreak || 0;
-    if (streak === 1) return "Great start! Keep going tomorrow.";
-    if (streak >= 10) return "Incredible! You are unstoppable!";
-    if (streak >= 5) return "Amazing streak! Bonus multipliers unlocked!";
-    if (streak >= 3) return `${streak}-day streak! You are on fire!`;
+    if (streak === 1) return "Great start! Keep growing your plant.";
+    if (streak >= 10) return "Incredible! Your money plant is thriving!";
+    if (streak >= 5) return "Amazing streak! You're becoming an Oak!";
+    if (streak >= 3) return `${streak}-day streak! Your plant is growing!`;
     return `${streak}-day streak! Keep it going!`;
+  };
+
+  const getOutcomeMessage = () => {
+    if (bothCompleted) {
+      return "You and your partner both completed! You both keep your stakes.";
+    }
+    if (userWon) {
+      return `You won! ${lastSession?.partnerName} owes you ${formatMoney(Math.abs(amountOwed))}.`;
+    }
+    return "Great job completing your session!";
   };
 
   return (
@@ -74,18 +105,54 @@ export default function CompleteScreen() {
             <Text style={styles.checkmark}>Done</Text>
           </View>
           <Text style={styles.title}>Congratulations</Text>
-          <Text style={styles.subtitle}>You completed your focus session</Text>
+          <Text style={styles.subtitle}>You completed your duo session</Text>
         </Animated.View>
 
-        {/* Earnings Card */}
-        <Card style={styles.earningsCard}>
-          <Text style={styles.earningsLabel}>You earned</Text>
-          <Balance
-            amount={lastSession?.actualPayout || 0}
-            size="display"
-            color="gain"
-          />
+        {/* Outcome Card */}
+        <Card style={styles.outcomeCard}>
+          <Text style={styles.outcomeLabel}>
+            {bothCompleted
+              ? "Both Completed"
+              : userWon
+                ? "You Won!"
+                : "Session Complete"}
+          </Text>
+          <Text style={styles.outcomeMessage}>{getOutcomeMessage()}</Text>
+
+          {/* Stake returned */}
+          <View style={styles.stakeRow}>
+            <Text style={styles.stakeLabel}>Stake returned:</Text>
+            <Balance
+              amount={lastSession?.stakeAmount || 0}
+              size="large"
+              color="gain"
+            />
+          </View>
         </Card>
+
+        {/* Settlement Card - if user won */}
+        {userWon && amountOwed < 0 && (
+          <Card style={styles.settlementCard}>
+            <Text style={styles.settlementTitle}>Awaiting Payment</Text>
+            <Text style={styles.settlementText}>
+              {lastSession?.partnerName} should pay you{" "}
+              {formatMoney(Math.abs(amountOwed))} via Venmo
+            </Text>
+            {lastSession?.partnerVenmo && (
+              <Text style={styles.venmoHandle}>{lastSession.partnerVenmo}</Text>
+            )}
+            <View style={styles.settlementButtons}>
+              <Button
+                title="Mark as Received"
+                onPress={handleMarkReceived}
+                variant="primary"
+              />
+            </View>
+            <Text style={styles.settlementNote}>
+              Mark as received once payment is confirmed
+            </Text>
+          </Card>
+        )}
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -96,9 +163,9 @@ export default function CompleteScreen() {
           <View style={styles.statDivider} />
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
-              {formatMoney(user?.totalEarnings || 0, false)}
+              {user?.reputation?.score || 50}
             </Text>
-            <Text style={styles.statLabel}>Total Earned</Text>
+            <Text style={styles.statLabel}>Rep Score</Text>
           </View>
         </View>
 
@@ -156,19 +223,72 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
-  earningsCard: {
+  // Outcome card
+  outcomeCard: {
     alignItems: "center",
     backgroundColor: Colors.gainLight,
     borderWidth: 1,
     borderColor: Colors.gain,
-    paddingVertical: Spacing.xl,
-    marginBottom: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    marginBottom: Spacing.md,
   },
-  earningsLabel: {
+  outcomeLabel: {
+    fontSize: Typography.titleSmall,
+    fontWeight: "600",
+    color: Colors.gain,
+    marginBottom: Spacing.xs,
+  },
+  outcomeMessage: {
+    fontSize: Typography.bodySmall,
+    color: Colors.text,
+    textAlign: "center",
+    marginBottom: Spacing.md,
+  },
+  stakeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  stakeLabel: {
     fontSize: Typography.labelMedium,
     color: Colors.textSecondary,
+  },
+  // Settlement card
+  settlementCard: {
+    alignItems: "center",
+    backgroundColor: Colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    paddingVertical: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  settlementTitle: {
+    fontSize: Typography.titleSmall,
+    fontWeight: "600",
+    color: Colors.text,
     marginBottom: Spacing.sm,
   },
+  settlementText: {
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginBottom: Spacing.sm,
+  },
+  venmoHandle: {
+    fontSize: Typography.bodyMedium,
+    fontWeight: "600",
+    color: Colors.primary,
+    marginBottom: Spacing.md,
+  },
+  settlementButtons: {
+    marginBottom: Spacing.sm,
+  },
+  settlementNote: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+  // Stats
   statsGrid: {
     flexDirection: "row",
     backgroundColor: Colors.backgroundCard,

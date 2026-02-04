@@ -6,6 +6,8 @@ import {
   SafeAreaView,
   TextInput,
   Pressable,
+  Linking,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -15,26 +17,141 @@ import {
   Radius,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
-import { useSessionStore } from "../../src/store/sessionStore";
+import { usePartnerStore } from "../../src/store/partnerStore";
 import { formatMoney } from "../../src/utils/format";
 
 export default function SurrenderScreen() {
   const router = useRouter();
-  const { currentSession, surrenderSession } = useSessionStore();
+  const {
+    activeDuoSession,
+    completeDuoSession,
+    getVenmoPayLink,
+    markSettlementPaid,
+  } = usePartnerStore();
   const [confirmText, setConfirmText] = useState("");
+  const [showPayment, setShowPayment] = useState(false);
 
   const canSurrender = confirmText.toLowerCase() === "quit";
 
   const handleSurrender = () => {
-    if (canSurrender) {
-      surrenderSession();
-      router.replace("/(tabs)");
+    if (canSurrender && activeDuoSession) {
+      // Complete session with user failed, partner completed (assumed)
+      completeDuoSession(false, true);
+      setShowPayment(true);
     }
   };
 
-  if (!currentSession) {
+  const handlePayVenmo = async () => {
+    if (activeDuoSession?.partnerVenmo) {
+      const venmoUrl = getVenmoPayLink(
+        activeDuoSession.stakeAmount,
+        activeDuoSession.partnerVenmo,
+        `NIYAH session - lost to ${activeDuoSession.partnerName}`,
+      );
+
+      try {
+        const canOpen = await Linking.canOpenURL(venmoUrl);
+        if (canOpen) {
+          await Linking.openURL(venmoUrl);
+        } else {
+          // Fallback to web
+          await Linking.openURL(
+            `https://venmo.com/${activeDuoSession.partnerVenmo.replace("@", "")}`,
+          );
+        }
+      } catch (error) {
+        Alert.alert(
+          "Error",
+          "Could not open Venmo. Please pay your partner manually.",
+        );
+      }
+    }
+  };
+
+  const handleMarkPaid = () => {
+    // Mark as paid and go home
+    // Note: In real app, we'd get the session ID from completed session
+    router.replace("/(tabs)");
+  };
+
+  const handleSkipPayment = () => {
+    Alert.alert(
+      "Skip Payment?",
+      "Skipping payment will hurt your reputation score. Other users may not want to partner with you.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Skip Anyway",
+          style: "destructive",
+          onPress: () => router.replace("/(tabs)"),
+        },
+      ],
+    );
+  };
+
+  if (!activeDuoSession && !showPayment) {
     router.replace("/(tabs)");
     return null;
+  }
+
+  // Payment screen after surrender
+  if (showPayment) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>Pay Your Partner</Text>
+            <Text style={styles.subtitle}>
+              You surrendered - time to settle up
+            </Text>
+          </View>
+
+          <Card style={styles.paymentCard}>
+            <Text style={styles.paymentLabel}>You owe</Text>
+            <Text style={styles.paymentAmount}>
+              {formatMoney(activeDuoSession?.stakeAmount || 0)}
+            </Text>
+            <Text style={styles.paymentTo}>
+              to {activeDuoSession?.partnerName}
+            </Text>
+            {activeDuoSession?.partnerVenmo && (
+              <Text style={styles.venmoHandle}>
+                {activeDuoSession.partnerVenmo}
+              </Text>
+            )}
+          </Card>
+
+          <Card style={styles.reputationWarning}>
+            <Text style={styles.reputationTitle}>About Your Reputation</Text>
+            <Text style={styles.reputationText}>
+              Paying promptly builds trust. Users with low reputation scores get
+              excluded from groups. Your current score affects who wants to
+              partner with you.
+            </Text>
+          </Card>
+
+          <View style={styles.footer}>
+            <Button
+              title="Pay via Venmo"
+              onPress={handlePayVenmo}
+              size="large"
+              variant="primary"
+            />
+            <Button
+              title="I Already Paid"
+              onPress={handleMarkPaid}
+              size="large"
+              variant="secondary"
+            />
+            <Pressable onPress={handleSkipPayment} style={styles.skipButton}>
+              <Text style={styles.skipText}>
+                Skip Payment (hurts reputation)
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -55,12 +172,28 @@ export default function SurrenderScreen() {
 
         {/* Loss Warning */}
         <Card style={styles.warningCard}>
-          <Text style={styles.warningLabel}>You will lose</Text>
+          <Text style={styles.warningLabel}>You will owe your partner</Text>
           <Text style={styles.lossAmount}>
-            {formatMoney(currentSession.stakeAmount)}
+            {formatMoney(activeDuoSession?.stakeAmount || 0)}
           </Text>
-          <Text style={styles.warningNote}>
-            Your stake will be forfeited and your streak will reset
+          <View style={styles.partnerInfo}>
+            <Text style={styles.warningNote}>
+              Pay {activeDuoSession?.partnerName} via Venmo
+            </Text>
+            {activeDuoSession?.partnerVenmo && (
+              <Text style={styles.partnerVenmo}>
+                {activeDuoSession.partnerVenmo}
+              </Text>
+            )}
+          </View>
+        </Card>
+
+        {/* Reputation Impact */}
+        <Card style={styles.reputationCard}>
+          <Text style={styles.reputationTitle}>Reputation Impact</Text>
+          <Text style={styles.reputationText}>
+            Surrendering is okay - but not paying hurts your reputation. Pay
+            your partner to maintain trust.
           </Text>
         </Card>
 
@@ -107,7 +240,7 @@ export default function SurrenderScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Button
-            title="Surrender and Lose Stake"
+            title="Surrender and Pay Partner"
             onPress={handleSurrender}
             disabled={!canSurrender}
             variant="danger"
@@ -156,6 +289,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
+  // Warning card
   warningCard: {
     alignItems: "center",
     backgroundColor: Colors.lossLight,
@@ -180,6 +314,78 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: "center",
   },
+  partnerInfo: {
+    alignItems: "center",
+    marginTop: Spacing.sm,
+  },
+  partnerVenmo: {
+    fontSize: Typography.bodyMedium,
+    fontWeight: "600",
+    color: Colors.primary,
+    marginTop: Spacing.xs,
+  },
+  // Payment card (after surrender)
+  paymentCard: {
+    alignItems: "center",
+    backgroundColor: Colors.lossLight,
+    borderWidth: 1,
+    borderColor: Colors.loss,
+    paddingVertical: Spacing.xl,
+    marginBottom: Spacing.md,
+  },
+  paymentLabel: {
+    fontSize: Typography.labelMedium,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+  },
+  paymentAmount: {
+    fontSize: Typography.displayMedium,
+    fontWeight: "700",
+    color: Colors.loss,
+    marginBottom: Spacing.xs,
+  },
+  paymentTo: {
+    fontSize: Typography.bodyMedium,
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
+  venmoHandle: {
+    fontSize: Typography.bodyLarge,
+    fontWeight: "600",
+    color: Colors.primary,
+  },
+  // Reputation cards
+  reputationCard: {
+    backgroundColor: Colors.warningLight,
+    borderWidth: 1,
+    borderColor: Colors.warning,
+    marginBottom: Spacing.md,
+  },
+  reputationWarning: {
+    backgroundColor: Colors.backgroundCard,
+    marginBottom: Spacing.lg,
+  },
+  reputationTitle: {
+    fontSize: Typography.titleSmall,
+    fontWeight: "600",
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
+  reputationText: {
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  // Skip payment
+  skipButton: {
+    alignItems: "center",
+    paddingVertical: Spacing.md,
+  },
+  skipText: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textMuted,
+  },
+  // Alternative suggestions
   alternativeCard: {
     marginBottom: Spacing.lg,
   },

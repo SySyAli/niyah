@@ -8,6 +8,7 @@ import {
   Radius,
 } from "../../src/constants/colors";
 import { Button } from "../../src/components";
+import { GoogleSignInButton } from "../../src/components/GoogleSignInButton";
 
 interface FeatureItemProps {
   number: number;
@@ -116,10 +117,19 @@ export default function WelcomeScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
+          <GoogleSignInButton onSuccess={() => router.replace("/(tabs)")} />
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <Button
-            title="Get Started"
+            title="Get Started with Email"
             onPress={() => router.push("/(auth)/signup")}
             size="large"
+            variant="secondary"
           />
           <Button
             title="I already have an account"
@@ -211,5 +221,20 @@ const styles = StyleSheet.create({
   actions: {
     gap: Spacing.sm,
     marginBottom: Spacing.lg,
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: Spacing.sm,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  dividerText: {
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    marginHorizontal: Spacing.md,
   },
 });

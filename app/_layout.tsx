@@ -3,8 +3,17 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, StyleSheet } from "react-native";
 import { Colors } from "../src/constants/colors";
+import { useAuthStore } from "../src/store/authStore";
 
 export default function RootLayout() {
+  const initialize = useAuthStore((state) => state.initialize);
+
+  useEffect(() => {
+    // Initialize Firebase auth listener
+    const unsubscribe = initialize();
+    return () => unsubscribe();
+  }, []);
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />

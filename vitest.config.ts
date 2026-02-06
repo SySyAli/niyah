@@ -30,7 +30,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
       "react-native": path.resolve(
         __dirname,
-        "./node_modules/react-native-web",
+        "./src/__mocks__/react-native.ts",
       ),
     },
   },

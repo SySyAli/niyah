@@ -1,68 +1,33 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { vi, beforeEach, afterEach } from "vitest";
+import { vi, afterEach } from "vitest";
+import React from "react";
 
 // ============================================================================
 // REACT NATIVE MOCKS
 // ============================================================================
 
-// Mock react-native
-vi.mock("react-native", () => ({
-  Platform: {
-    OS: "ios",
-    select: vi.fn((obj: Record<string, unknown>) => obj.ios ?? obj.default),
-  },
-  StyleSheet: {
-    create: vi.fn(<T extends Record<string, unknown>>(styles: T) => styles),
-    flatten: vi.fn(<T>(style: T) => style),
-  },
-  View: "View",
-  Text: "Text",
-  Pressable: "Pressable",
-  ActivityIndicator: "ActivityIndicator",
-  Animated: {
-    View: "Animated.View",
-    Text: "Animated.Text",
-    Value: vi.fn(() => ({
-      interpolate: vi.fn(() => ({})),
-      setValue: vi.fn(),
-    })),
-    timing: vi.fn(() => ({
-      start: vi.fn((cb?: () => void) => cb?.()),
-    })),
-    spring: vi.fn(() => ({
-      start: vi.fn((cb?: () => void) => cb?.()),
-    })),
-    parallel: vi.fn(() => ({
-      start: vi.fn((cb?: () => void) => cb?.()),
-    })),
-    sequence: vi.fn(() => ({
-      start: vi.fn((cb?: () => void) => cb?.()),
-    })),
-    loop: vi.fn(() => ({
-      start: vi.fn(),
-      stop: vi.fn(),
-    })),
-  },
-  Dimensions: {
-    get: vi.fn(() => ({ width: 375, height: 812 })),
-    addEventListener: vi.fn(() => ({ remove: vi.fn() })),
-  },
-  useWindowDimensions: vi.fn(() => ({ width: 375, height: 812 })),
-  useColorScheme: vi.fn(() => "light"),
-  NativeModules: {},
-}));
+// react-native is mocked via resolve alias in vitest.config.ts
+// pointing to src/__mocks__/react-native.ts
+
+// Helper: create a simple mock component that renders its children
+const mockComponent = (name: string) => {
+  const Component = React.forwardRef(({ children, ...props }: any, ref: any) =>
+    React.createElement(name, { ...props, ref }, children),
+  );
+  Component.displayName = name;
+  return Component;
+};
 
 // Mock react-native-svg
 vi.mock("react-native-svg", () => ({
-  default: "Svg",
-  Svg: "Svg",
-  Circle: "Circle",
-  Rect: "Rect",
-  Path: "Path",
-  G: "G",
-  Defs: "Defs",
-  LinearGradient: "LinearGradient",
-  Stop: "Stop",
+  default: mockComponent("Svg"),
+  Svg: mockComponent("Svg"),
+  Circle: mockComponent("Circle"),
+  Rect: mockComponent("Rect"),
+  Path: mockComponent("Path"),
+  G: mockComponent("G"),
+  Defs: mockComponent("Defs"),
+  LinearGradient: mockComponent("LinearGradient"),
+  Stop: mockComponent("Stop"),
 }));
 
 // Mock expo-haptics
@@ -172,6 +137,30 @@ vi.mock("react-native-gesture-handler", () => ({
   PanGestureHandler: "PanGestureHandler",
   ScrollView: "ScrollView",
   FlatList: "FlatList",
+}));
+
+// Mock @react-native-google-signin/google-signin
+vi.mock("@react-native-google-signin/google-signin", () => ({
+  GoogleSignin: {
+    configure: vi.fn(),
+    hasPlayServices: vi.fn(() => Promise.resolve(true)),
+    signIn: vi.fn(() =>
+      Promise.resolve({ type: "success", data: { idToken: "mock-token" } }),
+    ),
+    signOut: vi.fn(() => Promise.resolve()),
+    getTokens: vi.fn(() =>
+      Promise.resolve({ accessToken: "mock-access-token", idToken: "mock-id" }),
+    ),
+    getCurrentUser: vi.fn(() => null),
+  },
+  statusCodes: {
+    SIGN_IN_CANCELLED: "SIGN_IN_CANCELLED",
+    IN_PROGRESS: "IN_PROGRESS",
+    PLAY_SERVICES_NOT_AVAILABLE: "PLAY_SERVICES_NOT_AVAILABLE",
+  },
+  isSuccessResponse: vi.fn(
+    (response: { type?: string }) => response?.type === "success",
+  ),
 }));
 
 // Mock react-native-safe-area-context

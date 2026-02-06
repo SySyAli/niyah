@@ -1,52 +1,132 @@
 /**
- * Unit Tests for useCountdown.ts
+ * Unit Tests for useCountdown hook
  *
- * Testing Strategy:
- * - Tests hook behavior using direct testing approach
+ * Tests timer behavior: start, stop, reset, completion callback.
+ * Uses @testing-library/react's renderHook since we run in jsdom.
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { useCountdown } from "../../../hooks/useCountdown";
 
-// Since @testing-library/react-native has compatibility issues with Vitest,
-// we test the hook logic through its exported interface
-describe("useCountdown hook behavior", () => {
-  describe("module exports", () => {
-    it("should export useCountdown hook", async () => {
-      const module = await import("../../../hooks/useCountdown");
-      expect(module.useCountdown).toBeDefined();
-      expect(typeof module.useCountdown).toBe("function");
+describe("useCountdown hook", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe("initial state", () => {
+    it("starts with timeRemaining = 0 and isRunning = false", () => {
+      const { result } = renderHook(() => useCountdown());
+
+      expect(result.current.timeRemaining).toBe(0);
+      expect(result.current.isRunning).toBe(false);
+    });
+
+    it("exposes start, stop, and reset functions", () => {
+      const { result } = renderHook(() => useCountdown());
+
+      expect(typeof result.current.start).toBe("function");
+      expect(typeof result.current.stop).toBe("function");
+      expect(typeof result.current.reset).toBe("function");
     });
   });
 
-  describe("hook contract", () => {
-    it("should define expected interface", async () => {
-      const { useCountdown } = await import("../../../hooks/useCountdown");
+  describe("start", () => {
+    it("sets isRunning to true when started", () => {
+      const { result } = renderHook(() => useCountdown());
+      const endTime = new Date(Date.now() + 10000);
 
-      // Verify hook exists and is a function
-      expect(useCountdown).toBeDefined();
-      expect(typeof useCountdown).toBe("function");
+      act(() => {
+        result.current.start(endTime);
+      });
+
+      expect(result.current.isRunning).toBe(true);
+    });
+
+    it("calculates timeRemaining based on endTime", () => {
+      const { result } = renderHook(() => useCountdown());
+      const endTime = new Date(Date.now() + 5000);
+
+      act(() => {
+        result.current.start(endTime);
+      });
+
+      expect(result.current.timeRemaining).toBeGreaterThanOrEqual(4900);
+      expect(result.current.timeRemaining).toBeLessThanOrEqual(5100);
     });
   });
-});
 
-// Integration test: Test that the hook types are correct
-describe("useCountdown types", () => {
-  it("should have correct return type structure", async () => {
-    // This is a type-level test verified at compile time
-    // If this compiles, the types are correct
-    const { useCountdown } = await import("../../../hooks/useCountdown");
+  describe("stop", () => {
+    it("sets isRunning to false", () => {
+      const { result } = renderHook(() => useCountdown());
+      const endTime = new Date(Date.now() + 10000);
 
-    type HookReturn = ReturnType<typeof useCountdown>;
+      act(() => {
+        result.current.start(endTime);
+      });
+      expect(result.current.isRunning).toBe(true);
 
-    // TypeScript will verify these exist
-    const _verifyTypes: HookReturn = {
-      timeRemaining: 0,
-      isRunning: false,
-      start: (_date: Date) => {},
-      stop: () => {},
-      reset: () => {},
-    };
+      act(() => {
+        result.current.stop();
+      });
+      expect(result.current.isRunning).toBe(false);
+    });
+  });
 
-    expect(_verifyTypes).toBeDefined();
+  describe("reset", () => {
+    it("resets timeRemaining to 0 and isRunning to false", () => {
+      const { result } = renderHook(() => useCountdown());
+      const endTime = new Date(Date.now() + 10000);
+
+      act(() => {
+        result.current.start(endTime);
+      });
+
+      act(() => {
+        result.current.reset();
+      });
+
+      expect(result.current.timeRemaining).toBe(0);
+      expect(result.current.isRunning).toBe(false);
+    });
+  });
+
+  describe("completion callback", () => {
+    it("calls onComplete when timer reaches 0", () => {
+      const onComplete = vi.fn();
+      const { result } = renderHook(() => useCountdown({ onComplete }));
+
+      const endTime = new Date(Date.now() + 2000);
+
+      act(() => {
+        result.current.start(endTime);
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(onComplete).toHaveBeenCalled();
+      expect(result.current.isRunning).toBe(false);
+      expect(result.current.timeRemaining).toBe(0);
+    });
+  });
+
+  describe("type contract", () => {
+    it("returns the expected shape", () => {
+      const { result } = renderHook(() => useCountdown());
+
+      expect(result.current).toMatchObject({
+        timeRemaining: expect.any(Number),
+        isRunning: expect.any(Boolean),
+        start: expect.any(Function),
+        stop: expect.any(Function),
+        reset: expect.any(Function),
+      });
+    });
   });
 });

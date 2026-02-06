@@ -32,7 +32,7 @@ yarn-error.*
 .env*.local
 .env
 
-# Firebase config (contains project IDs, not secrets, but excluded for open source)
+# Firebase config
 GoogleService-Info.plist
 google-services.json
 

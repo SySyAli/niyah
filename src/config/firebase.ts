@@ -1,43 +1,46 @@
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
-import { makeRedirectUri } from "expo-auth-session";
-import { Platform } from "react-native";
-WebBrowser.maybeCompleteAuthSession();
+import {
+  GoogleSignin,
+  statusCodes,
+  isSuccessResponse,
+} from "@react-native-google-signin/google-signin";
 
-const GOOGLE_CLIENT_IDS = {
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+// Configure Google Sign-In with the web client ID.
+// The native SDK uses this to get an ID token. On Android, it automatically
+// matches the Android OAuth client ID registered in Google Cloud Console
+// via the app's package name + SHA-1 signing certificate.
+GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  offlineAccess: true,
+});
+
+// Sign in with Google using the native SDK.
+// Returns an access token (via getTokens) for fetching user info.
+export const signInWithGoogle = async (): Promise<string> => {
+  // Check if Play Services are available (Android only, no-op on iOS)
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+  const response = await GoogleSignin.signIn();
+
+  if (!isSuccessResponse(response)) {
+    throw new Error("Google Sign-In was cancelled");
+  }
+
+  // Get the access token
+  const tokens = await GoogleSignin.getTokens();
+  if (!tokens.accessToken) {
+    throw new Error("Failed to get access token from Google");
+  }
+
+  return tokens.accessToken;
 };
 
-// Check if Google auth is configured for the current platform
-const googleAuthConfigured =
-  (Platform.OS === "android" && !!GOOGLE_CLIENT_IDS.androidClientId) ||
-  (Platform.OS === "ios" && !!GOOGLE_CLIENT_IDS.iosClientId) ||
-  (Platform.OS === "web" && !!GOOGLE_CLIENT_IDS.webClientId);
-
-// Hook for Google authentication
-export const useGoogleAuth = () => {
-  const redirectUri = makeRedirectUri({
-    scheme: "niyah",
-  });
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    // Use webClientId as a fallback so the hook doesn't throw when
-    // a platform-specific client ID is missing.
-    iosClientId: GOOGLE_CLIENT_IDS.iosClientId || GOOGLE_CLIENT_IDS.webClientId,
-    androidClientId:
-      GOOGLE_CLIENT_IDS.androidClientId || GOOGLE_CLIENT_IDS.webClientId,
-    webClientId: GOOGLE_CLIENT_IDS.webClientId,
-  });
-
-  return {
-    request,
-    response,
-    promptAsync,
-    // Only mark as ready when the platform's actual client ID is configured
-    isReady: !!request && googleAuthConfigured,
-  };
+export const signOutGoogle = async () => {
+  try {
+    await GoogleSignin.signOut();
+  } catch (error) {
+    console.error("Google Sign-Out error:", error);
+  }
 };
 
 // Extract user info from Google token
@@ -57,6 +60,8 @@ export const getGoogleUserInfo = async (accessToken: string) => {
     throw error;
   }
 };
+
+export { statusCodes };
 
 export interface GoogleUser {
   id: string;

@@ -21,34 +21,37 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "googleServicesFile": "./GoogleService-Info.plist"
-    }
-  },
-  "android": {
-    "adaptiveIcon": {
-      "foregroundImage": "./assets/adaptive-icon.png",
-      "backgroundColor": "#1a1a2e"
     },
-    "package": "com.niyah.app",
-    "edgeToEdgeEnabled": true
-  },
-  "web": {
-    "favicon": "./assets/favicon.png",
-    "bundler": "metro"
-  },
-  "plugins": [
-    "expo-router",
-    "@react-native-google-signin/google-signin",
-    {
-      "iosUrlScheme": "com.googleusercontent.apps._some_id_here_"
-    }
-  ],
-  "experiments": {
-    "typedRoutes": true
-  },
-  "extra": {
-    "router": {},
-    "eas": {
-      "projectId": "70318998-fbd4-4d83-939f-39190c8cfdb4"
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "package": "com.niyah.app",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps._some_id_here_"
+        }
+      ],
+      "./plugins/withFollyCoroutinesFix"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "70318998-fbd4-4d83-939f-39190c8cfdb4"
+      }
     }
   }
 }

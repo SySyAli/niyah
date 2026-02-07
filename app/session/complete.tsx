@@ -1,12 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  Linking,
-  Pressable,
-} from "react-native";
+import { View, Text, StyleSheet, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
@@ -23,8 +16,7 @@ import { formatMoney } from "../../src/utils/format";
 export default function CompleteScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const { duoSessionHistory, getVenmoPayLink, markSettlementReceived } =
-    usePartnerStore();
+  const { duoSessionHistory, markSettlementReceived } = usePartnerStore();
   const [showConfetti, setShowConfetti] = useState(true);
 
   const lastSession = duoSessionHistory[0];
@@ -56,7 +48,7 @@ export default function CompleteScreen() {
     // Hide confetti after animation completes
     const timer = setTimeout(() => setShowConfetti(false), 4000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [opacityAnim, scaleAnim]);
 
   const handleDone = () => {
     router.replace("/(tabs)");

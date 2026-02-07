@@ -42,7 +42,7 @@ const FeatureItem: React.FC<FeatureItemProps> = ({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [delay]);
+  }, [delay, opacity, translateY]);
 
   return (
     <Animated.View
@@ -69,7 +69,7 @@ export default function WelcomeScreen() {
       duration: 500,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [headerOpacity]);
 
   return (
     <SafeAreaView style={styles.container}>

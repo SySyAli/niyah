@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
-import { Colors, Typography, Spacing, Radius } from "../constants/colors";
+import { Colors, Typography, Spacing } from "../constants/colors";
 import { Partner } from "../types";
 
 interface MoneyPlantProps {
@@ -44,7 +44,7 @@ const CoinLeaf: React.FC<CoinLeafProps> = ({
         }),
       ]),
     ]).start();
-  }, []);
+  }, [delay, rotateAnim, scaleAnim]);
 
   const rotation = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -84,7 +84,7 @@ const PartnerNode: React.FC<{
       delay: index * 200,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim, index]);
 
   return (
     <Animated.View

@@ -22,12 +22,8 @@ import { formatMoney } from "../../src/utils/format";
 
 export default function SurrenderScreen() {
   const router = useRouter();
-  const {
-    activeDuoSession,
-    completeDuoSession,
-    getVenmoPayLink,
-    markSettlementPaid,
-  } = usePartnerStore();
+  const { activeDuoSession, completeDuoSession, getVenmoPayLink } =
+    usePartnerStore();
   const [confirmText, setConfirmText] = useState("");
   const [showPayment, setShowPayment] = useState(false);
 
@@ -59,7 +55,7 @@ export default function SurrenderScreen() {
             `https://venmo.com/${activeDuoSession.partnerVenmo.replace("@", "")}`,
           );
         }
-      } catch (error) {
+      } catch {
         Alert.alert(
           "Error",
           "Could not open Venmo. Please pay your partner manually.",
@@ -93,7 +89,7 @@ export default function SurrenderScreen() {
     if (!activeDuoSession && !showPayment) {
       router.replace("/(tabs)");
     }
-  }, [activeDuoSession, showPayment]);
+  }, [activeDuoSession, showPayment, router]);
 
   if (!activeDuoSession && !showPayment) {
     return null;

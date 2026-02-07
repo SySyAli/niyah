@@ -97,7 +97,7 @@ describe("Session Flow Integration Tests", () => {
       expect(finalAuthState.user?.completedSessions).toBe(1);
 
       // Verify wallet updated (should have net gain)
-      const netGain = CADENCES.daily.basePayout - CADENCES.daily.stake;
+      const netGain = CADENCES.daily.stake - CADENCES.daily.stake;
       expect(useWalletStore.getState().balance).toBe(initialBalance + netGain);
     });
   });
@@ -226,12 +226,12 @@ describe("Session Flow Integration Tests", () => {
         useSessionStore.getState().completeSession();
       });
 
-      // Net gain from daily: $10 - $5 = $5
-      const dailyNet = CADENCES.daily.basePayout - CADENCES.daily.stake;
+      // stickK model: payout = stake, net gain = 0
+      const dailyNet = CADENCES.daily.stake - CADENCES.daily.stake;
 
       expect(useWalletStore.getState().balance).toBe(initialBalance + dailyNet);
       expect(useAuthStore.getState().user?.totalEarnings).toBe(
-        CADENCES.daily.basePayout,
+        CADENCES.daily.stake,
       );
 
       // Complete weekly session
@@ -242,12 +242,12 @@ describe("Session Flow Integration Tests", () => {
         useSessionStore.getState().completeSession();
       });
 
-      const weeklyNet = CADENCES.weekly.basePayout - CADENCES.weekly.stake;
+      const weeklyNet = CADENCES.weekly.stake - CADENCES.weekly.stake;
       const totalNet = dailyNet + weeklyNet;
 
       expect(useWalletStore.getState().balance).toBe(initialBalance + totalNet);
       expect(useAuthStore.getState().user?.totalEarnings).toBe(
-        CADENCES.daily.basePayout + CADENCES.weekly.basePayout,
+        CADENCES.daily.stake + CADENCES.weekly.stake,
       );
     });
 
@@ -450,7 +450,7 @@ describe("Session Flow Integration Tests", () => {
       expect(useAuthStore.getState().user?.completedSessions).toBe(10);
 
       // Verify financial consistency
-      const netPerSession = CADENCES.daily.basePayout - CADENCES.daily.stake;
+      const netPerSession = CADENCES.daily.stake - CADENCES.daily.stake;
       expect(useWalletStore.getState().balance).toBe(
         initialBalance + netPerSession * 10,
       );

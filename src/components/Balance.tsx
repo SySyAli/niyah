@@ -33,7 +33,7 @@ export const Balance: React.FC<BalanceProps> = ({
         useNativeDriver: true,
       }).start();
     }
-  }, [animate]);
+  }, [animate, opacityAnim]);
 
   const getColor = () => {
     if (color === "gain") return Colors.gain;

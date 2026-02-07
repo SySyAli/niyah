@@ -56,6 +56,15 @@ describe("sessionStore", () => {
         completedSessions: 0,
         totalEarnings: 0,
         createdAt: new Date(),
+        reputation: {
+          score: 50,
+          level: "sapling",
+          paymentsCompleted: 0,
+          paymentsMissed: 0,
+          totalOwedPaid: 0,
+          totalOwedMissed: 0,
+          lastUpdated: new Date(),
+        },
       },
       isAuthenticated: true,
       isLoading: false,
@@ -92,7 +101,7 @@ describe("sessionStore", () => {
         expect(session).not.toBeNull();
         expect(session?.cadence).toBe("daily");
         expect(session?.stakeAmount).toBe(CADENCES.daily.stake);
-        expect(session?.potentialPayout).toBe(CADENCES.daily.basePayout);
+        expect(session?.potentialPayout).toBe(CADENCES.daily.stake);
       });
 
       it("should set demo duration in DEMO_MODE", () => {
@@ -125,7 +134,7 @@ describe("sessionStore", () => {
         const session = useSessionStore.getState().currentSession;
         expect(session?.cadence).toBe("weekly");
         expect(session?.stakeAmount).toBe(CADENCES.weekly.stake);
-        expect(session?.potentialPayout).toBe(CADENCES.weekly.basePayout);
+        expect(session?.potentialPayout).toBe(CADENCES.weekly.stake);
       });
     });
 
@@ -140,7 +149,7 @@ describe("sessionStore", () => {
         const session = useSessionStore.getState().currentSession;
         expect(session?.cadence).toBe("monthly");
         expect(session?.stakeAmount).toBe(CADENCES.monthly.stake);
-        expect(session?.potentialPayout).toBe(CADENCES.monthly.basePayout);
+        expect(session?.potentialPayout).toBe(CADENCES.monthly.stake);
       });
     });
 
@@ -550,7 +559,7 @@ describe("sessionStore", () => {
       });
 
       // Balance should be initial + (payout - stake) = initial + net gain
-      const netGain = CADENCES.daily.basePayout - CADENCES.daily.stake;
+      const netGain = CADENCES.daily.stake - CADENCES.daily.stake;
       expect(useWalletStore.getState().balance).toBe(initialBalance + netGain);
       expect(useAuthStore.getState().user?.currentStreak).toBe(1);
     });

@@ -22,14 +22,12 @@ import { CADENCES } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
 
 interface CadenceCardProps {
-  cadenceKey: string;
   config: (typeof CADENCES)[keyof typeof CADENCES];
   canAfford: boolean;
   onPress: () => void;
 }
 
 const CadenceCard: React.FC<CadenceCardProps> = ({
-  cadenceKey,
   config,
   canAfford,
   onPress,
@@ -108,7 +106,7 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
 
 export default function SessionTabScreen() {
   const router = useRouter();
-  const { activeDuoSession, currentPartner } = usePartnerStore();
+  const { activeDuoSession } = usePartnerStore();
   const balance = useWalletStore((state) => state.balance);
 
   if (activeDuoSession) {
@@ -163,7 +161,6 @@ export default function SessionTabScreen() {
           {Object.entries(CADENCES).map(([key, config]) => (
             <CadenceCard
               key={key}
-              cadenceKey={key}
               config={config}
               canAfford={balance >= config.stake}
               onPress={() => router.push(`/session/select?cadence=${key}`)}

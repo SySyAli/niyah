@@ -63,7 +63,7 @@ const ConfettiPiece: React.FC<ConfettiPieceProps> = ({
         ),
       ]),
     ]).start();
-  }, []);
+  }, [delay, fallAnim, opacityAnim, rotateAnim, swayAnim]);
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],

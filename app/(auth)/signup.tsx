@@ -37,7 +37,7 @@ export default function SignupScreen() {
     try {
       await signup(email, password, name);
       router.replace("/(tabs)");
-    } catch (e) {
+    } catch {
       setError("Something went wrong. Please try again.");
     }
   };

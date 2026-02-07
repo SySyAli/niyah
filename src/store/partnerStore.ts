@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Partner, DuoSession, CadenceType, UserReputation } from "../types";
+import { Partner, DuoSession, CadenceType } from "../types";
 import { CADENCES, DEMO_MODE } from "../constants/config";
 import { useAuthStore } from "./authStore";
 import { useWalletStore } from "./walletStore";
@@ -148,7 +148,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
     // Determine outcome and settlement
     let settlementStatus: DuoSession["settlementStatus"] = undefined;
-    let amountOwed = 0;
+    let amountOwed: number;
 
     if (userCompleted && !partnerCompleted) {
       // User wins - partner owes user

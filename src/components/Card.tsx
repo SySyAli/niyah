@@ -38,7 +38,7 @@ export const Card: React.FC<CardProps> = ({
         useNativeDriver: true,
       }).start();
     }
-  }, [animate, delay]);
+  }, [animate, delay, opacityAnim]);
 
   const handlePressIn = () => {
     if (onPress) {

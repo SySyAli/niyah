@@ -22,13 +22,14 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       const accessToken = await signInWithGoogle();
       await loginWithGoogle(accessToken);
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string };
       // Don't show alerts for user-initiated cancellations
-      if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
+      if (err?.code === statusCodes.SIGN_IN_CANCELLED) {
         // User cancelled, do nothing
-      } else if (error?.code === statusCodes.IN_PROGRESS) {
+      } else if (err?.code === statusCodes.IN_PROGRESS) {
         // Sign-in already in progress
-      } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      } else if (err?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         Alert.alert(
           "Google Play Services Required",
           "Please install or update Google Play Services to sign in with Google.",
@@ -37,9 +38,9 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         console.error("Google Sign-In failed:", error);
         Alert.alert(
           "Sign In Failed",
-          error.message || "Unable to sign in with Google. Please try again.",
+          err.message || "Unable to sign in with Google. Please try again.",
         );
-        onError?.(error);
+        onError?.(error instanceof Error ? error : new Error(String(error)));
       }
     } finally {
       setIsLoading(false);

@@ -17,7 +17,6 @@ import {
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
-import { usePartnerStore } from "../../src/store/partnerStore";
 import { CADENCES, CadenceId, DEMO_MODE } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
 
@@ -110,8 +109,6 @@ export default function SelectCadenceScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const balance = useWalletStore((state) => state.balance);
-  const { currentPartner } = usePartnerStore();
-
   const [selectedCadence, setSelectedCadence] = useState<CadenceId>(
     (params.cadence as CadenceId) || "daily",
   );

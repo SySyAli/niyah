@@ -149,7 +149,7 @@ export const AmountDisplay: React.FC<AmountDisplayProps> = ({
       ]).start(() => blink());
     };
     blink();
-  }, []);
+  }, [cursorOpacity]);
 
   const displayAmount = amount || placeholder;
   const isEmpty = !amount;

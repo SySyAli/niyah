@@ -29,7 +29,7 @@ export const Timer: React.FC<TimerProps> = ({
       duration: 400,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [opacityAnim]);
 
   const getTimerSize = () => {
     switch (size) {

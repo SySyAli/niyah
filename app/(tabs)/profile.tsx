@@ -27,7 +27,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, setVenmoHandle } = useAuthStore();
   const { balance, transactions, pendingWithdrawal } = useWalletStore();
-  const { partners, duoSessionHistory } = usePartnerStore();
+  const { partners } = usePartnerStore();
   const [showVenmoInput, setShowVenmoInput] = useState(false);
   const [venmoInput, setVenmoInput] = useState(user?.venmoHandle || "");
 

@@ -119,7 +119,7 @@ const AnimatedTabIcon: React.FC<AnimatedTabIconProps> = ({
         useNativeDriver: true,
       }).start();
     }
-  }, [focused]);
+  }, [focused, opacityAnim, scaleAnim]);
 
   return (
     <View style={styles.iconWrapper}>

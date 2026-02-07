@@ -6,7 +6,6 @@ import {
   SafeAreaView,
   Pressable,
   ScrollView,
-  Image,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -17,7 +16,6 @@ import {
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
-import { useAuthStore } from "../../src/store/authStore";
 import {
   CADENCES,
   CadenceId,
@@ -39,7 +37,6 @@ export default function ConfirmSessionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { currentPartner, startDuoSession } = usePartnerStore();
-  const user = useAuthStore((state) => state.user);
 
   const cadence = (params.cadence as CadenceId) || "daily";
   const config = CADENCES[cadence];
@@ -50,6 +47,7 @@ export default function ConfirmSessionScreen() {
       router.replace("/session/active");
     } else {
       // No partner selected - go to partner selection
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.push("/session/partner" as any);
     }
   };
@@ -116,6 +114,7 @@ export default function ConfirmSessionScreen() {
             </View>
             <Pressable
               style={styles.changePartnerButton}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onPress={() => router.push("/session/partner" as any)}
             >
               <Text style={styles.changePartnerText}>Change Partner</Text>
@@ -126,6 +125,7 @@ export default function ConfirmSessionScreen() {
             <Text style={styles.noPartnerText}>No partner selected</Text>
             <Button
               title="Select Partner"
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onPress={() => router.push("/session/partner" as any)}
               variant="secondary"
             />

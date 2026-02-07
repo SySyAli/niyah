@@ -30,7 +30,7 @@ export default function ActiveSessionScreen() {
     } else {
       router.replace("/(tabs)");
     }
-  }, [activeDuoSession]);
+  }, [activeDuoSession, router, start]);
 
   if (!activeDuoSession) {
     return null;

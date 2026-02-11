@@ -20,6 +20,9 @@ export interface User {
   reputation: UserReputation;
   venmoHandle?: string; // For settlements
   profileImage?: string;
+  phoneNumber?: string;
+  phoneVerified?: boolean;
+  authProvider?: "email" | "google" | "apple";
 }
 
 // Social credit system - tracks payment reliability

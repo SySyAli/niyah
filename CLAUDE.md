@@ -293,6 +293,46 @@ const { initPaymentSheet, presentPaymentSheet } = useStripe();
 - Demo (test mode): 1-2 days
 - Production (real payments): 1-2 weeks (includes business verification)
 
+#### Stripe Connect Architecture (Production Plan)
+
+Instead of handling money directly, use **Stripe Connect Express** so Stripe manages KYC, bank accounts, and payouts:
+
+**Required Server Endpoints (Firebase Cloud Functions):**
+
+| Endpoint                             | Purpose                                           |
+| ------------------------------------ | ------------------------------------------------- |
+| `POST /stripe/create-account`        | Create Stripe Connect Express account for user    |
+| `POST /stripe/account-link`          | Generate onboarding URL for identity verification |
+| `POST /stripe/create-payment-intent` | Charge user's payment method (deposit/stake)      |
+| `POST /stripe/create-transfer`       | Transfer winnings to user's connected account     |
+| `GET /stripe/account-status`         | Check if user's account is verified               |
+| `POST /stripe/create-payout`         | Trigger payout from connected account to bank     |
+
+**Client-Side Flow:**
+
+```
+1. User signs up → create Stripe Connect Express account (server)
+2. User taps "Add Payment Method" → Stripe AccountLink URL opens in WebView
+   → Stripe handles: SSN, bank account, identity verification
+   → User never enters sensitive data in our app
+3. User deposits → PaymentIntent created (server) → PaymentSheet (client)
+4. User wins session → Transfer from platform to user's connected account (server)
+5. User requests withdrawal → Payout from connected account to bank (server)
+```
+
+**Key Dependencies:**
+
+- `@stripe/stripe-react-native` — client SDK (already evaluated)
+- Firebase Cloud Functions — server-side Stripe API calls
+- Stripe Dashboard — manage accounts, disputes, compliance
+
+**Why This Avoids Money Transmitter Issues:**
+
+- Stripe is the licensed money transmitter, not Niyah
+- Niyah never custodies funds directly
+- All KYC/AML compliance handled by Stripe
+- Platform charges are "service fees" through Stripe's infrastructure
+
 ---
 
 ### 3. Legal & Regulatory

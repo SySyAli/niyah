@@ -17,6 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.niyah.app",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -42,6 +43,7 @@
           "iosUrlScheme": "com.googleusercontent.apps._some_id_here_"
         }
       ],
+      "expo-apple-authentication",
       "./plugins/withFollyCoroutinesFix"
     ],
     "experiments": {

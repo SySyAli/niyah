@@ -12,6 +12,12 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: (accessToken: string) => Promise<void>;
+  loginWithApple: (
+    identityToken: string,
+    name?: string,
+    email?: string,
+  ) => Promise<void>;
+  verifyPhone: (phoneNumber: string) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   updateReputation: (updates: Partial<UserReputation>) => void;
@@ -52,6 +58,7 @@ const createUserFromGoogle = (googleUser: GoogleUser): User => ({
   totalEarnings: 0,
   createdAt: new Date(),
   reputation: createInitialReputation(),
+  authProvider: "google",
 });
 
 // Mock user for demo (email/password)
@@ -67,6 +74,7 @@ const createMockUser = (email: string, name: string): User => ({
   totalEarnings: 0,
   createdAt: new Date(),
   reputation: createInitialReputation(),
+  authProvider: "email",
 });
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -106,6 +114,46 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       set({ isLoading: false });
       throw error;
+    }
+  },
+
+  loginWithApple: async (
+    identityToken: string,
+    name?: string,
+    email?: string,
+  ) => {
+    set({ isLoading: true });
+
+    // For demo: create a user from Apple credential info
+    // In production: validate identityToken with Apple's servers via Firebase
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    const user: User = {
+      id: `apple_${Math.random().toString(36).substr(2, 9)}`,
+      email: email || "apple-user@icloud.com",
+      name: name || "Apple User",
+      balance: INITIAL_BALANCE,
+      currentStreak: 0,
+      longestStreak: 0,
+      totalSessions: 0,
+      completedSessions: 0,
+      totalEarnings: 0,
+      createdAt: new Date(),
+      reputation: createInitialReputation(),
+      authProvider: "apple",
+    };
+
+    set({ user, isAuthenticated: true, isLoading: false });
+  },
+
+  verifyPhone: async (phoneNumber: string) => {
+    // For demo: mock phone verification
+    // In production: use Firebase Phone Auth to send SMS OTP
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const { user } = get();
+    if (user) {
+      set({ user: { ...user, phoneNumber, phoneVerified: true } });
     }
   },
 

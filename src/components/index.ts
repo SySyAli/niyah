@@ -5,3 +5,4 @@ export { Timer, InlineTimer } from "./Timer";
 export { NumPad, AmountDisplay } from "./NumPad";
 export { Confetti } from "./Confetti";
 export { MoneyPlant } from "./MoneyPlant";
+export { OTPInput } from "./OTPInput";

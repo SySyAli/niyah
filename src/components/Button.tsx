@@ -9,7 +9,7 @@ import {
   Animated,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Colors, Radius, Typography } from "../constants/colors";
+import { Colors, Radius, Typography, FontWeight } from "../constants/colors";
 
 interface ButtonProps {
   title: string;
@@ -78,17 +78,17 @@ export const Button: React.FC<ButtonProps> = ({
     if (disabled) return Colors.textTertiary;
     switch (variant) {
       case "primary":
-        return Colors.background;
+        return Colors.white;
       case "secondary":
         return Colors.text;
       case "danger":
-        return Colors.text;
+        return Colors.white;
       case "ghost":
         return Colors.primary;
       case "outline":
         return Colors.text;
       default:
-        return Colors.background;
+        return Colors.white;
     }
   };
 
@@ -136,7 +136,7 @@ export const Button: React.FC<ButtonProps> = ({
       >
         {loading ? (
           <ActivityIndicator
-            color={variant === "primary" ? Colors.background : Colors.text}
+            color={variant === "primary" ? Colors.white : Colors.text}
             size="small"
           />
         ) : (
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   text: {
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     letterSpacing: 0.3,
   },
 });

@@ -1,3 +1,6 @@
+export { ContinuousScene } from "./ContinuousScene";
+
+// Legacy individual scenes (kept for reference, no longer used in onboarding)
 export { GardenScene } from "./GardenScene";
 export { StakeScene } from "./StakeScene";
 export { ShieldScene } from "./ShieldScene";

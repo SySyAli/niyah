@@ -14,6 +14,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.headlineMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   },
   cadenceName: {
     fontSize: Typography.titleLarge,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   duoBadge: {
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
   duoBadgeText: {
     color: Colors.primary,
     fontSize: Typography.labelSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
   },
   outcomeHint: {
     fontSize: Typography.labelSmall,
@@ -280,12 +281,12 @@ const styles = StyleSheet.create({
   },
   stakeValue: {
     fontSize: Typography.headlineSmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   earnValue: {
     fontSize: Typography.headlineSmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.gain,
   },
   arrowContainer: {
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     color: Colors.loss,
     fontSize: Typography.labelSmall,
     textAlign: "center",
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   // Active session styles
   activeHeader: {
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
   },
   activeTitle: {
     fontSize: Typography.titleLarge,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   activeSubtitle: {
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
   },
   howTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
   },
   stepNumberText: {
     fontSize: Typography.labelSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.textSecondary,
   },
   stepText: {

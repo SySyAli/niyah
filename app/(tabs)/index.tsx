@@ -14,6 +14,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Card, Balance, Button, MoneyPlant } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: Typography.headlineMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
     marginTop: 2,
   },
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
   },
   changeText: {
     fontSize: Typography.bodySmall,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   changePositive: {
     color: Colors.gain,
@@ -341,7 +342,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: Colors.background,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     fontSize: Typography.bodySmall,
   },
   actionButtonTextSecondary: {
@@ -370,12 +371,12 @@ const styles = StyleSheet.create({
   activeSessionLabel: {
     fontSize: Typography.labelSmall,
     color: Colors.primary,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     letterSpacing: 1,
   },
   activeSessionText: {
     fontSize: Typography.bodyLarge,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginTop: 2,
   },
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
   },
   activeSessionArrow: {
     fontSize: Typography.bodySmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.primary,
   },
   ctaCard: {
@@ -396,7 +397,7 @@ const styles = StyleSheet.create({
   },
   ctaTitle: {
     fontSize: Typography.titleLarge,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   ctaSubtitle: {
@@ -417,7 +418,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: Typography.headlineSmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   statLabel: {
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     fontSize: Typography.bodyMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   activityDate: {
@@ -474,12 +475,12 @@ const styles = StyleSheet.create({
   },
   activityEarned: {
     fontSize: Typography.bodyMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.gain,
   },
   activityLost: {
     fontSize: Typography.bodyMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.loss,
   },
   statusBadge: {
@@ -495,11 +496,11 @@ const styles = StyleSheet.create({
   statusSuccess: {
     fontSize: Typography.labelSmall,
     color: Colors.gain,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   statusFailed: {
     fontSize: Typography.labelSmall,
     color: Colors.loss,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
 });

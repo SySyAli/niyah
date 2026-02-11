@@ -103,12 +103,12 @@ export const Confetti: React.FC<ConfettiProps> = ({
   count = 50,
   colors = [
     Colors.primary,
-    Colors.gain,
-    "#FFD700", // Gold
-    "#FF6B6B", // Coral
-    "#4ECDC4", // Teal
-    "#A78BFA", // Purple
-    "#F472B6", // Pink
+    Colors.primaryLight,
+    Colors.accentGold, // Dark goldenrod
+    Colors.accentClay, // Deep clay red
+    "#2A6F97", // Deep teal-blue
+    Colors.accent, // Deep plum
+    "#8B6914", // Dark amber
   ],
 }) => {
   const pieces = Array.from({ length: count }, (_, i) => ({

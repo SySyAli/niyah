@@ -1,59 +1,68 @@
-// NIYAH Color System - Warm, earthy tones with green accent
-// Clean, minimal, calming aesthetic
+// NIYAH Color System - Dark, deep earth tones
+// Rich, grounded, premium feel — dark greens, deep blues, clay reds
 
 export const Colors = {
-  // Backgrounds - Warm beige/tan tones
-  background: "#C9C2B4",
-  backgroundElevated: "#D4CEC1",
-  backgroundCard: "#DED9CD",
-  backgroundSecondary: "#E8E4DA",
-  backgroundTertiary: "#F2EFE8",
+  // Backgrounds - Deep, dark earth tones
+  background: "#1A1714", // Very dark warm brown (almost black)
+  backgroundElevated: "#252019", // Slightly lighter dark brown
+  backgroundCard: "#2E2820", // Card surface — dark clay
+  backgroundSecondary: "#3A3228", // Secondary surface — warm dark
+  backgroundTertiary: "#4A4035", // Tertiary — muted earth
 
-  // Primary brand color - Natural green (growth/money)
-  primary: "#7CB564",
-  primaryDark: "#5A9A42",
-  primaryLight: "#9BC887",
-  primaryMuted: "rgba(124, 181, 100, 0.20)",
+  // Primary brand color - Deep forest green
+  primary: "#2D6A4F", // Deep forest green
+  primaryDark: "#1B4332", // Darker green
+  primaryLight: "#40916C", // Lighter forest green
+  primaryMuted: "rgba(45, 106, 79, 0.25)",
 
-  // Text hierarchy - Dark for contrast on light bg
-  text: "#1A1A1A",
-  textPrimary: "#1A1A1A",
-  textSecondary: "#4A4A4A",
-  textTertiary: "#6B6B6B",
-  textMuted: "#8C8C8C",
+  // Accent colors - Deep earth palette
+  accent: "#5C415D", // Deep plum/mauve
+  accentBlue: "#1B3A4B", // Deep ocean blue
+  accentClay: "#8B2500", // Deep clay red
+  accentGold: "#B8860B", // Dark goldenrod
+
+  // Text hierarchy - Light for contrast on dark bg
+  text: "#F2EDE4", // Warm off-white
+  textPrimary: "#F2EDE4", // Warm off-white
+  textSecondary: "#C4BAA8", // Muted sand
+  textTertiary: "#9A8E7A", // Dim earth
+  textMuted: "#6B6156", // Very dim
 
   // Money colors (critical for financial UI)
-  gain: "#7CB564",
-  gainLight: "rgba(124, 181, 100, 0.15)",
-  loss: "#D64545",
-  lossLight: "rgba(214, 69, 69, 0.15)",
+  gain: "#40916C", // Forest green (positive)
+  gainLight: "rgba(64, 145, 108, 0.20)",
+  loss: "#8B2500", // Deep clay red (negative)
+  lossLight: "rgba(139, 37, 0, 0.20)",
 
   // Status colors
-  success: "#7CB564",
-  warning: "#E6A23C",
-  warningLight: "rgba(230, 162, 60, 0.15)",
-  danger: "#D64545",
-  dangerLight: "rgba(214, 69, 69, 0.15)",
-  info: "#5B8DEF",
-  infoLight: "rgba(91, 141, 239, 0.15)",
+  success: "#40916C", // Forest green
+  warning: "#B8860B", // Dark goldenrod
+  warningLight: "rgba(184, 134, 11, 0.20)",
+  danger: "#8B2500", // Deep clay red
+  dangerLight: "rgba(139, 37, 0, 0.20)",
+  info: "#1B3A4B", // Deep ocean blue
+  infoLight: "rgba(27, 58, 75, 0.20)",
 
   // Interactive elements
-  buttonPrimary: "#7CB564",
-  buttonSecondary: "#DED9CD",
-  buttonDisabled: "#B8B2A5",
+  buttonPrimary: "#2D6A4F", // Deep forest green
+  buttonSecondary: "#3A3228", // Warm dark
+  buttonDisabled: "#4A4035", // Muted earth
 
-  // Borders - subtle dividers
-  border: "#B8B2A5",
-  borderLight: "#C9C2B4",
-  borderFocused: "#7CB564",
+  // Borders - subtle dividers on dark
+  border: "#4A4035", // Warm dark border
+  borderLight: "#3A3228", // Subtle border
+  borderFocused: "#40916C", // Forest green focus
 
   // Overlays
-  overlay: "rgba(0, 0, 0, 0.5)",
-  overlayLight: "rgba(0, 0, 0, 0.3)",
+  overlay: "rgba(0, 0, 0, 0.6)",
+  overlayLight: "rgba(0, 0, 0, 0.4)",
 
   // Special
-  shimmer: "#DED9CD",
-  skeleton: "#D4CEC1",
+  shimmer: "#3A3228",
+  skeleton: "#2E2820",
+
+  // White (for use on primary-colored buttons etc.)
+  white: "#FFFFFF",
 } as const;
 
 // Spacing system (8px grid)
@@ -92,6 +101,16 @@ export const Typography = {
   labelLarge: 14,
   labelMedium: 12,
   labelSmall: 11,
+} as const;
+
+// Font weights - bolder across the board
+// SF Pro is the system font on iOS, applied automatically
+export const FontWeight = {
+  regular: "500" as const, // Medium (was 400)
+  medium: "600" as const, // Semibold (was 500)
+  semibold: "700" as const, // Bold (was 600)
+  bold: "800" as const, // Heavy (was 700)
+  heavy: "900" as const, // Black (was 800)
 } as const;
 
 // Border radius

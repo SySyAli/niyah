@@ -78,7 +78,7 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
     return (
       <AppleAuthentication.AppleAuthenticationButton
         buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
         cornerRadius={28}
         style={styles.compactButton}
         onPress={handlePress}
@@ -89,7 +89,7 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
   return (
     <AppleAuthentication.AppleAuthenticationButton
       buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-      buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+      buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
       cornerRadius={Radius.md}
       style={styles.fullButton}
       onPress={handlePress}

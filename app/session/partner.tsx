@@ -14,6 +14,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
   backText: {
     color: Colors.textSecondary,
     fontSize: Typography.bodyLarge,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   titleSection: {
     alignItems: "center",
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.headlineMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -290,7 +291,7 @@ const styles = StyleSheet.create({
   },
   partnerInitial: {
     fontSize: Typography.titleLarge,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.primary,
   },
   partnerInfo: {
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   },
   partnerName: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
   },
   checkmarkText: {
     fontSize: Typography.labelSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   venmoRow: {
@@ -348,7 +349,7 @@ const styles = StyleSheet.create({
   venmoHandle: {
     fontSize: Typography.labelSmall,
     color: Colors.primary,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   emptyCard: {
     alignItems: "center",
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: Typography.titleMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
@@ -375,14 +376,14 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: Typography.bodyMedium,
     color: Colors.primary,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
   },
   inviteCard: {
     marginBottom: Spacing.lg,
   },
   inviteTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
@@ -405,7 +406,7 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },

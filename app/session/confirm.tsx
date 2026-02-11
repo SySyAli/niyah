@@ -13,6 +13,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
   backText: {
     color: Colors.textSecondary,
     fontSize: Typography.bodyLarge,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   titleSection: {
     alignItems: "center",
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.headlineMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   },
   partnerInitial: {
     fontSize: Typography.titleMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   partnerDetails: {
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
   },
   partnerName: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
   changePartnerText: {
     fontSize: Typography.labelMedium,
     color: Colors.primary,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   noPartnerCard: {
     marginBottom: Spacing.md,
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     fontSize: Typography.bodySmall,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
     color: Colors.text,
   },
   divider: {
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   },
   stakeValue: {
     fontSize: Typography.titleMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   // How it works card
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   },
   howItWorksTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
@@ -400,7 +401,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   outcomeHighlight: {
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   // Warning card
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
   },
   warningTitle: {
     fontSize: Typography.bodyMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.warning,
     marginBottom: Spacing.xs,
   },
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
   },
   blockedTitle: {
     fontSize: Typography.labelMedium,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
   },

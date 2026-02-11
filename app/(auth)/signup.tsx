@@ -12,7 +12,7 @@ import {
 import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 import * as Haptics from "expo-haptics";
-import { Colors } from "../../src/constants/colors";
+import { Colors, FontWeight } from "../../src/constants/colors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { AppleSignInButton } from "../../src/components/AppleSignInButton";
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   },
   socialLabel: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
     color: Colors.textSecondary,
   },
   socialRow: {
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   orText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.textMuted,
     marginHorizontal: 16,
     letterSpacing: 1,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   label: {
     color: Colors.text,
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   input: {
     backgroundColor: Colors.backgroundCard,
@@ -303,6 +303,6 @@ const styles = StyleSheet.create({
   linkText: {
     color: Colors.primary,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
   },
 });

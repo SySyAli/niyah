@@ -28,6 +28,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Button } from "../../src/components";
 import { OTPInput } from "../../src/components/OTPInput";
@@ -326,14 +327,14 @@ const styles = StyleSheet.create({
   backText: {
     color: Colors.primary,
     fontSize: Typography.titleSmall,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   header: {
     marginBottom: Spacing.xxl,
   },
   title: {
     fontSize: Typography.headlineLarge,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
   label: {
     color: Colors.text,
     fontSize: Typography.labelLarge,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   phoneRow: {
     flexDirection: "row",
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
   },
   prefixText: {
     fontSize: Typography.bodyLarge,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   phoneInput: {
@@ -395,10 +396,10 @@ const styles = StyleSheet.create({
   resendText: {
     color: Colors.primary,
     fontSize: Typography.bodyMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
   },
   resendDisabled: {
     color: Colors.textMuted,
-    fontWeight: "400",
+    fontWeight: FontWeight.regular,
   },
 });

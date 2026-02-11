@@ -1,5 +1,7 @@
 import React, { useEffect } from "react";
-import { View, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet, Platform, Text } from "react-native";
+import { SymbolView } from "expo-symbols";
+import type { SFSymbol } from "sf-symbols-typescript";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
@@ -13,7 +15,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
-import { Colors, Typography, Spacing } from "../constants/colors";
+import { Colors, Typography, Spacing, FontWeight } from "../constants/colors";
 import { useScrollContext } from "../context/ScrollContext";
 
 // ────────────────────────────────────────────────────────────────────
@@ -23,28 +25,37 @@ import { useScrollContext } from "../context/ScrollContext";
 interface TabConfig {
   key: string;
   label: string;
-  iconFocused: keyof typeof Ionicons.glyphMap;
-  iconDefault: keyof typeof Ionicons.glyphMap;
+  sfSymbolFocused: SFSymbol;
+  sfSymbolDefault: SFSymbol;
+  // Fallback for Android
+  ionIconFocused: keyof typeof Ionicons.glyphMap;
+  ionIconDefault: keyof typeof Ionicons.glyphMap;
 }
 
 const TABS: TabConfig[] = [
   {
     key: "index",
     label: "Home",
-    iconFocused: "home",
-    iconDefault: "home-outline",
+    sfSymbolFocused: "house.fill",
+    sfSymbolDefault: "house",
+    ionIconFocused: "home",
+    ionIconDefault: "home-outline",
   },
   {
     key: "session",
     label: "Focus",
-    iconFocused: "timer",
-    iconDefault: "timer-outline",
+    sfSymbolFocused: "timer",
+    sfSymbolDefault: "timer",
+    ionIconFocused: "timer",
+    ionIconDefault: "timer-outline",
   },
   {
     key: "profile",
     label: "Profile",
-    iconFocused: "person",
-    iconDefault: "person-outline",
+    sfSymbolFocused: "person.fill",
+    sfSymbolDefault: "person",
+    ionIconFocused: "person",
+    ionIconDefault: "person-outline",
   },
 ];
 
@@ -81,6 +92,34 @@ interface AnimatedTabBarProps {
   accessory?: React.ReactNode;
   [key: string]: unknown; // accept extra props from Expo Router
 }
+
+// ────────────────────────────────────────────────────────────────────
+// Tab Icon — SF Symbols on iOS, Ionicons fallback on Android
+// ────────────────────────────────────────────────────────────────────
+
+const TabIcon: React.FC<{
+  config: TabConfig;
+  focused: boolean;
+  color: string;
+}> = ({ config, focused, color }) => {
+  if (Platform.OS === "ios") {
+    const symbolName = focused
+      ? config.sfSymbolFocused
+      : config.sfSymbolDefault;
+    return (
+      <SymbolView
+        name={symbolName}
+        tintColor={color}
+        size={ICON_SIZE}
+        weight={focused ? "semibold" : "regular"}
+      />
+    );
+  }
+
+  // Android fallback
+  const iconName = focused ? config.ionIconFocused : config.ionIconDefault;
+  return <Ionicons name={iconName} size={ICON_SIZE} color={color} />;
+};
 
 // ────────────────────────────────────────────────────────────────────
 // Individual tab item
@@ -137,8 +176,7 @@ const TabItem: React.FC<TabItemProps> = ({
     marginTop: interpolate(minimized.value, [0, 1], [2, 0]),
   }));
 
-  const iconName = focused ? config.iconFocused : config.iconDefault;
-  const color = focused ? Colors.primary : Colors.textMuted;
+  const color = focused ? Colors.primaryLight : Colors.textMuted;
 
   return (
     <AnimatedPressable
@@ -155,7 +193,7 @@ const TabItem: React.FC<TabItemProps> = ({
 
         {/* Icon */}
         <Animated.View style={iconAnimatedStyle}>
-          <Ionicons name={iconName} size={ICON_SIZE} color={color} />
+          <TabIcon config={config} focused={focused} color={color} />
         </Animated.View>
       </View>
 
@@ -335,7 +373,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.labelSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     marginTop: 2,
   },
 });

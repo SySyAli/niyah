@@ -17,6 +17,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Button, Card, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
   closeText: {
     color: Colors.textSecondary,
     fontSize: Typography.bodyLarge,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   maxButton: {
     width: 60,
@@ -294,11 +295,11 @@ const styles = StyleSheet.create({
   maxText: {
     color: Colors.primary,
     fontSize: Typography.bodyLarge,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
   },
   title: {
     fontSize: Typography.titleLarge,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   balanceInfo: {
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
   },
   balanceAmount: {
     fontSize: Typography.titleMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.gain,
   },
   errorText: {
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
   },
   summaryAmount: {
     fontSize: Typography.displaySmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   inputGroup: {
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: Typography.labelLarge,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
     color: Colors.text,
   },
   inputContainer: {
@@ -400,11 +401,11 @@ const styles = StyleSheet.create({
   infoValueGreen: {
     fontSize: Typography.bodyMedium,
     color: Colors.gain,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   infoValueBold: {
     fontSize: Typography.titleMedium,
     color: Colors.text,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
   },
 });

@@ -18,7 +18,13 @@ import Animated, {
   FadeIn,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { Colors, Spacing, Radius, Typography } from "../constants/colors";
+import {
+  Colors,
+  Spacing,
+  Radius,
+  Typography,
+  FontWeight,
+} from "../constants/colors";
 
 interface OTPInputProps {
   value: string;
@@ -230,7 +236,7 @@ const styles = StyleSheet.create({
   },
   digit: {
     fontSize: Typography.headlineSmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
     textAlign: "center",
   },

@@ -7,6 +7,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button, Balance, Confetti } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -202,12 +203,12 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: Typography.titleMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.gain,
   },
   title: {
     fontSize: Typography.displaySmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
   },
   outcomeLabel: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.gain,
     marginBottom: Spacing.xs,
   },
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
   },
   settlementTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
   },
   venmoHandle: {
     fontSize: Typography.bodyMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.primary,
     marginBottom: Spacing.md,
   },
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: Typography.headlineSmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   statLabel: {

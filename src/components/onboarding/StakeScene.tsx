@@ -22,8 +22,8 @@ interface SceneProps {
   size: number;
 }
 
-// Floating coin orbiting the phone
-const OrbitingCoin: React.FC<{
+// Simplified floating coin
+const FloatingCoin: React.FC<{
   x: number;
   y: number;
   coinSize: number;
@@ -32,7 +32,6 @@ const OrbitingCoin: React.FC<{
   progress: SharedValue<number>;
 }> = ({ x, y, coinSize: s, delay: d, index, progress }) => {
   const float = useSharedValue(0);
-  const spin = useSharedValue(0);
 
   useEffect(() => {
     float.value = withDelay(
@@ -40,11 +39,11 @@ const OrbitingCoin: React.FC<{
       withRepeat(
         withSequence(
           withTiming(1, {
-            duration: 2200 + index * 300,
+            duration: 3000 + index * 400,
             easing: Easing.inOut(Easing.ease),
           }),
           withTiming(0, {
-            duration: 2200 + index * 300,
+            duration: 3000 + index * 400,
             easing: Easing.inOut(Easing.ease),
           }),
         ),
@@ -52,42 +51,26 @@ const OrbitingCoin: React.FC<{
         true,
       ),
     );
-    spin.value = withDelay(
-      d,
-      withRepeat(
-        withTiming(1, { duration: 4000 + index * 500, easing: Easing.linear }),
-        -1,
-        false,
-      ),
-    );
   }, []);
 
   const style = useAnimatedStyle(() => {
-    const stagger = index * 0.1;
+    const stagger = index * 0.08;
     return {
       opacity: interpolate(
         progress.value,
-        [-1, -0.5 + stagger, -0.1, 0, 0.5, 1],
-        [0, 0, 0.8, 1, 0.8, 0],
+        [-1, -0.4 + stagger, 0, 0.4, 1],
+        [0, 0.4, 0.85, 0.4, 0],
       ),
       transform: [
-        { translateY: interpolate(float.value, [0, 1], [0, -12 - index * 3]) },
-        {
-          translateX: interpolate(
-            float.value,
-            [0, 1],
-            [0, index % 2 === 0 ? 6 : -6],
-          ),
-        },
+        { translateY: interpolate(float.value, [0, 1], [0, -10 - index * 2]) },
         {
           scale: interpolate(
             progress.value,
-            [-1, -0.3 + stagger, 0],
-            [0.3, 0.8, 1],
+            [-1, -0.2 + stagger, 0],
+            [0.4, 0.85, 1],
             Extrapolation.CLAMP,
           ),
         },
-        { rotateY: `${interpolate(spin.value, [0, 1], [0, 360])}deg` },
       ],
     };
   });
@@ -95,21 +78,26 @@ const OrbitingCoin: React.FC<{
   return (
     <Animated.View style={[{ position: "absolute", left: x, top: y }, style]}>
       <Svg width={s} height={s}>
-        <Circle cx={s / 2} cy={s / 2} r={s / 2 - 1} fill="#E6A23C" />
-        <Circle cx={s / 2} cy={s / 2} r={s / 2 - 4} fill="#F0C060" />
         <Circle
           cx={s / 2}
           cy={s / 2}
-          r={s / 2 - 7}
-          fill="#E6A23C"
-          opacity={0.3}
+          r={s / 2 - 1}
+          fill="#D4BC94"
+          opacity={0.8}
+        />
+        <Circle
+          cx={s / 2}
+          cy={s / 2}
+          r={s / 2 - 3.5}
+          fill="#EDD49A"
+          opacity={0.9}
         />
         <SvgText
           x={s / 2}
           y={s / 2 + s * 0.15}
           textAnchor="middle"
-          fill="#8B6914"
-          fontSize={s * 0.38}
+          fill="#B09868"
+          fontSize={s * 0.36}
           fontWeight="bold"
         >
           $
@@ -129,84 +117,77 @@ export const StakeScene: React.FC<SceneProps> = ({
     () => (scrollX.value - pageIndex * pageWidth) / pageWidth,
   );
 
-  // Phone rocking animation
   const rock = useSharedValue(0);
+  const glow = useSharedValue(0);
+
   useEffect(() => {
     rock.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 3500, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 3500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true,
     );
-  }, []);
-
-  // Glow pulse
-  const glow = useSharedValue(0);
-  useEffect(() => {
     glow.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 2500, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true,
     );
   }, []);
 
-  // Phone enters from right, tilts into position
   const phoneStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       progress.value,
-      [-1, -0.5, 0, 0.5, 1],
-      [0, 0.7, 1, 0.7, 0],
+      [-1, -0.4, 0, 0.4, 1],
+      [0, 0.6, 1, 0.6, 0],
     ),
     transform: [
       {
         translateX: interpolate(
           progress.value,
-          [-1, -0.2, 0, 1],
-          [120, 20, 0, -60],
+          [-1, -0.1, 0, 1],
+          [80, 10, 0, -40],
           Extrapolation.CLAMP,
         ),
       },
       {
-        rotate: `${interpolate(progress.value, [-1, 0], [-5, 15], Extrapolation.CLAMP) + interpolate(rock.value, [0, 1], [-2, 2])}deg`,
+        rotate: `${interpolate(rock.value, [0, 1], [-1.5, 1.5])}deg`,
       },
       {
         scale: interpolate(
           progress.value,
-          [-1, -0.3, 0, 1],
-          [0.6, 0.85, 1, 0.85],
+          [-1, -0.2, 0, 1],
+          [0.7, 0.9, 1, 0.9],
           Extrapolation.CLAMP,
         ),
       },
     ],
   }));
 
-  // Glow behind phone
   const glowStyle = useAnimatedStyle(() => ({
     opacity:
       interpolate(
         progress.value,
-        [-1, -0.3, 0, 0.3, 1],
-        [0, 0.3, 0.5, 0.3, 0],
+        [-1, -0.2, 0, 0.2, 1],
+        [0, 0.2, 0.35, 0.2, 0],
       ) * interpolate(glow.value, [0, 1], [0.6, 1]),
-    transform: [{ scale: interpolate(glow.value, [0, 1], [0.9, 1.1]) }],
+    transform: [{ scale: interpolate(glow.value, [0, 1], [0.92, 1.08]) }],
   }));
 
-  const phoneW = size * 0.48;
-  const phoneH = size * 0.72;
+  const phoneW = size * 0.44;
+  const phoneH = size * 0.66;
   const phoneCx = size / 2 - phoneW / 2;
-  const phoneCy = size * 0.14;
+  const phoneCy = size * 0.17;
 
   const coins = [
-    { x: size * 0.08, y: size * 0.12, s: size * 0.12, delay: 0 },
-    { x: size * 0.75, y: size * 0.08, s: size * 0.09, delay: 300 },
-    { x: size * 0.7, y: size * 0.55, s: size * 0.1, delay: 600 },
-    { x: size * 0.05, y: size * 0.58, s: size * 0.08, delay: 900 },
-    { x: size * 0.38, y: size * 0.02, s: size * 0.14, delay: 150 }, // large coin on top
+    { x: size * 0.1, y: size * 0.15, s: size * 0.09, delay: 0 },
+    { x: size * 0.76, y: size * 0.12, s: size * 0.07, delay: 400 },
+    { x: size * 0.72, y: size * 0.55, s: size * 0.08, delay: 800 },
+    { x: size * 0.07, y: size * 0.56, s: size * 0.065, delay: 1200 },
   ];
 
   return (
@@ -215,23 +196,23 @@ export const StakeScene: React.FC<SceneProps> = ({
       <Animated.View
         style={[
           styles.absolute,
-          { left: phoneCx - size * 0.06, top: phoneCy + phoneH * 0.15 },
+          { left: phoneCx - size * 0.08, top: phoneCy + phoneH * 0.15 },
           glowStyle,
         ]}
       >
-        <Svg width={phoneW + size * 0.12} height={phoneH * 0.7}>
+        <Svg width={phoneW + size * 0.16} height={phoneH * 0.7}>
           <Circle
-            cx={(phoneW + size * 0.12) / 2}
+            cx={(phoneW + size * 0.16) / 2}
             cy={phoneH * 0.35}
-            r={phoneW * 0.6}
-            fill="#7CB564"
+            r={phoneW * 0.55}
+            fill="#A8D5A2"
             opacity={0.2}
           />
           <Circle
-            cx={(phoneW + size * 0.12) / 2}
+            cx={(phoneW + size * 0.16) / 2}
             cy={phoneH * 0.35}
-            r={phoneW * 0.4}
-            fill="#7CB564"
+            r={phoneW * 0.35}
+            fill="#C5E6C0"
             opacity={0.15}
           />
         </Svg>
@@ -243,77 +224,108 @@ export const StakeScene: React.FC<SceneProps> = ({
       >
         <Svg width={phoneW} height={phoneH} viewBox="0 0 180 280">
           {/* Phone outer frame */}
-          <Rect x={0} y={0} width={180} height={280} rx={24} fill="#5A9A42" />
-          {/* Phone inner frame */}
-          <Rect x={4} y={4} width={172} height={272} rx={20} fill="#4A8A35" />
+          <Rect
+            x={0}
+            y={0}
+            width={180}
+            height={280}
+            rx={26}
+            fill="#7CB564"
+            opacity={0.9}
+          />
+          <Rect
+            x={4}
+            y={4}
+            width={172}
+            height={272}
+            rx={22}
+            fill="#6BA854"
+            opacity={0.85}
+          />
           {/* Screen */}
-          <Rect x={10} y={10} width={160} height={260} rx={16} fill="#2A3A20" />
+          <Rect
+            x={10}
+            y={10}
+            width={160}
+            height={260}
+            rx={18}
+            fill="#2D4228"
+            opacity={0.9}
+          />
 
-          {/* Lock icon on screen */}
+          {/* Lock icon */}
           <Rect
             x={75}
-            y={105}
+            y={108}
             width={30}
-            height={24}
+            height={22}
             rx={4}
-            fill="#7CB564"
-            opacity={0.8}
+            fill="#9BC887"
+            opacity={0.7}
           />
           <Path
-            d="M 80 105 L 80 95 Q 80 82 90 82 Q 100 82 100 95 L 100 105"
-            stroke="#7CB564"
-            strokeWidth={3.5}
+            d="M 80 108 L 80 98 Q 80 85 90 85 Q 100 85 100 98 L 100 108"
+            stroke="#9BC887"
+            strokeWidth={3}
             fill="none"
-            opacity={0.8}
+            opacity={0.7}
           />
-          <Circle cx={90} cy={117} r={3} fill="#2A3A20" />
+          <Circle cx={90} cy={119} r={2.5} fill="#2D4228" />
 
-          {/* Decorative screen elements */}
+          {/* Subtle screen lines */}
           <Rect
-            x={30}
-            y={45}
-            width={50}
-            height={6}
-            rx={3}
-            fill="#7CB564"
-            opacity={0.2}
-          />
-          <Rect
-            x={30}
-            y={58}
-            width={35}
-            height={6}
-            rx={3}
+            x={32}
+            y={48}
+            width={44}
+            height={5}
+            rx={2.5}
             fill="#7CB564"
             opacity={0.15}
           />
           <Rect
-            x={30}
-            y={190}
-            width={120}
-            height={8}
-            rx={4}
+            x={32}
+            y={60}
+            width={30}
+            height={5}
+            rx={2.5}
             fill="#7CB564"
             opacity={0.1}
           />
           <Rect
-            x={30}
-            y={210}
-            width={80}
-            height={8}
-            rx={4}
+            x={32}
+            y={195}
+            width={116}
+            height={6}
+            rx={3}
             fill="#7CB564"
             opacity={0.08}
           />
+          <Rect
+            x={32}
+            y={212}
+            width={76}
+            height={6}
+            rx={3}
+            fill="#7CB564"
+            opacity={0.06}
+          />
 
           {/* Notch */}
-          <Rect x={60} y={14} width={60} height={8} rx={4} fill="#1A2A14" />
+          <Rect
+            x={62}
+            y={14}
+            width={56}
+            height={7}
+            rx={3.5}
+            fill="#1E2E1A"
+            opacity={0.6}
+          />
         </Svg>
       </Animated.View>
 
-      {/* Orbiting coins */}
+      {/* Floating coins */}
       {coins.map((c, i) => (
-        <OrbitingCoin
+        <FloatingCoin
           key={i}
           x={c.x}
           y={c.y}

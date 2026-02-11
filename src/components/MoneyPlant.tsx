@@ -294,14 +294,14 @@ const styles = StyleSheet.create({
   potTop: {
     width: 70,
     height: 12,
-    backgroundColor: "#8B4513",
+    backgroundColor: "#5C2E0A",
     borderTopLeftRadius: 4,
     borderTopRightRadius: 4,
   },
   potBody: {
     width: 60,
     height: 40,
-    backgroundColor: "#A0522D",
+    backgroundColor: "#6B3818",
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
   },
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: Colors.warning,
     borderWidth: 3,
-    borderColor: "#DAA520",
+    borderColor: "#8B6914",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   coinText: {
     fontSize: Typography.labelSmall,
     fontWeight: "700",
-    color: "#5D4E37",
+    color: "#3A3228",
   },
   partnerNode: {
     position: "absolute",

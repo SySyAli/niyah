@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   Pressable,
   useWindowDimensions,
   Platform,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Animated, {
@@ -18,7 +21,6 @@ import Animated, {
   interpolate,
   interpolateColor,
   Extrapolation,
-  runOnJS,
   type SharedValue,
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
@@ -27,13 +29,9 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
-import {
-  GardenScene,
-  StakeScene,
-  ShieldScene,
-  GrowthScene,
-} from "../../src/components/onboarding";
+import { ContinuousScene } from "../../src/components/onboarding";
 import { AppleSignInButton } from "../../src/components/AppleSignInButton";
 
 // --- Page data ---
@@ -43,7 +41,7 @@ const PAGES = [
     title: "Welcome to\nNiyah",
     subtitle:
       "Put real money on the line to build\nfocus habits that actually stick.",
-    hint: "Swipe to learn more \u2192",
+    hint: "Swipe to explore",
   },
   {
     title: "Stake Your\nFocus",
@@ -62,7 +60,8 @@ const PAGES = [
   },
 ];
 
-const BG_COLORS = ["#F2EFE8", "#EDE9DF", "#E6E2D6", "#DDD9CE"];
+// Warm beige palette that blends seamlessly between pages
+const BG_COLORS = ["#1A1714", "#1E1B16", "#221F19", "#252019"];
 
 // --- Sub-components ---
 
@@ -90,7 +89,15 @@ const AnimatedPageText: React.FC<{
           translateX: interpolate(
             scrollX.value,
             input,
-            [pageWidth * 0.25, 0, -pageWidth * 0.25],
+            [30, 0, -30],
+            Extrapolation.CLAMP,
+          ),
+        },
+        {
+          translateY: interpolate(
+            scrollX.value,
+            input,
+            [6, 0, 6],
             Extrapolation.CLAMP,
           ),
         },
@@ -99,7 +106,7 @@ const AnimatedPageText: React.FC<{
   });
 
   return (
-    <Animated.View style={[styles.textContainer, style]}>
+    <Animated.View style={[styles.textBlock, style]}>
       <Text style={styles.title}>{page.title}</Text>
       <Text style={styles.subtitle}>{page.subtitle}</Text>
       {page.hint && <Text style={styles.hint}>{page.hint}</Text>}
@@ -119,17 +126,17 @@ const AnimatedDot: React.FC<{
       (index + 1) * pageWidth,
     ];
     return {
-      width: interpolate(scrollX.value, input, [8, 24, 8], Extrapolation.CLAMP),
+      width: interpolate(scrollX.value, input, [6, 28, 6], Extrapolation.CLAMP),
       opacity: interpolate(
         scrollX.value,
         input,
-        [0.3, 1, 0.3],
+        [0.25, 1, 0.25],
         Extrapolation.CLAMP,
       ),
       backgroundColor: interpolateColor(scrollX.value, input, [
-        Colors.textMuted,
-        Colors.text,
-        Colors.textMuted,
+        "rgba(242, 237, 228, 0.2)",
+        "rgba(242, 237, 228, 0.65)",
+        "rgba(242, 237, 228, 0.2)",
       ]),
     };
   });
@@ -159,35 +166,30 @@ const GoogleIcon = () => (
   </Svg>
 );
 
-// Apple icon
-const AppleIcon = () => (
-  <Svg width={20} height={24} viewBox="0 0 17 20" fill={Colors.text}>
-    <Path d="M13.26 10.04c-.02-2.15 1.76-3.19 1.84-3.24-1-1.47-2.56-1.67-3.12-1.7-1.33-.13-2.59.78-3.26.78-.67 0-1.72-.76-2.82-.74-1.45.02-2.79.85-3.54 2.15-1.51 2.62-.39 6.51 1.08 8.64.72 1.04 1.58 2.21 2.7 2.17 1.09-.04 1.5-.7 2.81-.7 1.32 0 1.69.7 2.82.68 1.17-.02 1.9-1.06 2.61-2.1.82-1.2 1.16-2.37 1.18-2.43-.03-.01-2.27-.87-2.29-3.46v-.05zM11.1 3.55c.6-.72 1-1.73.89-2.73-.86.04-1.9.57-2.52 1.3-.55.64-1.03 1.66-.9 2.64.96.07 1.93-.49 2.53-1.21z" />
-  </Svg>
-);
-
 // --- Main Screen ---
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const scrollX = useSharedValue(0);
-  const lastPage = useSharedValue(0);
-
-  const hapticFeedback = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
+  const lastPage = useRef(0);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollX.value = event.contentOffset.x;
-      const currentPage = Math.round(event.contentOffset.x / width);
-      if (currentPage !== lastPage.value) {
-        lastPage.value = currentPage;
-        runOnJS(hapticFeedback)();
-      }
     },
   });
+
+  const handleMomentumEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const newPage = Math.round(event.nativeEvent.contentOffset.x / width);
+      if (newPage !== lastPage.current) {
+        lastPage.current = newPage;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    },
+    [width],
+  );
 
   // Animated background color
   const bgStyle = useAnimatedStyle(() => ({
@@ -198,7 +200,7 @@ export default function WelcomeScreen() {
     ),
   }));
 
-  const illustrationSize = Math.min(width * 0.85, height * 0.42);
+  const illustrationSize = Math.min(width * 0.88, height * 0.4);
 
   const handleAuthSuccess = () => {
     router.replace("/(tabs)");
@@ -207,64 +209,63 @@ export default function WelcomeScreen() {
   return (
     <Animated.View style={[styles.container, bgStyle]}>
       <StatusBar style="dark" />
+
+      {/* Soft gradient wash */}
+      <LinearGradient
+        colors={[
+          "rgba(0, 0, 0, 0.12)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0.06)",
+        ]}
+        locations={[0, 0.5, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
       <SafeAreaView style={styles.safeArea}>
-        {/* Scrollable pages */}
-        <Animated.ScrollView
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {PAGES.map((page, index) => (
-            <View key={index} style={[styles.page, { width }]}>
+        {/* === Main swipeable area === */}
+        <View style={styles.mainArea}>
+          {/* Text overlays - stacked, only one visible at a time */}
+          <View style={styles.textArea} pointerEvents="none">
+            {PAGES.map((page, i) => (
               <AnimatedPageText
+                key={i}
                 page={page}
-                index={index}
+                index={i}
                 scrollX={scrollX}
                 pageWidth={width}
               />
-              <View style={styles.illustrationContainer}>
-                {index === 0 && (
-                  <GardenScene
-                    scrollX={scrollX}
-                    pageIndex={0}
-                    pageWidth={width}
-                    size={illustrationSize}
-                  />
-                )}
-                {index === 1 && (
-                  <StakeScene
-                    scrollX={scrollX}
-                    pageIndex={1}
-                    pageWidth={width}
-                    size={illustrationSize}
-                  />
-                )}
-                {index === 2 && (
-                  <ShieldScene
-                    scrollX={scrollX}
-                    pageIndex={2}
-                    pageWidth={width}
-                    size={illustrationSize}
-                  />
-                )}
-                {index === 3 && (
-                  <GrowthScene
-                    scrollX={scrollX}
-                    pageIndex={3}
-                    pageWidth={width}
-                    size={illustrationSize}
-                  />
-                )}
-              </View>
-            </View>
-          ))}
-        </Animated.ScrollView>
+            ))}
+          </View>
 
-        {/* Fixed bottom section */}
+          {/* Continuous scene - single evolving illustration */}
+          <View style={styles.sceneArea} pointerEvents="none">
+            <ContinuousScene
+              scrollX={scrollX}
+              pageWidth={width}
+              size={illustrationSize}
+            />
+          </View>
+
+          {/* Invisible scroll capture - sits on top, captures swipe gestures */}
+          <Animated.ScrollView
+            style={StyleSheet.absoluteFill}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            bounces={false}
+            decelerationRate="fast"
+            overScrollMode="never"
+            onMomentumScrollEnd={handleMomentumEnd}
+          >
+            {PAGES.map((_, i) => (
+              <View key={i} style={{ width }} />
+            ))}
+          </Animated.ScrollView>
+        </View>
+
+        {/* === Bottom section === */}
         <View style={styles.bottomSection}>
           {/* Pagination dots */}
           <View style={styles.dotsContainer}>
@@ -299,7 +300,7 @@ export default function WelcomeScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Social auth icons (Coinbase-style circles) */}
+          {/* Social auth icons */}
           <View style={styles.socialRow}>
             <Pressable
               style={({ pressed }) => [
@@ -307,7 +308,6 @@ export default function WelcomeScreen() {
                 pressed && styles.socialButtonPressed,
               ]}
               onPress={async () => {
-                // Google Sign-In uses the native SDK so we import it directly
                 try {
                   const { signInWithGoogle } = await import(
                     "../../src/config/firebase"
@@ -320,7 +320,6 @@ export default function WelcomeScreen() {
                   await useAuthStore.getState().loginWithGoogle(accessToken);
                   handleAuthSuccess();
                 } catch (error: any) {
-                  // Silently handle user cancellations
                   if (error?.code !== "SIGN_IN_CANCELLED") {
                     console.error("Google sign-in error:", error);
                   }
@@ -360,23 +359,24 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  scrollView: {
+  mainArea: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  page: {
-    flex: 1,
+  textArea: {
     paddingHorizontal: Spacing.lg,
-  },
-  textContainer: {
     paddingTop: Spacing.xl,
-    paddingBottom: Spacing.md,
+    height: 160,
+    zIndex: 2,
+  },
+  textBlock: {
+    position: "absolute",
+    top: Spacing.xl,
+    left: Spacing.lg,
+    right: Spacing.lg,
   },
   title: {
     fontSize: Typography.displaySmall,
-    fontWeight: "800",
+    fontWeight: FontWeight.heavy,
     color: Colors.text,
     letterSpacing: -0.5,
     lineHeight: Typography.displaySmall * 1.1,
@@ -385,18 +385,20 @@ const styles = StyleSheet.create({
     fontSize: Typography.bodyLarge,
     color: Colors.textSecondary,
     marginTop: Spacing.sm,
-    lineHeight: Typography.bodyLarge * 1.45,
+    lineHeight: Typography.bodyLarge * 1.5,
   },
   hint: {
-    fontSize: Typography.bodyMedium,
-    fontWeight: "600",
-    color: Colors.text,
+    fontSize: Typography.bodySmall,
+    fontWeight: FontWeight.medium,
+    color: Colors.textTertiary,
     marginTop: Spacing.md,
+    letterSpacing: 0.3,
   },
-  illustrationContainer: {
+  sceneArea: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 1,
   },
   bottomSection: {
     paddingHorizontal: Spacing.lg,
@@ -410,8 +412,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dot: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
   },
   getStartedButton: {
     backgroundColor: Colors.primary,
@@ -426,8 +428,8 @@ const styles = StyleSheet.create({
   },
   getStartedText: {
     fontSize: Typography.bodyLarge,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
     letterSpacing: 0.2,
   },
   divider: {
@@ -440,8 +442,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
   },
   dividerText: {
-    fontSize: Typography.labelMedium,
-    fontWeight: "600",
+    fontSize: Typography.labelSmall,
+    fontWeight: FontWeight.semibold,
     color: Colors.textMuted,
     marginHorizontal: Spacing.md,
     letterSpacing: 1,
@@ -453,12 +455,12 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.backgroundCard,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: "rgba(255, 255, 255, 0.12)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -474,11 +476,11 @@ const styles = StyleSheet.create({
   },
   signInText: {
     fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
+    color: Colors.textTertiary,
   },
   signInLink: {
     fontSize: Typography.bodySmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
 });

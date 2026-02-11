@@ -15,6 +15,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -274,7 +275,7 @@ const styles = StyleSheet.create({
   backText: {
     color: Colors.primary,
     fontSize: Typography.bodyLarge,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   titleSection: {
     alignItems: "center",
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.headlineMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
   },
   lossAmount: {
     fontSize: Typography.displaySmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.loss,
     marginBottom: Spacing.sm,
   },
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
   },
   partnerVenmo: {
     fontSize: Typography.bodyMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.primary,
     marginTop: Spacing.xs,
   },
@@ -341,7 +342,7 @@ const styles = StyleSheet.create({
   },
   paymentAmount: {
     fontSize: Typography.displayMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.loss,
     marginBottom: Spacing.xs,
   },
@@ -352,7 +353,7 @@ const styles = StyleSheet.create({
   },
   venmoHandle: {
     fontSize: Typography.bodyLarge,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.primary,
   },
   // Reputation cards
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   },
   reputationTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
@@ -392,7 +393,7 @@ const styles = StyleSheet.create({
   },
   alternativeTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
   },
   confirmLabel: {
     fontSize: Typography.labelMedium,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
     textAlign: "center",
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     textAlign: "center",
     letterSpacing: 4,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
   },
   confirmInputValid: {
     borderColor: Colors.loss,

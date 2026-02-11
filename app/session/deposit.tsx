@@ -15,6 +15,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Button, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -240,11 +241,11 @@ const styles = StyleSheet.create({
   closeText: {
     color: Colors.textSecondary,
     fontSize: Typography.bodyLarge,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   title: {
     fontSize: Typography.titleLarge,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   balanceInfo: {
@@ -258,7 +259,7 @@ const styles = StyleSheet.create({
   },
   balanceAmount: {
     fontSize: Typography.titleMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.textSecondary,
   },
   quickAmountsContainer: {
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
   },
   quickAmountText: {
     fontSize: Typography.bodyMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   quickAmountTextSelected: {

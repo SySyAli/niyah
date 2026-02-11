@@ -25,111 +25,7 @@ interface SceneProps {
   size: number;
 }
 
-// App icon that bounces off the shield
-const BouncingIcon: React.FC<{
-  startX: number;
-  startY: number;
-  endX: number;
-  endY: number;
-  color: string;
-  iconSize: number;
-  delay: number;
-  index: number;
-  progress: SharedValue<number>;
-}> = ({
-  startX,
-  startY,
-  endX,
-  endY,
-  color,
-  iconSize: s,
-  delay: d,
-  index,
-  progress,
-}) => {
-  const bounce = useSharedValue(0);
-
-  useEffect(() => {
-    bounce.value = withDelay(
-      d,
-      withRepeat(
-        withSequence(
-          withTiming(1, {
-            duration: 1800,
-            easing: Easing.out(Easing.back(1.5)),
-          }),
-          withTiming(0.7, { duration: 600, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 600, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: 1200, easing: Easing.in(Easing.ease) }),
-        ),
-        -1,
-        false,
-      ),
-    );
-  }, []);
-
-  const style = useAnimatedStyle(() => {
-    const stagger = index * 0.12;
-    const pageOpacity = interpolate(
-      progress.value,
-      [-1, -0.4 + stagger, 0, 0.4, 1],
-      [0, 0.5, 1, 0.5, 0],
-    );
-    return {
-      opacity:
-        pageOpacity * interpolate(bounce.value, [0, 0.3, 1], [0.3, 1, 1]),
-      transform: [
-        { translateX: interpolate(bounce.value, [0, 1], [startX, endX]) },
-        { translateY: interpolate(bounce.value, [0, 1], [startY, endY]) },
-        {
-          scale: interpolate(
-            bounce.value,
-            [0, 0.5, 0.7, 1],
-            [0.6, 1, 1.15, 0.9],
-          ),
-        },
-        {
-          rotate: `${interpolate(bounce.value, [0, 1], [0, index % 2 === 0 ? 15 : -15])}deg`,
-        },
-      ],
-    };
-  });
-
-  return (
-    <Animated.View style={[{ position: "absolute" }, style]}>
-      <Svg width={s} height={s}>
-        <Rect
-          x={2}
-          y={2}
-          width={s - 4}
-          height={s - 4}
-          rx={s * 0.22}
-          fill={color}
-        />
-        <Rect
-          x={s * 0.3}
-          y={s * 0.35}
-          width={s * 0.4}
-          height={s * 0.12}
-          rx={2}
-          fill="white"
-          opacity={0.5}
-        />
-        <Rect
-          x={s * 0.35}
-          y={s * 0.52}
-          width={s * 0.3}
-          height={s * 0.12}
-          rx={2}
-          fill="white"
-          opacity={0.3}
-        />
-      </Svg>
-    </Animated.View>
-  );
-};
-
-// Ripple circle expanding from shield center
+// Simplified ripple
 const Ripple: React.FC<{
   cx: number;
   cy: number;
@@ -144,7 +40,7 @@ const Ripple: React.FC<{
       d,
       withRepeat(
         withSequence(
-          withTiming(1, { duration: 2500, easing: Easing.out(Easing.ease) }),
+          withTiming(1, { duration: 3000, easing: Easing.out(Easing.ease) }),
           withTiming(0, { duration: 0 }),
         ),
         -1,
@@ -157,12 +53,12 @@ const Ripple: React.FC<{
     const pageOpacity = interpolate(
       progress.value,
       [-1, -0.3, 0, 0.3, 1],
-      [0, 0.5, 1, 0.5, 0],
+      [0, 0.4, 1, 0.4, 0],
     );
     return {
       opacity:
-        pageOpacity * interpolate(expand.value, [0, 0.3, 1], [0.4, 0.3, 0]),
-      transform: [{ scale: interpolate(expand.value, [0, 1], [0.3, 1]) }],
+        pageOpacity * interpolate(expand.value, [0, 0.2, 1], [0.3, 0.25, 0]),
+      transform: [{ scale: interpolate(expand.value, [0, 1], [0.4, 1]) }],
     };
   });
 
@@ -185,9 +81,91 @@ const Ripple: React.FC<{
           cy={maxR}
           r={maxR - 2}
           fill="none"
-          stroke="#7CB564"
-          strokeWidth={2}
+          stroke="#9BC887"
+          strokeWidth={1.5}
           opacity={0.4}
+        />
+      </Svg>
+    </Animated.View>
+  );
+};
+
+// Soft deflected icon
+const DeflectedIcon: React.FC<{
+  x: number;
+  y: number;
+  color: string;
+  iconSize: number;
+  delay: number;
+  index: number;
+  progress: SharedValue<number>;
+}> = ({ x, y, color, iconSize: s, delay: d, index, progress }) => {
+  const anim = useSharedValue(0);
+
+  useEffect(() => {
+    anim.value = withDelay(
+      d,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
+        ),
+        -1,
+        true,
+      ),
+    );
+  }, []);
+
+  const style = useAnimatedStyle(() => {
+    const stagger = index * 0.1;
+    return {
+      opacity: interpolate(
+        progress.value,
+        [-1, -0.3 + stagger, 0, 0.3, 1],
+        [0, 0.3, 0.65, 0.3, 0],
+      ),
+      transform: [
+        {
+          translateY: interpolate(
+            anim.value,
+            [0, 1],
+            [0, index % 2 === 0 ? -6 : 6],
+          ),
+        },
+        { scale: interpolate(anim.value, [0, 0.5, 1], [0.9, 1, 0.9]) },
+      ],
+    };
+  });
+
+  return (
+    <Animated.View style={[{ position: "absolute", left: x, top: y }, style]}>
+      <Svg width={s} height={s}>
+        <Rect
+          x={2}
+          y={2}
+          width={s - 4}
+          height={s - 4}
+          rx={s * 0.22}
+          fill={color}
+          opacity={0.7}
+        />
+        <Rect
+          x={s * 0.3}
+          y={s * 0.38}
+          width={s * 0.4}
+          height={s * 0.1}
+          rx={2}
+          fill="white"
+          opacity={0.35}
+        />
+        <Rect
+          x={s * 0.35}
+          y={s * 0.52}
+          width={s * 0.3}
+          height={s * 0.1}
+          rx={2}
+          fill="white"
+          opacity={0.2}
         />
       </Svg>
     </Animated.View>
@@ -204,24 +182,20 @@ export const ShieldScene: React.FC<SceneProps> = ({
     () => (scrollX.value - pageIndex * pageWidth) / pageWidth,
   );
 
-  // Shield pulse
   const pulse = useSharedValue(0);
+  const timerProgress = useSharedValue(0);
+
   useEffect(() => {
     pulse.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 2200, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       true,
     );
-  }, []);
-
-  // Timer ring progress
-  const timerProgress = useSharedValue(0);
-  useEffect(() => {
     timerProgress.value = withRepeat(
-      withTiming(1, { duration: 6000, easing: Easing.linear }),
+      withTiming(1, { duration: 8000, easing: Easing.linear }),
       -1,
       false,
     );
@@ -230,32 +204,23 @@ export const ShieldScene: React.FC<SceneProps> = ({
   const shieldStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       progress.value,
-      [-1, -0.4, 0, 0.4, 1],
-      [0, 0.6, 1, 0.6, 0],
+      [-1, -0.3, 0, 0.3, 1],
+      [0, 0.5, 1, 0.5, 0],
     ),
     transform: [
       {
         scale:
           interpolate(
             progress.value,
-            [-1, -0.2, 0],
-            [0.4, 0.9, 1],
+            [-1, -0.15, 0],
+            [0.5, 0.9, 1],
             Extrapolation.CLAMP,
-          ) * interpolate(pulse.value, [0, 1], [1, 1.03]),
-      },
-      {
-        translateY: interpolate(
-          progress.value,
-          [-1, 0, 1],
-          [30, 0, -15],
-          Extrapolation.CLAMP,
-        ),
+          ) * interpolate(pulse.value, [0, 1], [1, 1.02]),
       },
     ],
   }));
 
-  // Timer ring (animated strokeDashoffset)
-  const timerRingRadius = size * 0.28;
+  const timerRingRadius = size * 0.26;
   const circumference = 2 * Math.PI * timerRingRadius;
 
   const timerRingProps = useAnimatedProps(() => ({
@@ -265,65 +230,46 @@ export const ShieldScene: React.FC<SceneProps> = ({
   const timerStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       progress.value,
-      [-1, -0.3, 0, 0.3, 1],
-      [0, 0.5, 0.8, 0.5, 0],
+      [-1, -0.2, 0, 0.2, 1],
+      [0, 0.4, 0.7, 0.4, 0],
     ),
-    transform: [
-      { rotate: "-90deg" },
-      {
-        scale: interpolate(
-          progress.value,
-          [-1, -0.2, 0],
-          [0.5, 0.9, 1],
-          Extrapolation.CLAMP,
-        ),
-      },
-    ],
+    transform: [{ rotate: "-90deg" }],
   }));
 
   const cx = size / 2;
   const cy = size * 0.45;
-  const shieldW = size * 0.36;
-  const shieldH = size * 0.42;
+  const shieldW = size * 0.34;
+  const shieldH = size * 0.4;
 
-  // App icons: start position (edges) → end position (bounced away from shield)
-  const appIcons = [
+  const icons = [
     {
-      startX: -10,
-      startY: cy - 20,
-      endX: size * 0.05,
-      endY: cy - size * 0.18,
+      x: size * 0.04,
+      y: cy - size * 0.12,
       color: "#E1306C",
-      s: size * 0.1,
-      delay: 0,
-    }, // Instagram-pink
-    {
-      startX: size * 0.85,
-      startY: cy - 10,
-      endX: size * 0.78,
-      endY: cy - size * 0.15,
-      color: "#1DA1F2",
-      s: size * 0.09,
-      delay: 800,
-    }, // Twitter-blue
-    {
-      startX: size * 0.1,
-      startY: size * 0.8,
-      endX: size * 0.12,
-      endY: cy + size * 0.22,
-      color: "#FF0050",
       s: size * 0.085,
-      delay: 1600,
-    }, // TikTok-red
+      delay: 0,
+    },
     {
-      startX: size * 0.8,
-      startY: size * 0.75,
-      endX: size * 0.72,
-      endY: cy + size * 0.2,
-      color: "#FF0000",
-      s: size * 0.09,
-      delay: 2400,
-    }, // YouTube-red
+      x: size * 0.82,
+      y: cy - size * 0.08,
+      color: "#1DA1F2",
+      s: size * 0.075,
+      delay: 600,
+    },
+    {
+      x: size * 0.08,
+      y: cy + size * 0.18,
+      color: "#FF4060",
+      s: size * 0.07,
+      delay: 1200,
+    },
+    {
+      x: size * 0.78,
+      y: cy + size * 0.16,
+      color: "#FF2020",
+      s: size * 0.075,
+      delay: 1800,
+    },
   ];
 
   return (
@@ -332,22 +278,15 @@ export const ShieldScene: React.FC<SceneProps> = ({
       <Ripple
         cx={cx}
         cy={cy}
-        maxR={size * 0.38}
+        maxR={size * 0.36}
         delay={0}
         progress={progress}
       />
       <Ripple
         cx={cx}
         cy={cy}
-        maxR={size * 0.34}
-        delay={1200}
-        progress={progress}
-      />
-      <Ripple
-        cx={cx}
-        cy={cy}
-        maxR={size * 0.42}
-        delay={2400}
+        maxR={size * 0.32}
+        delay={1500}
         progress={progress}
       />
 
@@ -363,27 +302,26 @@ export const ShieldScene: React.FC<SceneProps> = ({
           width={(timerRingRadius + 4) * 2}
           height={(timerRingRadius + 4) * 2}
         >
-          {/* Track */}
           <Circle
             cx={timerRingRadius + 4}
             cy={timerRingRadius + 4}
             r={timerRingRadius}
             fill="none"
-            stroke="#5A9A42"
-            strokeWidth={3}
-            opacity={0.2}
+            stroke="#7CB564"
+            strokeWidth={2}
+            opacity={0.15}
           />
-          {/* Progress */}
           <AnimatedCircle
             cx={timerRingRadius + 4}
             cy={timerRingRadius + 4}
             r={timerRingRadius}
             fill="none"
-            stroke="#7CB564"
-            strokeWidth={3.5}
+            stroke="#9BC887"
+            strokeWidth={2.5}
             strokeDasharray={circumference}
             animatedProps={timerRingProps}
             strokeLinecap="round"
+            opacity={0.6}
           />
         </Svg>
       </Animated.View>
@@ -397,41 +335,40 @@ export const ShieldScene: React.FC<SceneProps> = ({
         ]}
       >
         <Svg width={shieldW} height={shieldH} viewBox="0 0 140 170">
-          {/* Shield shape */}
           <Path
             d="M 70 10 L 125 35 L 125 90 Q 125 140 70 165 Q 15 140 15 90 L 15 35 Z"
-            fill="#7CB564"
+            fill="#9BC887"
+            opacity={0.85}
           />
           <Path
-            d="M 70 18 L 118 40 L 118 88 Q 118 133 70 156 Q 22 133 22 88 L 22 40 Z"
-            fill="#5A9A42"
-          />
-          {/* Inner highlight */}
-          <Path
-            d="M 70 28 L 110 48 L 110 85 Q 110 125 70 145 Q 30 125 30 85 L 30 48 Z"
+            d="M 70 20 L 116 42 L 116 88 Q 116 132 70 153 Q 24 132 24 88 L 24 42 Z"
             fill="#7CB564"
-            opacity={0.6}
+            opacity={0.75}
+          />
+          <Path
+            d="M 70 30 L 108 50 L 108 84 Q 108 122 70 140 Q 32 122 32 84 L 32 50 Z"
+            fill="#A8D5A2"
+            opacity={0.4}
           />
           {/* Checkmark */}
           <Path
-            d="M 50 85 L 65 100 L 95 65"
+            d="M 50 86 L 64 100 L 94 66"
             stroke="white"
-            strokeWidth={7}
+            strokeWidth={6}
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
+            opacity={0.9}
           />
         </Svg>
       </Animated.View>
 
-      {/* Bouncing app icons */}
-      {appIcons.map((icon, i) => (
-        <BouncingIcon
+      {/* Deflected app icons */}
+      {icons.map((icon, i) => (
+        <DeflectedIcon
           key={i}
-          startX={icon.startX}
-          startY={icon.startY}
-          endX={icon.endX}
-          endY={icon.endY}
+          x={icon.x}
+          y={icon.y}
           color={icon.color}
           iconSize={icon.s}
           delay={icon.delay}

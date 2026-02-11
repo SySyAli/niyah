@@ -15,6 +15,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Card, Balance } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -319,12 +320,12 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: Typography.displaySmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   name: {
     fontSize: Typography.titleLarge,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   email: {
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
   reputationText: {
     fontSize: Typography.labelSmall,
     color: Colors.textSecondary,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   // Reputation card
   reputationCard: {
@@ -365,7 +366,7 @@ const styles = StyleSheet.create({
   },
   reputationTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   reputationDescription: {
@@ -407,7 +408,7 @@ const styles = StyleSheet.create({
   },
   paymentValue: {
     fontSize: Typography.titleMedium,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   paymentLabel: {
@@ -421,7 +422,7 @@ const styles = StyleSheet.create({
   },
   venmoTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
   },
   venmoSaveText: {
     fontSize: Typography.labelMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   venmoDisplay: {
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
   venmoHandleText: {
     fontSize: Typography.bodyMedium,
     color: Colors.primary,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
   },
   venmoPlaceholder: {
     fontSize: Typography.bodyMedium,
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
   },
   withdrawButtonText: {
     fontSize: Typography.bodySmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
   },
   pendingRow: {
@@ -515,7 +516,7 @@ const styles = StyleSheet.create({
   },
   pendingAmount: {
     fontSize: Typography.bodySmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.warning,
   },
   statsRow: {
@@ -535,7 +536,7 @@ const styles = StyleSheet.create({
   },
   miniStatValue: {
     fontSize: Typography.titleLarge,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   miniStatLabel: {
@@ -548,7 +549,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
@@ -582,7 +583,7 @@ const styles = StyleSheet.create({
   },
   transactionAmount: {
     fontSize: Typography.bodyMedium,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     fontVariant: ["tabular-nums"],
   },
   amountPositive: {

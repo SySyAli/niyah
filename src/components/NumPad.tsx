@@ -8,7 +8,13 @@ import {
   Animated,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Colors, Typography, Spacing, Radius } from "../constants/colors";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  Radius,
+  FontWeight,
+} from "../constants/colors";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const PAD_WIDTH = Math.min(SCREEN_WIDTH - 48, 360);
@@ -194,7 +200,7 @@ const styles = StyleSheet.create({
   },
   keyText: {
     fontSize: Typography.headlineMedium,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
     color: Colors.text,
   },
   actionKeyText: {
@@ -202,7 +208,7 @@ const styles = StyleSheet.create({
   },
   backspaceText: {
     fontSize: Typography.bodyMedium,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
     color: Colors.textSecondary,
   },
   amountContainer: {
@@ -213,7 +219,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.labelLarge,
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
-    fontWeight: "500",
+    fontWeight: FontWeight.medium,
   },
   amountRow: {
     flexDirection: "row",
@@ -221,7 +227,7 @@ const styles = StyleSheet.create({
   },
   amountText: {
     fontSize: Typography.displayLarge,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     letterSpacing: -2,
   },

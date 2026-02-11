@@ -7,6 +7,7 @@ import {
   Typography,
   Spacing,
   Radius,
+  FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button, Timer } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -152,13 +153,13 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: Typography.labelSmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.gain,
     letterSpacing: 1,
   },
   title: {
     fontSize: Typography.headlineLarge,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
   },
   payoutAmount: {
     fontSize: Typography.displaySmall,
-    fontWeight: "700",
+    fontWeight: FontWeight.bold,
     color: Colors.gain,
   },
   tipsSection: {
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
   },
   tipsTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    fontWeight: FontWeight.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },

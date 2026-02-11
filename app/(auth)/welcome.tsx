@@ -309,10 +309,12 @@ export default function WelcomeScreen() {
               onPress={async () => {
                 // Google Sign-In uses the native SDK so we import it directly
                 try {
-                  const { signInWithGoogle } =
-                    await import("../../src/config/firebase");
-                  const { useAuthStore } =
-                    await import("../../src/store/authStore");
+                  const { signInWithGoogle } = await import(
+                    "../../src/config/firebase"
+                  );
+                  const { useAuthStore } = await import(
+                    "../../src/store/authStore"
+                  );
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   const accessToken = await signInWithGoogle();
                   await useAuthStore.getState().loginWithGoogle(accessToken);

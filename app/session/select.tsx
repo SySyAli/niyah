@@ -17,6 +17,7 @@ import {
   FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
+import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../../src/store/walletStore";
 import { CADENCES, CadenceId, DEMO_MODE } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
@@ -49,9 +50,14 @@ const CadenceOption: React.FC<CadenceOptionProps> = ({
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   };
 
+  const handleSelect = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onSelect();
+  };
+
   return (
     <Pressable
-      onPress={canAfford ? onSelect : undefined}
+      onPress={canAfford ? handleSelect : undefined}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >
@@ -119,6 +125,7 @@ export default function SelectCadenceScreen() {
 
   const handleContinue = () => {
     if (canAfford) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       router.push(`/session/confirm?cadence=${selectedCadence}`);
     }
   };

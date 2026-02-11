@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   useWindowDimensions,
-  Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
@@ -23,7 +22,6 @@ import Animated, {
   Extrapolation,
   type SharedValue,
 } from "react-native-reanimated";
-import Svg, { Path } from "react-native-svg";
 import {
   Colors,
   Typography,
@@ -31,8 +29,7 @@ import {
   Radius,
   FontWeight,
 } from "../../src/constants/colors";
-import { ContinuousScene } from "../../src/components/onboarding";
-import { AppleSignInButton } from "../../src/components/AppleSignInButton";
+import { ContinuousScene, StonesScene } from "../../src/components/onboarding";
 
 // --- Page data ---
 
@@ -40,8 +37,8 @@ const PAGES = [
   {
     title: "Welcome to\nNiyah",
     subtitle:
-      "Put real money on the line to build\nfocus habits that actually stick.",
-    hint: "Swipe to explore",
+      "Tie screen-time limits with money,\nand earn more if you stick to them.",
+    hint: "Swipe to learn more \u2794",
   },
   {
     title: "Stake Your\nFocus",
@@ -60,8 +57,8 @@ const PAGES = [
   },
 ];
 
-// Warm beige palette that blends seamlessly between pages
-const BG_COLORS = ["#1A1714", "#1E1B16", "#221F19", "#252019"];
+// Dark green palette — page 0 matches Figma (#1B4332)
+const BG_COLORS = ["#1B4332", "#1E1B16", "#221F19", "#252019"];
 
 // --- Sub-components ---
 
@@ -71,42 +68,12 @@ const AnimatedPageText: React.FC<{
   scrollX: SharedValue<number>;
   pageWidth: number;
 }> = ({ page, index, scrollX, pageWidth }) => {
-  const style = useAnimatedStyle(() => {
-    const input = [
-      (index - 1) * pageWidth,
-      index * pageWidth,
-      (index + 1) * pageWidth,
-    ];
-    return {
-      opacity: interpolate(
-        scrollX.value,
-        input,
-        [0, 1, 0],
-        Extrapolation.CLAMP,
-      ),
-      transform: [
-        {
-          translateX: interpolate(
-            scrollX.value,
-            input,
-            [30, 0, -30],
-            Extrapolation.CLAMP,
-          ),
-        },
-        {
-          translateY: interpolate(
-            scrollX.value,
-            input,
-            [6, 0, 6],
-            Extrapolation.CLAMP,
-          ),
-        },
-      ],
-    };
-  });
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateX: index * pageWidth - scrollX.value }],
+  }));
 
   return (
-    <Animated.View style={[styles.textBlock, style]}>
+    <Animated.View style={[styles.textBlock, { width: pageWidth }, style]}>
       <Text style={styles.title}>{page.title}</Text>
       <Text style={styles.subtitle}>{page.subtitle}</Text>
       {page.hint && <Text style={styles.hint}>{page.hint}</Text>}
@@ -144,28 +111,6 @@ const AnimatedDot: React.FC<{
   return <Animated.View style={[styles.dot, style]} />;
 };
 
-// Google "G" icon
-const GoogleIcon = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24">
-    <Path
-      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-      fill="#4285F4"
-    />
-    <Path
-      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      fill="#34A853"
-    />
-    <Path
-      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-      fill="#FBBC05"
-    />
-    <Path
-      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      fill="#EA4335"
-    />
-  </Svg>
-);
-
 // --- Main Screen ---
 
 export default function WelcomeScreen() {
@@ -200,15 +145,11 @@ export default function WelcomeScreen() {
     ),
   }));
 
-  const illustrationSize = Math.min(width * 0.88, height * 0.4);
-
-  const handleAuthSuccess = () => {
-    router.replace("/(tabs)");
-  };
+  const illustrationSize = Math.min(width * 1.05, height * 0.52);
 
   return (
     <Animated.View style={[styles.container, bgStyle]}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
 
       {/* Soft gradient wash */}
       <LinearGradient
@@ -237,7 +178,7 @@ export default function WelcomeScreen() {
             ))}
           </View>
 
-          {/* Continuous scene - single evolving illustration */}
+          {/* Continuous scene — Stages 1-3 illustrations (non-interactive) */}
           <View style={styles.sceneArea} pointerEvents="none">
             <ContinuousScene
               scrollX={scrollX}
@@ -246,7 +187,7 @@ export default function WelcomeScreen() {
             />
           </View>
 
-          {/* Invisible scroll capture - sits on top, captures swipe gestures */}
+          {/* Invisible scroll capture — captures swipe gestures */}
           <Animated.ScrollView
             style={StyleSheet.absoluteFill}
             horizontal
@@ -263,6 +204,21 @@ export default function WelcomeScreen() {
               <View key={i} style={{ width }} />
             ))}
           </Animated.ScrollView>
+
+          {/* Interactive stones layer — ABOVE ScrollView so taps reach Pressables.
+              pointerEvents="box-none" lets swipes pass through to ScrollView. */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+            {/* Spacer matching textArea height */}
+            <View style={{ height: 160 }} pointerEvents="none" />
+            {/* Center stones in the remaining space (mirrors sceneArea layout) */}
+            <View style={styles.stonesOverlay} pointerEvents="box-none">
+              <StonesScene
+                scrollX={scrollX}
+                pageWidth={width}
+                size={illustrationSize}
+              />
+            </View>
+          </View>
         </View>
 
         {/* === Bottom section === */}
@@ -279,71 +235,32 @@ export default function WelcomeScreen() {
             ))}
           </View>
 
-          {/* Get Started button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.getStartedButton,
-              pressed && styles.getStartedPressed,
-            ]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/(auth)/signup");
-            }}
-          >
-            <Text style={styles.getStartedText}>Get started</Text>
-          </Pressable>
-
-          {/* OR divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social auth icons */}
-          <View style={styles.socialRow}>
+          {/* Auth buttons — Log in (outline) + Sign up (filled) */}
+          <View style={styles.authRow}>
             <Pressable
               style={({ pressed }) => [
-                styles.socialButton,
-                pressed && styles.socialButtonPressed,
+                styles.loginButton,
+                pressed && styles.authButtonPressed,
               ]}
-              onPress={async () => {
-                try {
-                  const { signInWithGoogle } = await import(
-                    "../../src/config/firebase"
-                  );
-                  const { useAuthStore } = await import(
-                    "../../src/store/authStore"
-                  );
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  const accessToken = await signInWithGoogle();
-                  await useAuthStore.getState().loginWithGoogle(accessToken);
-                  handleAuthSuccess();
-                } catch (error: any) {
-                  if (error?.code !== "SIGN_IN_CANCELLED") {
-                    console.error("Google sign-in error:", error);
-                  }
-                }
-              }}
-            >
-              <GoogleIcon />
-            </Pressable>
-
-            {Platform.OS === "ios" && (
-              <AppleSignInButton compact onSuccess={handleAuthSuccess} />
-            )}
-          </View>
-
-          {/* Sign in link */}
-          <View style={styles.signInRow}>
-            <Text style={styles.signInText}>I already have an account. </Text>
-            <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push("/(auth)/login");
               }}
             >
-              <Text style={styles.signInLink}>Sign in</Text>
+              <Text style={styles.loginButtonText}>Log in</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.signupButton,
+                pressed && styles.authButtonPressed,
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push("/(auth)/signup");
+              }}
+            >
+              <Text style={styles.signupButtonText}>Sign up</Text>
             </Pressable>
           </View>
         </View>
@@ -363,7 +280,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   textArea: {
-    paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
     height: 160,
     zIndex: 2,
@@ -371,8 +287,9 @@ const styles = StyleSheet.create({
   textBlock: {
     position: "absolute",
     top: Spacing.xl,
-    left: Spacing.lg,
-    right: Spacing.lg,
+    left: 0,
+    paddingHorizontal: Spacing.lg,
+    alignItems: "center",
   },
   title: {
     fontSize: Typography.displaySmall,
@@ -380,25 +297,33 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: -0.5,
     lineHeight: Typography.displaySmall * 1.1,
+    textAlign: "center",
   },
   subtitle: {
     fontSize: Typography.bodyLarge,
     color: Colors.textSecondary,
     marginTop: Spacing.sm,
     lineHeight: Typography.bodyLarge * 1.5,
+    textAlign: "center",
   },
   hint: {
     fontSize: Typography.bodySmall,
-    fontWeight: FontWeight.medium,
-    color: Colors.textTertiary,
+    fontWeight: FontWeight.bold,
+    color: Colors.text,
     marginTop: Spacing.md,
     letterSpacing: 0.3,
+    textAlign: "center",
   },
   sceneArea: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
+  },
+  stonesOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   bottomSection: {
     paddingHorizontal: Spacing.lg,
@@ -415,72 +340,42 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-  getStartedButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  getStartedPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  getStartedText: {
-    fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-    letterSpacing: 0.2,
-  },
-  divider: {
+  authRow: {
     flexDirection: "row",
-    alignItems: "center",
-  },
-  dividerLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.border,
-  },
-  dividerText: {
-    fontSize: Typography.labelSmall,
-    fontWeight: FontWeight.semibold,
-    color: Colors.textMuted,
-    marginHorizontal: Spacing.md,
-    letterSpacing: 1,
-  },
-  socialRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
     gap: Spacing.md,
   },
-  socialButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  loginButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
-    justifyContent: "center",
+    borderColor: Colors.white,
+    backgroundColor: "transparent",
     alignItems: "center",
-  },
-  socialButtonPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.95 }],
-  },
-  signInRow: {
-    flexDirection: "row",
     justifyContent: "center",
+  },
+  loginButtonText: {
+    fontSize: Typography.bodyMedium,
+    fontWeight: FontWeight.medium,
+    color: Colors.white,
+  },
+  signupButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: "#000000",
     alignItems: "center",
-    paddingBottom: Spacing.xs,
+    justifyContent: "center",
   },
-  signInText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textTertiary,
+  signupButtonText: {
+    fontSize: Typography.bodyMedium,
+    fontWeight: FontWeight.medium,
+    color: "#000000",
   },
-  signInLink: {
-    fontSize: Typography.bodySmall,
-    fontWeight: FontWeight.bold,
-    color: Colors.text,
+  authButtonPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.97 }],
   },
 });

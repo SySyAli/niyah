@@ -10,6 +10,7 @@ import {
   FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button, Balance, Confetti } from "../../src/components";
+import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { formatMoney } from "../../src/utils/format";
@@ -32,6 +33,8 @@ export default function CompleteScreen() {
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -52,11 +55,13 @@ export default function CompleteScreen() {
   }, [opacityAnim, scaleAnim]);
 
   const handleDone = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.replace("/(tabs)");
   };
 
   const handleMarkReceived = () => {
     if (lastSession) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       markSettlementReceived(lastSession.id);
     }
   };

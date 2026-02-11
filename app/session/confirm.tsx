@@ -16,6 +16,7 @@ import {
   FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
+import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import {
   CADENCES,
@@ -44,9 +45,11 @@ export default function ConfirmSessionScreen() {
 
   const handleConfirm = () => {
     if (currentPartner) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       startDuoSession(cadence);
       router.replace("/session/active");
     } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       // No partner selected - go to partner selection
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.push("/session/partner" as any);

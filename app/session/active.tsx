@@ -10,6 +10,7 @@ import {
   FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button, Timer } from "../../src/components";
+import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useCountdown } from "../../src/hooks/useCountdown";
 import { formatMoney } from "../../src/utils/format";
@@ -107,7 +108,10 @@ export default function ActiveSessionScreen() {
         <View style={styles.footer}>
           <Button
             title="I Need to Surrender"
-            onPress={() => router.push("/session/surrender")}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              router.push("/session/surrender");
+            }}
             variant="outline"
             size="large"
           />

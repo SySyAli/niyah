@@ -17,6 +17,7 @@ import {
   Radius,
   FontWeight,
 } from "../../src/constants/colors";
+import * as Haptics from "expo-haptics";
 import { Card, Balance } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -33,6 +34,7 @@ export default function ProfileScreen() {
   const [venmoInput, setVenmoInput] = useState(user?.venmoHandle || "");
 
   const handleLogout = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -65,6 +67,7 @@ export default function ProfileScreen() {
 
   const handleSaveVenmo = () => {
     if (venmoInput) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const handle = venmoInput.startsWith("@") ? venmoInput : `@${venmoInput}`;
       setVenmoHandle(handle);
       setShowVenmoInput(false);
@@ -180,7 +183,10 @@ export default function ProfileScreen() {
           ) : (
             <Pressable
               style={styles.venmoDisplay}
-              onPress={() => setShowVenmoInput(true)}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowVenmoInput(true);
+              }}
             >
               <Text
                 style={
@@ -207,7 +213,10 @@ export default function ProfileScreen() {
               <Balance amount={balance} size="medium" />
             </View>
             <Pressable
-              onPress={() => router.push("/session/withdraw")}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/session/withdraw");
+              }}
               style={styles.withdrawButton}
             >
               <Text style={styles.withdrawButtonText}>Withdraw</Text>

@@ -17,6 +17,7 @@ import {
   Radius,
   FontWeight,
 } from "../../src/constants/colors";
+import * as Haptics from "expo-haptics";
 import { Button, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
@@ -47,9 +48,14 @@ const QuickAmountButton: React.FC<QuickAmountButtonProps> = ({
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   };
 
+  const handleQuickPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress(amount);
+  };
+
   return (
     <Pressable
-      onPress={() => onPress(amount)}
+      onPress={handleQuickPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >
@@ -125,6 +131,7 @@ export default function DepositScreen() {
   }, []);
 
   const handleDeposit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const finalAmount = selectedQuickAmount || amountInCents;
 
     Alert.alert(

@@ -19,6 +19,7 @@ import {
   Radius,
   FontWeight,
 } from "../../src/constants/colors";
+import * as Haptics from "expo-haptics";
 import { Button, Card, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
@@ -74,16 +75,19 @@ export default function WithdrawScreen() {
   }, []);
 
   const handleMaxAmount = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setInputValue((balance / 100).toFixed(2));
   };
 
   const handleContinue = () => {
     if (!isValidAmount) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setStep("details");
   };
 
   const handleWithdraw = () => {
     if (!canWithdraw) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     Alert.alert(
       "Confirm Withdrawal",

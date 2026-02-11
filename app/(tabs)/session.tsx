@@ -16,6 +16,7 @@ import {
   Radius,
   FontWeight,
 } from "../../src/constants/colors";
+import * as Haptics from "expo-haptics";
 import { Card, Button } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -46,12 +47,17 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   };
 
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
+
   // stickK model: stake = stake (no ROI, just keep your stake on completion)
   // In duo mode, winner takes loser's stake
 
   return (
     <Pressable
-      onPress={canAfford ? onPress : undefined}
+      onPress={canAfford ? handlePress : undefined}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >

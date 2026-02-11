@@ -16,6 +16,7 @@ import {
   Radius,
   FontWeight,
 } from "../../src/constants/colors";
+import * as Haptics from "expo-haptics";
 import { Card, Button } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { REPUTATION_LEVELS } from "../../src/constants/config";
@@ -30,12 +31,14 @@ export default function PartnerSelectionScreen() {
   const [inviteName, setInviteName] = useState("");
 
   const handleSelectPartner = (oderId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     selectPartner(oderId);
     router.back();
   };
 
   const handleSendInvite = () => {
     if (inviteEmail && inviteName) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       sendInvite(inviteEmail, inviteName);
       setShowInvite(false);
       setInviteEmail("");

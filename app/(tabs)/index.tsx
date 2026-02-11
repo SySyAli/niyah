@@ -16,6 +16,7 @@ import {
   Radius,
   FontWeight,
 } from "../../src/constants/colors";
+import * as Haptics from "expo-haptics";
 import { Card, Balance, Button, MoneyPlant } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -46,9 +47,14 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
   };
 
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
     >
@@ -149,7 +155,12 @@ export default function DashboardScreen() {
 
         {/* Active Session Banner */}
         {activeDuoSession && (
-          <Pressable onPress={() => router.push("/session/active")}>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/session/active");
+            }}
+          >
             <Card style={styles.activeSessionCard}>
               <View style={styles.activeSessionIndicator} />
               <View style={styles.activeSessionContent}>

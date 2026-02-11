@@ -18,6 +18,7 @@ import {
   FontWeight,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
+import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { formatMoney } from "../../src/utils/format";
 
@@ -32,13 +33,15 @@ export default function SurrenderScreen() {
 
   const handleSurrender = () => {
     if (canSurrender && activeDuoSession) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       // Complete session with user failed, partner completed (assumed)
       completeDuoSession(false, true);
       setShowPayment(true);
     }
   };
 
-  const handlePayVenmo = async () => {
+  const handlePayVenmo = async (): Promise<void> => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (activeDuoSession?.partnerVenmo) {
       const venmoUrl = getVenmoPayLink(
         activeDuoSession.stakeAmount,
@@ -66,6 +69,7 @@ export default function SurrenderScreen() {
   };
 
   const handleMarkPaid = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // Mark as paid and go home
     // Note: In real app, we'd get the session ID from completed session
     router.replace("/(tabs)");

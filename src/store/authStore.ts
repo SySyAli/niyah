@@ -213,18 +213,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const firebaseUser = await signInWithGoogle();
 
-      // Check if new user
-      const isNew = firebaseUser.isNewUser;
-
-      // Check if profile exists in Firestore
-      const profileExists = await checkProfileComplete(firebaseUser.uid);
+      // Fetch Firestore profile and build user state immediately,
+      // rather than waiting for onAuthStateChanged (which races).
+      const firestoreData = await fetchUserProfile(firebaseUser.uid).catch(
+        () => null,
+      );
+      const user = buildUser(firebaseUser, firestoreData);
+      const profileComplete = user.profileComplete === true;
 
       set({
-        isNewUser: isNew || !profileExists,
+        firebaseUser,
+        user,
+        isAuthenticated: true,
+        profileComplete,
+        isNewUser: !profileComplete,
         isLoading: false,
       });
-
-      // onAuthStateChanged will handle the rest
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -247,12 +251,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const firebaseUser = await signInWithApple(identityToken, rawNonce);
 
-      const isNew = firebaseUser.isNewUser;
-
-      const profileExists = await checkProfileComplete(firebaseUser.uid);
+      // Fetch Firestore profile and build user state immediately,
+      // rather than waiting for onAuthStateChanged (which races).
+      const firestoreData = await fetchUserProfile(firebaseUser.uid).catch(
+        () => null,
+      );
+      const user = buildUser(firebaseUser, firestoreData);
+      const profileComplete = user.profileComplete === true;
 
       set({
-        isNewUser: isNew || !profileExists,
+        firebaseUser,
+        user,
+        isAuthenticated: true,
+        profileComplete,
+        isNewUser: !profileComplete,
         isLoading: false,
       });
     } catch (error) {
@@ -296,19 +308,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const firebaseUser = await signInWithEmailLink(email, url);
 
-      const isNew = firebaseUser.isNewUser;
-
-      const profileExists = await checkProfileComplete(firebaseUser.uid);
-
       // Clean up stored email
       await AsyncStorage.removeItem(MAGIC_LINK_EMAIL_KEY);
 
+      // Fetch Firestore profile and build user state immediately,
+      // rather than waiting for onAuthStateChanged (which races).
+      const firestoreData = await fetchUserProfile(firebaseUser.uid).catch(
+        () => null,
+      );
+      const user = buildUser(firebaseUser, firestoreData);
+      const profileComplete = user.profileComplete === true;
+
       set({
-        isNewUser: isNew || !profileExists,
+        firebaseUser,
+        user,
+        isAuthenticated: true,
+        profileComplete,
+        isNewUser: !profileComplete,
         isLoading: false,
       });
-
-      // onAuthStateChanged handles the rest
     } catch (error) {
       set({ isLoading: false });
       throw error;

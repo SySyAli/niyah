@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 97.893 173.287" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="peach-fight-bg" filter="url(#filter0_f_70_852)">
+<ellipse cx="48.9465" cy="86.6436" rx="44.9465" ry="82.6436" fill="var(--fill-0, black)" fill-opacity="0.46"/>
+</g>
+<defs>
+<filter id="filter0_f_70_852" x="0" y="0" width="97.893" height="173.287" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="2" result="effect1_foregroundBlur_70_852"/>
+</filter>
+</defs>
+</svg>

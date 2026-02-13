@@ -27,13 +27,11 @@ import Animated, {
 import Svg, {
   Path,
   Circle,
-  Rect,
   Defs,
   ClipPath,
   LinearGradient,
   Stop,
   G,
-  Ellipse,
 } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 
@@ -157,15 +155,15 @@ const BLOBS: BlobConfig[] = [
       { type: "circle" as const, cx: 62.5673, cy: 47.9045, r: 5.49241 },
     ],
     happyEyes: [
-      // Left happy eye — upward arc (^)
+      // Left droopy eye — annoyed half-circle
       {
         type: "path" as const,
-        d: "M 38.5 50.5 Q 45 42 51.5 50.5",
+        d: "M 50.48 47.90 A 5.49 5.49 0 0 1 39.50 47.90 L 44.99 47.90 Z",
       },
-      // Right happy eye — upward arc (^)
+      // Right droopy eye — annoyed half-circle
       {
         type: "path" as const,
-        d: "M 56 50.5 Q 62.6 42 69 50.5",
+        d: "M 68.06 47.90 A 5.49 5.49 0 0 1 57.08 47.90 L 62.57 47.90 Z",
       },
     ],
     baseRot: 0,
@@ -267,6 +265,7 @@ interface BlobProps {
   blob: BlobConfig;
   index: number;
   size: number;
+  pageWidth: number;
   progress: SharedValue<number>;
   breathe: SharedValue<number>;
   floatA: SharedValue<number>;
@@ -278,6 +277,7 @@ const BlobCharacter: React.FC<BlobProps> = ({
   blob,
   index,
   size,
+  pageWidth,
   progress,
   breathe,
   floatA,
@@ -370,9 +370,21 @@ const BlobCharacter: React.FC<BlobProps> = ({
   const floats = [floatA, floatB, floatC];
   const primaryFloat = floats[blob.floatIdx % 3];
 
-  // Compute target center position for hero blob (fractional offset from original pos)
-  const heroCenterX = blob.isHero ? (0.5 - blob.x - blob.w / 2) * size : 0;
-  const heroCenterY = blob.isHero ? (0.42 - blob.y - blob.h / 2) * size : 0;
+  // Proper coordinate computation for hero blob → peach position on page 1
+  const FIGMA_Y_OFF = 210;
+  const sf = pageWidth / 400;
+  // Target peach position from Figma (Onboarding2Scene coordinates)
+  const targetCenterScreenX = 25 * sf + (132 * sf) / 2;
+  const targetCenterScreenY = (262 - FIGMA_Y_OFF) * sf + (129 * sf) / 2;
+  // Blob's current center on screen
+  const blobsOffsetX = (pageWidth - size) / 2;
+  const blobsOffsetY = size * 0.05;
+  const blobCenterScreenX = blobsOffsetX + size * blob.x + (size * blob.w) / 2;
+  const blobCenterScreenY = blobsOffsetY + size * blob.y + (size * blob.h) / 2;
+  // Delta to move hero blob to peach position
+  const heroDeltaX = blob.isHero ? targetCenterScreenX - blobCenterScreenX : 0;
+  const heroDeltaY = blob.isHero ? targetCenterScreenY - blobCenterScreenY : 0;
+  const heroTargetScale = blob.isHero ? (132 * sf) / (size * blob.w) : 1;
 
   const animStyle = useAnimatedStyle(() => {
     // Gentle vertical float
@@ -382,32 +394,32 @@ const BlobCharacter: React.FC<BlobProps> = ({
     const breatheScale = interpolate(breathe.value, [0, 1], [1, 1.006]);
 
     if (blob.isHero) {
-      // Hero blob: stays visible through page 1, scales up and centers
+      // Hero blob: stays fully opaque through page 1, fades out during 1→2
       const scrollOpacity = interpolate(
         progress.value,
-        [0, 0.5, 1.0, 1.5, 2.0],
-        [1, 1, 1, 0.5, 0],
+        [0, 1, 1.3, 1.8],
+        [1, 1, 0.6, 0],
         Extrapolation.CLAMP,
       );
 
       const heroScale = interpolate(
         progress.value,
-        [0, 0.5, 1.0],
-        [1, 1.5, 2.2],
+        [0, 0.85],
+        [1, heroTargetScale],
         Extrapolation.CLAMP,
       );
 
       const moveX = interpolate(
         progress.value,
-        [0, 0.5, 1.0],
-        [0, heroCenterX * 0.5, heroCenterX],
+        [0, 0.85],
+        [0, heroDeltaX],
         Extrapolation.CLAMP,
       );
 
       const moveY = interpolate(
         progress.value,
-        [0, 0.5, 1.0],
-        [0, heroCenterY * 0.5, heroCenterY],
+        [0, 0.85],
+        [0, heroDeltaY],
         Extrapolation.CLAMP,
       );
 
@@ -489,21 +501,6 @@ const BlobCharacter: React.FC<BlobProps> = ({
     return interpolate(progress.value, [0.3, 0.7], [1, 0], Extrapolation.CLAMP);
   });
 
-  // Phone opacity (hero only, appears as blob moves to center)
-  const phoneOpacity = useDerivedValue(() => {
-    if (!blob.isHero) return 0;
-    return interpolate(
-      progress.value,
-      [0.5, 0.9, 1.0, 1.5, 2.0],
-      [0, 0.5, 1, 0.5, 0],
-      Extrapolation.CLAMP,
-    );
-  });
-
-  const phoneStyle = useAnimatedStyle(() => ({
-    opacity: phoneOpacity.value,
-  }));
-
   const happyEyeStyle = useAnimatedStyle(() => ({
     opacity: happyEyeOpacity.value,
   }));
@@ -524,10 +521,6 @@ const BlobCharacter: React.FC<BlobProps> = ({
   const hlCy = vbH * 0.28;
   const hlRx = vbW * 0.22;
   const hlRy = vbH * 0.18;
-
-  // Phone dimensions (relative to blob size for hero)
-  const phoneW = w * 0.35;
-  const phoneH = w * 0.55;
 
   return (
     <Animated.View
@@ -613,7 +606,7 @@ const BlobCharacter: React.FC<BlobProps> = ({
           </Svg>
         </Animated.View>
 
-        {/* Happy eyes layer — fades in for hero (^_^ arcs) */}
+        {/* Annoyed eyes layer — droopy half-circles, fades in for hero */}
         {blob.isHero && blob.happyEyes && (
           <Animated.View
             style={[StyleSheet.absoluteFill, happyEyeStyle]}
@@ -621,126 +614,12 @@ const BlobCharacter: React.FC<BlobProps> = ({
           >
             <Svg width={w} height={h} viewBox={blob.viewBox}>
               {blob.happyEyes.map((eye, i) => (
-                <Path
-                  key={`happy-${i}`}
-                  d={eye.d!}
-                  fill="none"
-                  stroke="#0F0000"
-                  strokeWidth={3.5}
-                  strokeLinecap="round"
-                />
+                <Path key={`annoyed-${i}`} d={eye.d!} fill="#0F0000" />
               ))}
-              {/* Little smile */}
-              <Path
-                d="M 47 58 Q 54 65 61 58"
-                fill="none"
-                stroke="#0F0000"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-              />
             </Svg>
           </Animated.View>
         )}
       </Pressable>
-
-      {/* Phone held by hero blob — appears on right side */}
-      {blob.isHero && (
-        <Animated.View
-          style={[
-            {
-              position: "absolute",
-              right: -phoneW * 0.6,
-              top: h * 0.1,
-              width: phoneW,
-              height: phoneH,
-            },
-            phoneStyle,
-          ]}
-          pointerEvents="none"
-        >
-          <Svg width={phoneW} height={phoneH} viewBox="0 0 60 95">
-            {/* Phone body */}
-            <Rect
-              x={0}
-              y={0}
-              width={60}
-              height={95}
-              rx={10}
-              fill="#3A3A3A"
-              opacity={0.9}
-            />
-            {/* Screen */}
-            <Rect
-              x={3}
-              y={3}
-              width={54}
-              height={89}
-              rx={8}
-              fill="#1A1A2E"
-              opacity={0.95}
-            />
-            {/* Screen glow */}
-            <Rect
-              x={8}
-              y={14}
-              width={44}
-              height={60}
-              rx={4}
-              fill="#329DD8"
-              opacity={0.15}
-            />
-            {/* Notch */}
-            <Rect
-              x={18}
-              y={6}
-              width={24}
-              height={4}
-              rx={2}
-              fill="#0F0F0F"
-              opacity={0.7}
-            />
-            {/* App icon placeholder 1 */}
-            <Rect
-              x={12}
-              y={22}
-              width={14}
-              height={14}
-              rx={4}
-              fill="#E1306C"
-              opacity={0.5}
-            />
-            {/* App icon placeholder 2 */}
-            <Rect
-              x={34}
-              y={22}
-              width={14}
-              height={14}
-              rx={4}
-              fill="#1DA1F2"
-              opacity={0.5}
-            />
-            {/* Content lines */}
-            <Rect
-              x={12}
-              y={44}
-              width={36}
-              height={3}
-              rx={1.5}
-              fill="#F2EDE4"
-              opacity={0.12}
-            />
-            <Rect
-              x={12}
-              y={52}
-              width={24}
-              height={3}
-              rx={1.5}
-              fill="#F2EDE4"
-              opacity={0.08}
-            />
-          </Svg>
-        </Animated.View>
-      )}
     </Animated.View>
   );
 };
@@ -811,6 +690,7 @@ export const BlobsScene: React.FC<BlobsSceneProps> = ({
           blob={blob}
           index={i}
           size={size}
+          pageWidth={pageWidth}
           progress={progress}
           breathe={breathe}
           floatA={floatA}

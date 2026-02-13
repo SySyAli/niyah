@@ -31,7 +31,11 @@ import {
   FontWeight,
   Font,
 } from "../../src/constants/colors";
-import { ContinuousScene, BlobsScene } from "../../src/components/onboarding";
+import {
+  ContinuousScene,
+  BlobsScene,
+  Onboarding2Scene,
+} from "../../src/components/onboarding";
 
 // --- Page data ---
 
@@ -43,9 +47,9 @@ const PAGES = [
     hint: "Swipe to learn more \u2794",
   },
   {
-    title: "Stake Your\nFocus",
+    title: "Take your focus\nto the next level",
     subtitle:
-      "Commit real dollars to each session.\nWhen Instagram costs $5, you stay focused.",
+      "Block distracting apps and set limits.\nPut up real $$ to test your strength.",
   },
   {
     title: "Block\nDistractions",
@@ -59,8 +63,8 @@ const PAGES = [
   },
 ];
 
-// Dark green palette — page 0 matches Figma (#1B4332)
-const BG_COLORS = ["#1B4332", "#1E1B16", "#221F19", "#252019"];
+// Dark green palette — pages 0-1 match Figma (#1B4332), then transition darker
+const BG_COLORS = ["#1B4332", "#1B4332", "#221F19", "#252019"];
 
 // --- Niyah logo (brand mark shown on page 0) ---
 
@@ -305,6 +309,25 @@ export default function WelcomeScreen() {
               pageWidth={width}
               size={illustrationSize}
             />
+            {/* Onboarding 2 scene — overlays on page 1 (scroll-driven).
+                Uses full width for positioning, aligned to top of scene area. */}
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  paddingTop: 0,
+                },
+              ]}
+              pointerEvents="none"
+            >
+              <Onboarding2Scene
+                scrollX={scrollX}
+                pageWidth={width}
+                size={width}
+              />
+            </View>
           </View>
 
           {/* Invisible scroll capture — captures swipe gestures */}

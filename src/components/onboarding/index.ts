@@ -1,5 +1,6 @@
 export { ContinuousScene } from "./ContinuousScene";
 export { BlobsScene } from "./BlobsScene";
+export { Onboarding2Scene } from "./Onboarding2Scene";
 
 // Legacy individual scenes (kept for reference, no longer used in onboarding)
 export { GardenScene } from "./GardenScene";

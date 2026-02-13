@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 191.898 238.012" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="phone-coat-bg" filter="url(#filter0_f_70_837)">
+<ellipse cx="95.9489" cy="119.006" rx="91.9489" ry="115.006" fill="var(--fill-0, #3E281B)"/>
+</g>
+<defs>
+<filter id="filter0_f_70_837" x="0" y="0" width="191.898" height="238.012" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="2" result="effect1_foregroundBlur_70_837"/>
+</filter>
+</defs>
+</svg>

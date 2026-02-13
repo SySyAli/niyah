@@ -17,7 +17,7 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import * as Haptics from "expo-haptics";
 import { Button, Card, NumPad, AmountDisplay } from "../../src/components";
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   closeText: {
     color: Colors.textSecondary,
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   maxButton: {
     width: 60,
@@ -299,11 +299,11 @@ const styles = StyleSheet.create({
   maxText: {
     color: Colors.primary,
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
   },
   title: {
     fontSize: Typography.titleLarge,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
   },
   balanceInfo: {
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   balanceAmount: {
     fontSize: Typography.titleMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.gain,
   },
   errorText: {
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   },
   summaryAmount: {
     fontSize: Typography.displaySmall,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   inputGroup: {
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: Typography.labelLarge,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     color: Colors.text,
   },
   inputContainer: {
@@ -405,11 +405,11 @@ const styles = StyleSheet.create({
   infoValueGreen: {
     fontSize: Typography.bodyMedium,
     color: Colors.gain,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   infoValueBold: {
     fontSize: Typography.titleMedium,
     color: Colors.text,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
   },
 });

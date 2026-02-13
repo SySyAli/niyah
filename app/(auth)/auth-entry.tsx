@@ -21,6 +21,7 @@ import {
   Spacing,
   Radius,
   FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 36,
-    fontWeight: FontWeight.heavy,
+    ...Font.heavy,
     color: Colors.text,
     letterSpacing: -0.5,
     lineHeight: 42,
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
   },
   socialButtonText: {
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     color: Colors.text,
   },
   appleButton: {
@@ -391,7 +392,7 @@ const styles = StyleSheet.create({
   },
   appleButtonText: {
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     color: "#000",
   },
   orDivider: {

@@ -1,6 +1,12 @@
 import React, { useRef, useEffect } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
-import { Colors, Typography, Spacing, FontWeight } from "../constants/colors";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  FontWeight,
+  Font,
+} from "../constants/colors";
 import { formatMoney } from "../utils/format";
 
 interface BalanceProps {
@@ -111,7 +117,7 @@ export const AnimatedDigit: React.FC<{
   fontSize: number;
   color: string;
 }> = ({ digit, fontSize, color }) => (
-  <Text style={{ fontSize, fontWeight: FontWeight.bold, color }}>{digit}</Text>
+  <Text style={{ fontSize, ...Font.bold, color }}>{digit}</Text>
 );
 
 const styles = StyleSheet.create({
@@ -122,16 +128,16 @@ const styles = StyleSheet.create({
     fontSize: Typography.labelLarge,
     color: Colors.textSecondary,
     marginBottom: Spacing.xs,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   amount: {
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     fontVariant: ["tabular-nums"],
     letterSpacing: -1,
   },
   compactAmount: {
     fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     fontVariant: ["tabular-nums"],
   },
 });

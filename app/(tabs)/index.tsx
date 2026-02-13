@@ -14,7 +14,7 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import * as Haptics from "expo-haptics";
 import { Card, Balance, Button, MoneyPlant } from "../../src/components";
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: Typography.headlineMedium,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
     marginTop: 2,
   },
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   },
   changeText: {
     fontSize: Typography.bodySmall,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   changePositive: {
     color: Colors.gain,
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: Colors.background,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     fontSize: Typography.bodySmall,
   },
   actionButtonTextSecondary: {
@@ -382,12 +382,12 @@ const styles = StyleSheet.create({
   activeSessionLabel: {
     fontSize: Typography.labelSmall,
     color: Colors.primary,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     letterSpacing: 1,
   },
   activeSessionText: {
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginTop: 2,
   },
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   },
   activeSessionArrow: {
     fontSize: Typography.bodySmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.primary,
   },
   ctaCard: {
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   },
   ctaTitle: {
     fontSize: Typography.titleLarge,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   ctaSubtitle: {
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: Typography.headlineSmall,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   statLabel: {
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
   },
   activityDate: {
@@ -486,12 +486,12 @@ const styles = StyleSheet.create({
   },
   activityEarned: {
     fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.gain,
   },
   activityLost: {
     fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.loss,
   },
   statusBadge: {
@@ -507,11 +507,11 @@ const styles = StyleSheet.create({
   statusSuccess: {
     fontSize: Typography.labelSmall,
     color: Colors.gain,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   statusFailed: {
     fontSize: Typography.labelSmall,
     color: Colors.loss,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
 });

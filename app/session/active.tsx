@@ -7,7 +7,7 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import { Card, Button, Timer } from "../../src/components";
 import * as Haptics from "expo-haptics";
@@ -157,13 +157,13 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: Typography.labelSmall,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.gain,
     letterSpacing: 1,
   },
   title: {
     fontSize: Typography.headlineLarge,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   },
   payoutAmount: {
     fontSize: Typography.displaySmall,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.gain,
   },
   tipsSection: {
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   tipsTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },

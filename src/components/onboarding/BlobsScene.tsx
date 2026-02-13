@@ -1,7 +1,7 @@
 /**
- * StonesScene — Polished, ethereal stone characters for onboarding.
+ * BlobsScene — Polished, ethereal blob characters for onboarding.
  *
- * Each stone is layered SVG: gradient fill → inner shadow → specular
+ * Each blob is layered SVG: gradient fill → inner shadow → specular
  * highlight → stroke → eyes, with a colored iOS shadow for a soft glow.
  *
  * Animations: staggered entrance, subtle breathing idle, critically-damped
@@ -38,10 +38,10 @@ import Svg, {
 import * as Haptics from "expo-haptics";
 
 // ============================================================
-//  STONE DATA
+//  BLOB DATA
 // ============================================================
 
-interface StoneEye {
+interface BlobEye {
   type: "circle" | "path";
   cx?: number;
   cy?: number;
@@ -49,7 +49,7 @@ interface StoneEye {
   d?: string;
 }
 
-interface StoneConfig {
+interface BlobConfig {
   id: string;
   /** Base fill color */
   color: string;
@@ -63,9 +63,9 @@ interface StoneConfig {
   h: number;
   bodyPath: string;
   strokeWidth: number;
-  eyes: StoneEye[];
-  /** Happy eyes shown when stone is hero on page 1 */
-  happyEyes?: StoneEye[];
+  eyes: BlobEye[];
+  /** Happy eyes shown when blob is hero on page 1 */
+  happyEyes?: BlobEye[];
   /** Base rotation in degrees */
   baseRot: number;
   /** Ambient float amplitude (px) — kept very subtle */
@@ -74,14 +74,14 @@ interface StoneConfig {
   tapRotDeg: number;
   /** Which float channel to use (0, 1, or 2) */
   floatIdx: number;
-  /** Whether this stone is the hero for page 1 transition */
+  /** Whether this blob is the hero for page 1 transition */
   isHero?: boolean;
-  /** Fly-out direction as fractions of scene size (non-hero stones) */
+  /** Fly-out direction as fractions of scene size (non-hero blobs) */
   flyOutX?: number;
   flyOutY?: number;
 }
 
-const STONES: StoneConfig[] = [
+const BLOBS: BlobConfig[] = [
   {
     id: "plum",
     color: "#5C415D",
@@ -142,8 +142,8 @@ const STONES: StoneConfig[] = [
   },
   {
     id: "red",
-    color: "#8B2500",
-    highlightColor: "#B84020",
+    color: "#E07A5F",
+    highlightColor: "#F0A090",
     viewBox: "0 0 119.677 117.413",
     x: 0.348,
     y: 0.421,
@@ -260,11 +260,11 @@ const STONES: StoneConfig[] = [
 ];
 
 // ============================================================
-//  INDIVIDUAL STONE
+//  INDIVIDUAL BLOB
 // ============================================================
 
-interface StoneProps {
-  stone: StoneConfig;
+interface BlobProps {
+  blob: BlobConfig;
   index: number;
   size: number;
   progress: SharedValue<number>;
@@ -274,8 +274,8 @@ interface StoneProps {
   floatC: SharedValue<number>;
 }
 
-const Stone: React.FC<StoneProps> = ({
-  stone,
+const BlobCharacter: React.FC<BlobProps> = ({
+  blob,
   index,
   size,
   progress,
@@ -289,7 +289,7 @@ const Stone: React.FC<StoneProps> = ({
   const entrance = useSharedValue(0);
   const blink = useSharedValue(1);
 
-  // Per-stone blink patterns: varied timing, some double-blink
+  // Per-blob blink patterns: varied timing, some double-blink
   // Patterns cycle: single, double, single, double, single, single
   const BLINK_PATTERNS: (() => number)[] = [
     // Single blink
@@ -321,7 +321,7 @@ const Stone: React.FC<StoneProps> = ({
   ];
 
   useEffect(() => {
-    // Each stone starts blinking at a staggered offset
+    // Each blob starts blinking at a staggered offset
     let patternIdx = index % BLINK_PATTERNS.length;
     let timeout: ReturnType<typeof setTimeout>;
 
@@ -331,13 +331,13 @@ const Stone: React.FC<StoneProps> = ({
       timeout = setTimeout(scheduleBlink, nextDelay);
     };
 
-    // Stagger initial blink so stones don't sync up
+    // Stagger initial blink so blobs don't sync up
     timeout = setTimeout(scheduleBlink, 2500 + index * 900);
 
     return () => clearTimeout(timeout);
   }, []);
 
-  // Staggered entrance: each stone fades in 80ms after the previous
+  // Staggered entrance: each blob fades in 80ms after the previous
   useEffect(() => {
     entrance.value = withDelay(
       index * 80,
@@ -356,7 +356,7 @@ const Stone: React.FC<StoneProps> = ({
 
     // Tiny tilt, heavily damped
     tapRotate.value = withSequence(
-      withTiming(stone.tapRotDeg, { duration: 80 }),
+      withTiming(blob.tapRotDeg, { duration: 80 }),
       withSpring(0, { damping: 20, stiffness: 160, mass: 1 }),
     );
 
@@ -368,25 +368,21 @@ const Stone: React.FC<StoneProps> = ({
   };
 
   const floats = [floatA, floatB, floatC];
-  const primaryFloat = floats[stone.floatIdx % 3];
+  const primaryFloat = floats[blob.floatIdx % 3];
 
-  // Compute target center position for hero stone (fractional offset from original pos)
-  const heroCenterX = stone.isHero ? (0.5 - stone.x - stone.w / 2) * size : 0;
-  const heroCenterY = stone.isHero ? (0.42 - stone.y - stone.h / 2) * size : 0;
+  // Compute target center position for hero blob (fractional offset from original pos)
+  const heroCenterX = blob.isHero ? (0.5 - blob.x - blob.w / 2) * size : 0;
+  const heroCenterY = blob.isHero ? (0.42 - blob.y - blob.h / 2) * size : 0;
 
   const animStyle = useAnimatedStyle(() => {
     // Gentle vertical float
-    const floatY = interpolate(
-      primaryFloat.value,
-      [0, 1],
-      [0, -stone.floatAmp],
-    );
+    const floatY = interpolate(primaryFloat.value, [0, 1], [0, -blob.floatAmp]);
 
     // Ultra-subtle breathing scale (1.0 → 1.006)
     const breatheScale = interpolate(breathe.value, [0, 1], [1, 1.006]);
 
-    if (stone.isHero) {
-      // Hero stone: stays visible through page 1, scales up and centers
+    if (blob.isHero) {
+      // Hero blob: stays visible through page 1, scales up and centers
       const scrollOpacity = interpolate(
         progress.value,
         [0, 0.5, 1.0, 1.5, 2.0],
@@ -420,24 +416,24 @@ const Stone: React.FC<StoneProps> = ({
         transform: [
           { translateX: moveX },
           { translateY: moveY + floatY },
-          { rotate: `${stone.baseRot + tapRotate.value}deg` },
+          { rotate: `${blob.baseRot + tapRotate.value}deg` },
           { scale: tapScale.value * breatheScale * entrance.value * heroScale },
         ],
       };
     }
 
-    // Non-hero stones: fly out as progress goes 0→1
+    // Non-hero blobs: fly out as progress goes 0→1
     const flyX = interpolate(
       progress.value,
       [0, 0.3, 0.8],
-      [0, 0, (stone.flyOutX || 0) * size],
+      [0, 0, (blob.flyOutX || 0) * size],
       Extrapolation.CLAMP,
     );
 
     const flyY = interpolate(
       progress.value,
       [0, 0.3, 0.8],
-      [0, 0, (stone.flyOutY || 0) * size],
+      [0, 0, (blob.flyOutY || 0) * size],
       Extrapolation.CLAMP,
     );
 
@@ -453,7 +449,7 @@ const Stone: React.FC<StoneProps> = ({
       transform: [
         { translateX: flyX },
         { translateY: flyY + floatY },
-        { rotate: `${stone.baseRot + tapRotate.value}deg` },
+        { rotate: `${blob.baseRot + tapRotate.value}deg` },
         { scale: tapScale.value * breatheScale * entrance.value },
       ],
     };
@@ -461,7 +457,7 @@ const Stone: React.FC<StoneProps> = ({
 
   // Animated style for the glow — hero gets brighter glow on page 1
   const glowStyle = useAnimatedStyle(() => {
-    if (!stone.isHero) return {};
+    if (!blob.isHero) return {};
 
     const glowIntensity = interpolate(
       progress.value,
@@ -484,18 +480,18 @@ const Stone: React.FC<StoneProps> = ({
 
   // Animated opacity for happy eyes crossfade (hero only)
   const happyEyeOpacity = useDerivedValue(() => {
-    if (!stone.isHero) return 0;
+    if (!blob.isHero) return 0;
     return interpolate(progress.value, [0.3, 0.7], [0, 1], Extrapolation.CLAMP);
   });
 
   const normalEyeOpacity = useDerivedValue(() => {
-    if (!stone.isHero) return 1;
+    if (!blob.isHero) return 1;
     return interpolate(progress.value, [0.3, 0.7], [1, 0], Extrapolation.CLAMP);
   });
 
-  // Phone opacity (hero only, appears as stone moves to center)
+  // Phone opacity (hero only, appears as blob moves to center)
   const phoneOpacity = useDerivedValue(() => {
-    if (!stone.isHero) return 0;
+    if (!blob.isHero) return 0;
     return interpolate(
       progress.value,
       [0.5, 0.9, 1.0, 1.5, 2.0],
@@ -517,11 +513,11 @@ const Stone: React.FC<StoneProps> = ({
     transform: [{ scaleY: blink.value }],
   }));
 
-  const w = size * stone.w;
-  const h = size * stone.h;
+  const w = size * blob.w;
+  const h = size * blob.h;
 
   // Derive highlight ellipse position from viewBox
-  const vbParts = stone.viewBox.split(" ");
+  const vbParts = blob.viewBox.split(" ");
   const vbW = Number(vbParts[2]);
   const vbH = Number(vbParts[3]);
   const hlCx = vbW * 0.38;
@@ -529,17 +525,17 @@ const Stone: React.FC<StoneProps> = ({
   const hlRx = vbW * 0.22;
   const hlRy = vbH * 0.18;
 
-  // Phone dimensions (relative to stone size for hero)
+  // Phone dimensions (relative to blob size for hero)
   const phoneW = w * 0.35;
   const phoneH = w * 0.55;
 
   return (
     <Animated.View
       style={[
-        styles.stone,
+        styles.blob,
         {
-          left: size * stone.x,
-          top: size * stone.y,
+          left: size * blob.x,
+          top: size * blob.y,
           width: w,
           height: h,
           // Dark drop shadow for depth (iOS)
@@ -558,15 +554,15 @@ const Stone: React.FC<StoneProps> = ({
       ]}
     >
       <Pressable onPress={triggerTap} style={{ width: w, height: h }}>
-        <Svg width={w} height={h} viewBox={stone.viewBox}>
+        <Svg width={w} height={h} viewBox={blob.viewBox}>
           <Defs>
-            {/* Clip to stone body for inner effects */}
-            <ClipPath id={`body-${stone.id}`}>
-              <Path d={stone.bodyPath} />
+            {/* Clip to blob body for inner effects */}
+            <ClipPath id={`body-${blob.id}`}>
+              <Path d={blob.bodyPath} />
             </ClipPath>
             {/* Gradient: lighter top-left → base color bottom-right */}
             <LinearGradient
-              id={`fill-${stone.id}`}
+              id={`fill-${blob.id}`}
               x1="0.25"
               y1="0"
               x2="0.75"
@@ -574,24 +570,24 @@ const Stone: React.FC<StoneProps> = ({
             >
               <Stop
                 offset="0"
-                stopColor={stone.highlightColor}
+                stopColor={blob.highlightColor}
                 stopOpacity={1}
               />
-              <Stop offset="1" stopColor={stone.color} stopOpacity={1} />
+              <Stop offset="1" stopColor={blob.color} stopOpacity={1} />
             </LinearGradient>
           </Defs>
 
           {/* Layer 1: Body with gradient fill + stroke */}
           <Path
-            d={stone.bodyPath}
-            fill={`url(#fill-${stone.id})`}
+            d={blob.bodyPath}
+            fill={`url(#fill-${blob.id})`}
             stroke="#111111"
-            strokeWidth={stone.strokeWidth}
+            strokeWidth={blob.strokeWidth}
           />
 
           {/* Layer 2: Inner shadow — dark overlay shifted down-right, clipped */}
-          <G clipPath={`url(#body-${stone.id})`}>
-            <Path d={stone.bodyPath} fill="black" opacity={0.1} x={2} y={4} />
+          <G clipPath={`url(#body-${blob.id})`}>
+            <Path d={blob.bodyPath} fill="black" opacity={0.1} x={2} y={4} />
           </G>
         </Svg>
 
@@ -600,8 +596,8 @@ const Stone: React.FC<StoneProps> = ({
           style={[StyleSheet.absoluteFill, normalEyeStyle]}
           pointerEvents="none"
         >
-          <Svg width={w} height={h} viewBox={stone.viewBox}>
-            {stone.eyes.map((eye, i) =>
+          <Svg width={w} height={h} viewBox={blob.viewBox}>
+            {blob.eyes.map((eye, i) =>
               eye.type === "circle" ? (
                 <Circle
                   key={i}
@@ -618,13 +614,13 @@ const Stone: React.FC<StoneProps> = ({
         </Animated.View>
 
         {/* Happy eyes layer — fades in for hero (^_^ arcs) */}
-        {stone.isHero && stone.happyEyes && (
+        {blob.isHero && blob.happyEyes && (
           <Animated.View
             style={[StyleSheet.absoluteFill, happyEyeStyle]}
             pointerEvents="none"
           >
-            <Svg width={w} height={h} viewBox={stone.viewBox}>
-              {stone.happyEyes.map((eye, i) => (
+            <Svg width={w} height={h} viewBox={blob.viewBox}>
+              {blob.happyEyes.map((eye, i) => (
                 <Path
                   key={`happy-${i}`}
                   d={eye.d!}
@@ -647,8 +643,8 @@ const Stone: React.FC<StoneProps> = ({
         )}
       </Pressable>
 
-      {/* Phone held by hero stone — appears on right side */}
-      {stone.isHero && (
+      {/* Phone held by hero blob — appears on right side */}
+      {blob.isHero && (
         <Animated.View
           style={[
             {
@@ -753,13 +749,13 @@ const Stone: React.FC<StoneProps> = ({
 //  MAIN SCENE
 // ============================================================
 
-interface StonesSceneProps {
+interface BlobsSceneProps {
   scrollX: SharedValue<number>;
   pageWidth: number;
   size: number;
 }
 
-export const StonesScene: React.FC<StonesSceneProps> = ({
+export const BlobsScene: React.FC<BlobsSceneProps> = ({
   scrollX,
   pageWidth,
   size,
@@ -809,10 +805,10 @@ export const StonesScene: React.FC<StonesSceneProps> = ({
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
-      {STONES.map((stone, i) => (
-        <Stone
-          key={stone.id}
-          stone={stone}
+      {BLOBS.map((blob, i) => (
+        <BlobCharacter
+          key={blob.id}
+          blob={blob}
           index={i}
           size={size}
           progress={progress}
@@ -830,7 +826,7 @@ const styles = StyleSheet.create({
   container: {
     alignSelf: "center",
   },
-  stone: {
+  blob: {
     position: "absolute",
   },
 });

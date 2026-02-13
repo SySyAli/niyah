@@ -104,7 +104,7 @@ export const Typography = {
 } as const;
 
 // Font weights - bolder across the board
-// SF Pro is the system font on iOS, applied automatically
+// SF Pro Rounded on iOS, Roboto on Android (falls back to fontWeight)
 export const FontWeight = {
   regular: "500" as const, // Medium (was 400)
   medium: "600" as const, // Semibold (was 500)
@@ -112,6 +112,24 @@ export const FontWeight = {
   bold: "800" as const, // Heavy (was 700)
   heavy: "900" as const, // Black (was 800)
 } as const;
+
+// SF Pro Rounded font family
+// "ui-rounded" is supported natively by React Native on iOS and resolves to
+// SF Pro Rounded at whatever fontWeight is set. No per-weight PostScript names needed.
+import { Platform } from "react-native";
+
+const ROUNDED = Platform.OS === "ios" ? "ui-rounded" : undefined;
+
+export const Font = {
+  regular: { fontFamily: ROUNDED, fontWeight: "500" as const },
+  medium: { fontFamily: ROUNDED, fontWeight: "600" as const },
+  semibold: { fontFamily: ROUNDED, fontWeight: "700" as const },
+  bold: { fontFamily: ROUNDED, fontWeight: "800" as const },
+  heavy: { fontFamily: ROUNDED, fontWeight: "900" as const },
+} as const;
+
+// Base font family for body text (no explicit weight)
+export const BaseFontFamily = ROUNDED;
 
 // Border radius
 export const Radius = {

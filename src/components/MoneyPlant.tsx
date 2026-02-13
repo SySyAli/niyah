@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
-import { Colors, Typography, Spacing } from "../constants/colors";
+import { Colors, Typography, Spacing, Font } from "../constants/colors";
 import { Partner } from "../types";
 
 interface MoneyPlantProps {
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: Typography.titleSmall,
-    fontWeight: "600",
+    ...Font.medium,
     color: Colors.primary,
     marginBottom: Spacing.lg,
     fontStyle: "italic",
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   },
   coinText: {
     fontSize: Typography.labelSmall,
-    fontWeight: "700",
+    ...Font.semibold,
     color: "#3A3228",
   },
   partnerNode: {
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   },
   partnerInitial: {
     fontSize: Typography.labelMedium,
-    fontWeight: "600",
+    ...Font.medium,
     color: Colors.text,
   },
   partnerName: {
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: Typography.titleLarge,
-    fontWeight: "700",
+    ...Font.semibold,
     color: Colors.text,
   },
   statLabel: {

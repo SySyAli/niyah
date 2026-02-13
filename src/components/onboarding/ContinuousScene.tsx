@@ -92,7 +92,7 @@ export const ContinuousScene: React.FC<ContinuousSceneProps> = ({
   const phoneW = size * 0.36;
   const phoneH = size * 0.52;
 
-  // Stage 1 phone + coins removed — replaced by hero red stone in StonesScene
+  // Stage 1 phone + coins removed — replaced by hero red blob in BlobsScene
   const phoneStyle = useAnimatedStyle(() => ({
     opacity: 0,
   }));
@@ -248,7 +248,7 @@ export const ContinuousScene: React.FC<ContinuousSceneProps> = ({
 
   return (
     <View style={[styles.scene, { width: size, height: size }]}>
-      {/* Stage 0 stones are rendered by StonesScene in welcome.tsx */}
+      {/* Stage 0 blobs are rendered by BlobsScene in welcome.tsx */}
 
       {/* ================================================================
        *  STAGE 1 — STAKE: PHONE

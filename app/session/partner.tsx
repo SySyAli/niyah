@@ -14,7 +14,7 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import * as Haptics from "expo-haptics";
 import { Card, Button } from "../../src/components";
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   backText: {
     color: Colors.textSecondary,
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   titleSection: {
     alignItems: "center",
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.headlineMedium,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   },
   partnerInitial: {
     fontSize: Typography.titleLarge,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.primary,
   },
   partnerInfo: {
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   },
   partnerName: {
     fontSize: Typography.titleSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.xs,
   },
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   },
   checkmarkText: {
     fontSize: Typography.labelSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
   },
   venmoRow: {
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   venmoHandle: {
     fontSize: Typography.labelSmall,
     color: Colors.primary,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   emptyCard: {
     alignItems: "center",
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: Typography.titleMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
@@ -379,14 +379,14 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: Typography.bodyMedium,
     color: Colors.primary,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
   },
   inviteCard: {
     marginBottom: Spacing.lg,
   },
   inviteTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },

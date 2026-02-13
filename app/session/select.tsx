@@ -14,7 +14,7 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
 import * as Haptics from "expo-haptics";
@@ -229,11 +229,11 @@ const styles = StyleSheet.create({
   backText: {
     color: Colors.textSecondary,
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   title: {
     fontSize: Typography.headlineMedium,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   optionName: {
     fontSize: Typography.titleMedium,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   checkmark: {
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   checkmarkText: {
     fontSize: Typography.labelSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.background,
   },
   optionDuration: {
@@ -306,12 +306,12 @@ const styles = StyleSheet.create({
   },
   stakeAmount: {
     fontSize: Typography.titleLarge,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   earnAmount: {
     fontSize: Typography.titleLarge,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.gain,
   },
   vsContainer: {
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   },
   vsText: {
     fontSize: Typography.labelMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.textMuted,
   },
   insufficientText: {
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: Typography.bodySmall,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     color: Colors.text,
   },
   bonusValue: {
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   outcomeTitle: {
     fontSize: Typography.labelMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   },
   outcomeValue: {
     fontSize: Typography.labelSmall,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     color: Colors.text,
   },
   footer: {

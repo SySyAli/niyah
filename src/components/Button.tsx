@@ -9,7 +9,13 @@ import {
   Animated,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Colors, Radius, Typography, FontWeight } from "../constants/colors";
+import {
+  Colors,
+  Radius,
+  Typography,
+  FontWeight,
+  Font,
+} from "../constants/colors";
 
 interface ButtonProps {
   title: string;
@@ -173,7 +179,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   text: {
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     letterSpacing: 0.3,
   },
 });

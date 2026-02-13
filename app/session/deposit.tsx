@@ -15,7 +15,7 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import * as Haptics from "expo-haptics";
 import { Button, NumPad, AmountDisplay } from "../../src/components";
@@ -248,11 +248,11 @@ const styles = StyleSheet.create({
   closeText: {
     color: Colors.textSecondary,
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   title: {
     fontSize: Typography.titleLarge,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
   },
   balanceInfo: {
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   balanceAmount: {
     fontSize: Typography.titleMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.textSecondary,
   },
   quickAmountsContainer: {
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   quickAmountText: {
     fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
   },
   quickAmountTextSelected: {

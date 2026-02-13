@@ -7,7 +7,7 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import { Card, Button, Balance, Confetti } from "../../src/components";
 import * as Haptics from "expo-haptics";
@@ -208,12 +208,12 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: Typography.titleMedium,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.gain,
   },
   title: {
     fontSize: Typography.displaySmall,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   },
   outcomeLabel: {
     fontSize: Typography.titleSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.gain,
     marginBottom: Spacing.xs,
   },
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   settlementTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
   },
   venmoHandle: {
     fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.primary,
     marginBottom: Spacing.md,
   },
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: Typography.headlineSmall,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   statLabel: {

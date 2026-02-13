@@ -14,6 +14,7 @@ import {
   Spacing,
   Radius,
   FontWeight,
+  Font,
 } from "../constants/colors";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
   },
   keyText: {
     fontSize: Typography.headlineMedium,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     color: Colors.text,
   },
   actionKeyText: {
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
   },
   backspaceText: {
     fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     color: Colors.textSecondary,
   },
   amountContainer: {
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.labelLarge,
     color: Colors.textSecondary,
     marginBottom: Spacing.sm,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   amountRow: {
     flexDirection: "row",
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   },
   amountText: {
     fontSize: Typography.displayLarge,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     letterSpacing: -2,
   },

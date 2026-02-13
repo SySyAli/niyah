@@ -14,7 +14,7 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import * as Haptics from "expo-haptics";
 import { Card, Button } from "../../src/components";
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Typography.headlineMedium,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   subtitle: {
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   },
   cadenceName: {
     fontSize: Typography.titleLarge,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   duoBadge: {
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   duoBadgeText: {
     color: Colors.primary,
     fontSize: Typography.labelSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
   },
   outcomeHint: {
     fontSize: Typography.labelSmall,
@@ -287,12 +287,12 @@ const styles = StyleSheet.create({
   },
   stakeValue: {
     fontSize: Typography.headlineSmall,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   earnValue: {
     fontSize: Typography.headlineSmall,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.gain,
   },
   arrowContainer: {
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     color: Colors.loss,
     fontSize: Typography.labelSmall,
     textAlign: "center",
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
   },
   // Active session styles
   activeHeader: {
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   },
   activeTitle: {
     fontSize: Typography.titleLarge,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
   },
   activeSubtitle: {
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   },
   howTitle: {
     fontSize: Typography.titleSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.md,
   },
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   },
   stepNumberText: {
     fontSize: Typography.labelSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.textSecondary,
   },
   stepText: {

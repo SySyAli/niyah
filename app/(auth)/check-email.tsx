@@ -16,6 +16,7 @@ import {
   Spacing,
   Radius,
   FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: FontWeight.heavy,
+    ...Font.heavy,
     color: Colors.text,
     textAlign: "center",
     letterSpacing: -0.5,
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
   },
   email: {
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.primary,
     marginTop: Spacing.xs,
     textAlign: "center",
@@ -207,11 +208,11 @@ const styles = StyleSheet.create({
   resendText: {
     color: Colors.primary,
     fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
   },
   resendDisabled: {
     color: Colors.textMuted,
-    fontWeight: FontWeight.regular,
+    ...Font.regular,
   },
   differentButton: {
     marginTop: Spacing.md,

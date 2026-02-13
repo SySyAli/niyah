@@ -24,6 +24,7 @@ import {
   Radius,
   Typography,
   FontWeight,
+  Font,
 } from "../constants/colors";
 
 interface OTPInputProps {
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
   },
   digit: {
     fontSize: Typography.headlineSmall,
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     color: Colors.text,
     textAlign: "center",
   },

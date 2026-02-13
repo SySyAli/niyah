@@ -1,11 +1,24 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, StyleSheet } from "react-native";
+import { View, Text, TextInput, StyleSheet, Platform } from "react-native";
 import * as Linking from "expo-linking";
-import { Colors } from "../src/constants/colors";
+import { Colors, BaseFontFamily } from "../src/constants/colors";
 import { useAuthStore } from "../src/store/authStore";
 import { isEmailSignInLink } from "../src/config/firebase";
+
+// Apply SF Pro Rounded globally as the default font family
+if (Platform.OS === "ios" && BaseFontFamily) {
+  const textStyle = { fontFamily: BaseFontFamily };
+  (Text as any).defaultProps = {
+    ...((Text as any).defaultProps || {}),
+    style: textStyle,
+  };
+  (TextInput as any).defaultProps = {
+    ...((TextInput as any).defaultProps || {}),
+    style: textStyle,
+  };
+}
 
 export default function RootLayout() {
   const { completeEmailLink } = useAuthStore();

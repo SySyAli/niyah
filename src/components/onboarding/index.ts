@@ -1,5 +1,5 @@
 export { ContinuousScene } from "./ContinuousScene";
-export { StonesScene } from "./StonesScene";
+export { BlobsScene } from "./BlobsScene";
 
 // Legacy individual scenes (kept for reference, no longer used in onboarding)
 export { GardenScene } from "./GardenScene";

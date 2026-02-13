@@ -18,6 +18,7 @@ import {
   Spacing,
   Radius,
   FontWeight,
+  Font,
 } from "../../src/constants/colors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -229,7 +230,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 36,
-    fontWeight: FontWeight.heavy,
+    ...Font.heavy,
     color: Colors.text,
     letterSpacing: -0.5,
     lineHeight: 42,
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.labelLarge,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     color: Colors.text,
   },
   optional: {
@@ -278,7 +279,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     paddingHorizontal: Spacing.lg,
     fontSize: 20,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     color: Colors.text,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
   },
   prefixText: {
     fontSize: 20,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
   },
   phoneInput: {

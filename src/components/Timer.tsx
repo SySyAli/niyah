@@ -1,7 +1,13 @@
 import React, { useRef, useEffect } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { Colors, Typography, Spacing, FontWeight } from "../constants/colors";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  FontWeight,
+  Font,
+} from "../constants/colors";
 import { formatTime } from "../utils/format";
 
 interface TimerProps {
@@ -169,12 +175,12 @@ const styles = StyleSheet.create({
     fontSize: Typography.labelMedium,
     color: Colors.textSecondary,
     marginBottom: Spacing.xs,
-    fontWeight: FontWeight.medium,
+    ...Font.medium,
     textTransform: "uppercase",
     letterSpacing: 1,
   },
   time: {
-    fontWeight: FontWeight.bold,
+    ...Font.bold,
     fontVariant: ["tabular-nums"],
     letterSpacing: -1,
   },
@@ -185,7 +191,7 @@ const styles = StyleSheet.create({
   },
   inlineTime: {
     fontSize: Typography.bodyLarge,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     color: Colors.text,
     fontVariant: ["tabular-nums"],
   },

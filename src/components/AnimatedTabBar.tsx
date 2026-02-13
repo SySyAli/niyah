@@ -15,7 +15,13 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
-import { Colors, Typography, Spacing, FontWeight } from "../constants/colors";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  FontWeight,
+  Font,
+} from "../constants/colors";
 import { useScrollContext } from "../context/ScrollContext";
 
 // ────────────────────────────────────────────────────────────────────
@@ -373,7 +379,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.labelSmall,
-    fontWeight: FontWeight.semibold,
+    ...Font.semibold,
     marginTop: 2,
   },
 });

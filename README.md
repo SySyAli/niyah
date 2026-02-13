@@ -164,5 +164,3 @@ pnpm install
 npx expo prebuild --clean
 npx expo run:ios
 ```
-
----

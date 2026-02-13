@@ -1,24 +1,64 @@
 /**
- * Unit Tests for authStore.ts
+ * Unit Tests for authStore.ts (Firebase-backed)
  *
  * Testing Strategy:
- * - WHITE BOX: Tests based on internal state management
- * - State transition testing
- * - Async operation testing
- * - Mock user creation testing
+ * - Tests state management and store actions
+ * - Firebase calls are mocked at the module level (vitest.setup.ts)
+ * - Focus on state transitions and consistency
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act } from "react";
 import { useAuthStore } from "../../../store/authStore";
-import { INITIAL_BALANCE } from "../../../constants/config";
+
+// Helper: simulate an authenticated user by directly setting state
+// (since actual Firebase auth is mocked)
+const simulateAuthenticated = (overrides: Record<string, unknown> = {}) => {
+  useAuthStore.setState({
+    user: {
+      id: "test-uid",
+      email: "test@example.com",
+      name: "Test User",
+      firstName: "Test",
+      lastName: "User",
+      balance: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      totalSessions: 0,
+      completedSessions: 0,
+      totalEarnings: 0,
+      createdAt: new Date(),
+      reputation: {
+        score: 50,
+        level: "sapling",
+        paymentsCompleted: 0,
+        paymentsMissed: 0,
+        totalOwedPaid: 0,
+        totalOwedMissed: 0,
+        lastUpdated: new Date(),
+      },
+      authProvider: "email",
+      profileComplete: true,
+      ...overrides,
+    },
+    isAuthenticated: true,
+    isInitialized: true,
+    profileComplete: true,
+    isLoading: false,
+  });
+};
 
 describe("authStore", () => {
-  // Reset store state before each test
   beforeEach(() => {
-    const store = useAuthStore.getState();
-    act(() => {
-      store.logout();
+    // Reset store to initial state
+    useAuthStore.setState({
+      user: null,
+      firebaseUser: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isInitialized: false,
+      profileComplete: false,
+      isNewUser: false,
     });
   });
 
@@ -28,151 +68,17 @@ describe("authStore", () => {
       expect(state.user).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isLoading).toBe(false);
-    });
-  });
-
-  describe("login", () => {
-    it("should set isLoading to true during login", async () => {
-      const store = useAuthStore.getState();
-
-      // Start login (don't await)
-      const loginPromise = act(async () => {
-        return store.login("test@example.com", "password123");
-      });
-
-      // Check loading state immediately
-      expect(useAuthStore.getState().isLoading).toBe(true);
-
-      // Complete login
-      await loginPromise;
-    });
-
-    it("should create user with correct data after login", async () => {
-      const store = useAuthStore.getState();
-
-      await act(async () => {
-        await store.login("john@example.com", "password123");
-      });
-
-      const state = useAuthStore.getState();
-      expect(state.user).not.toBeNull();
-      expect(state.user?.email).toBe("john@example.com");
-      expect(state.user?.name).toBe("john"); // Name derived from email
-      expect(state.user?.balance).toBe(INITIAL_BALANCE);
-      expect(state.isAuthenticated).toBe(true);
-      expect(state.isLoading).toBe(false);
-    });
-
-    it("should initialize user stats to zero", async () => {
-      const store = useAuthStore.getState();
-
-      await act(async () => {
-        await store.login("test@example.com", "password");
-      });
-
-      const state = useAuthStore.getState();
-      expect(state.user?.currentStreak).toBe(0);
-      expect(state.user?.longestStreak).toBe(0);
-      expect(state.user?.totalSessions).toBe(0);
-      expect(state.user?.completedSessions).toBe(0);
-      expect(state.user?.totalEarnings).toBe(0);
-    });
-
-    it("should set createdAt date", async () => {
-      const beforeLogin = new Date();
-
-      const store = useAuthStore.getState();
-      await act(async () => {
-        await store.login("test@example.com", "password");
-      });
-
-      const afterLogin = new Date();
-      const state = useAuthStore.getState();
-
-      expect(state.user?.createdAt).toBeInstanceOf(Date);
-      expect(state.user?.createdAt.getTime()).toBeGreaterThanOrEqual(
-        beforeLogin.getTime(),
-      );
-      expect(state.user?.createdAt.getTime()).toBeLessThanOrEqual(
-        afterLogin.getTime(),
-      );
-    });
-
-    it("should generate unique user IDs", async () => {
-      const store = useAuthStore.getState();
-
-      await act(async () => {
-        await store.login("user1@example.com", "password");
-      });
-      const id1 = useAuthStore.getState().user?.id;
-
-      act(() => {
-        store.logout();
-      });
-
-      await act(async () => {
-        await store.login("user2@example.com", "password");
-      });
-      const id2 = useAuthStore.getState().user?.id;
-
-      expect(id1).toBeDefined();
-      expect(id2).toBeDefined();
-      expect(id1).not.toBe(id2);
-    });
-  });
-
-  describe("signup", () => {
-    it("should create user with provided name", async () => {
-      const store = useAuthStore.getState();
-
-      await act(async () => {
-        await store.signup("alice@example.com", "password123", "Alice Smith");
-      });
-
-      const state = useAuthStore.getState();
-      expect(state.user?.name).toBe("Alice Smith");
-      expect(state.user?.email).toBe("alice@example.com");
-      expect(state.isAuthenticated).toBe(true);
-    });
-
-    it("should set isLoading during signup", async () => {
-      const store = useAuthStore.getState();
-
-      const signupPromise = act(async () => {
-        return store.signup("test@example.com", "password", "Test User");
-      });
-
-      expect(useAuthStore.getState().isLoading).toBe(true);
-
-      await signupPromise;
-      expect(useAuthStore.getState().isLoading).toBe(false);
-    });
-
-    it("should initialize new user with INITIAL_BALANCE", async () => {
-      const store = useAuthStore.getState();
-
-      await act(async () => {
-        await store.signup("test@example.com", "password", "Test");
-      });
-
-      expect(useAuthStore.getState().user?.balance).toBe(INITIAL_BALANCE);
+      expect(state.isInitialized).toBe(false);
     });
   });
 
   describe("logout", () => {
     it("should clear user and set isAuthenticated to false", async () => {
-      const store = useAuthStore.getState();
-
-      // First login
-      await act(async () => {
-        await store.login("test@example.com", "password");
-      });
-
+      simulateAuthenticated();
       expect(useAuthStore.getState().isAuthenticated).toBe(true);
 
-      // Then logout
-      act(() => {
-        store.logout();
+      await act(async () => {
+        await useAuthStore.getState().logout();
       });
 
       const state = useAuthStore.getState();
@@ -180,13 +86,9 @@ describe("authStore", () => {
       expect(state.isAuthenticated).toBe(false);
     });
 
-    it("should be idempotent (safe to call multiple times)", () => {
-      const store = useAuthStore.getState();
-
-      act(() => {
-        store.logout();
-        store.logout();
-        store.logout();
+    it("should be safe to call when not authenticated", async () => {
+      await act(async () => {
+        await useAuthStore.getState().logout();
       });
 
       const state = useAuthStore.getState();
@@ -196,15 +98,14 @@ describe("authStore", () => {
   });
 
   describe("updateUser", () => {
-    it("should update user properties when logged in", async () => {
-      const store = useAuthStore.getState();
-
-      await act(async () => {
-        await store.login("test@example.com", "password");
-      });
+    it("should update user properties when logged in", () => {
+      simulateAuthenticated();
 
       act(() => {
-        store.updateUser({ currentStreak: 5, totalSessions: 10 });
+        useAuthStore.getState().updateUser({
+          currentStreak: 5,
+          totalSessions: 10,
+        });
       });
 
       const state = useAuthStore.getState();
@@ -212,44 +113,31 @@ describe("authStore", () => {
       expect(state.user?.totalSessions).toBe(10);
     });
 
-    it("should preserve other user properties when updating", async () => {
-      const store = useAuthStore.getState();
-
-      await act(async () => {
-        await store.login("test@example.com", "password");
-      });
-
-      const originalEmail = useAuthStore.getState().user?.email;
+    it("should preserve other user properties when updating", () => {
+      simulateAuthenticated({ email: "test@example.com" });
 
       act(() => {
-        store.updateUser({ balance: 10000 });
+        useAuthStore.getState().updateUser({ balance: 10000 });
       });
 
       const state = useAuthStore.getState();
-      expect(state.user?.email).toBe(originalEmail);
+      expect(state.user?.email).toBe("test@example.com");
       expect(state.user?.balance).toBe(10000);
     });
 
     it("should do nothing when not logged in", () => {
-      const store = useAuthStore.getState();
-
-      // Not logged in
       act(() => {
-        store.updateUser({ currentStreak: 5 });
+        useAuthStore.getState().updateUser({ currentStreak: 5 });
       });
 
       expect(useAuthStore.getState().user).toBeNull();
     });
 
-    it("should allow updating multiple properties at once", async () => {
-      const store = useAuthStore.getState();
-
-      await act(async () => {
-        await store.login("test@example.com", "password");
-      });
+    it("should allow updating multiple properties at once", () => {
+      simulateAuthenticated();
 
       act(() => {
-        store.updateUser({
+        useAuthStore.getState().updateUser({
           currentStreak: 7,
           longestStreak: 10,
           totalEarnings: 50000,
@@ -265,27 +153,77 @@ describe("authStore", () => {
     });
   });
 
-  describe("state consistency", () => {
-    it("should maintain consistent state through login/logout cycles", async () => {
-      const store = useAuthStore.getState();
+  describe("updateReputation", () => {
+    it("should update reputation with correct score calculation", () => {
+      simulateAuthenticated();
 
-      // Login
-      await act(async () => {
-        await store.login("test@example.com", "password");
+      act(() => {
+        useAuthStore.getState().updateReputation({
+          paymentsCompleted: 8,
+          paymentsMissed: 2,
+        });
       });
+
+      const rep = useAuthStore.getState().user?.reputation;
+      expect(rep?.paymentsCompleted).toBe(8);
+      expect(rep?.paymentsMissed).toBe(2);
+      // successRate = 8/10 = 0.8, score = 50 + (0.8 - 0.5) * 100 = 80
+      expect(rep?.score).toBe(80);
+      expect(rep?.level).toBe("tree");
+    });
+
+    it("should clamp score between 0 and 100", () => {
+      simulateAuthenticated();
+
+      act(() => {
+        useAuthStore.getState().updateReputation({
+          paymentsCompleted: 10,
+          paymentsMissed: 0,
+        });
+      });
+
+      const rep = useAuthStore.getState().user?.reputation;
+      // successRate = 1.0, score = 50 + (1.0 - 0.5) * 100 = 100
+      expect(rep?.score).toBe(100);
+      expect(rep?.level).toBe("oak");
+    });
+  });
+
+  describe("setVenmoHandle", () => {
+    it("should set venmo handle on user", () => {
+      simulateAuthenticated();
+
+      act(() => {
+        useAuthStore.getState().setVenmoHandle("@test-user");
+      });
+
+      expect(useAuthStore.getState().user?.venmoHandle).toBe("@test-user");
+    });
+
+    it("should do nothing when not logged in", () => {
+      act(() => {
+        useAuthStore.getState().setVenmoHandle("@test-user");
+      });
+
+      expect(useAuthStore.getState().user).toBeNull();
+    });
+  });
+
+  describe("state consistency", () => {
+    it("should maintain consistent state through auth cycles", async () => {
+      // Simulate login
+      simulateAuthenticated({ email: "test@example.com" });
       expect(useAuthStore.getState().isAuthenticated).toBe(true);
 
       // Logout
-      act(() => {
-        store.logout();
+      await act(async () => {
+        await useAuthStore.getState().logout();
       });
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
       expect(useAuthStore.getState().user).toBeNull();
 
       // Login again
-      await act(async () => {
-        await store.login("another@example.com", "password");
-      });
+      simulateAuthenticated({ email: "another@example.com" });
       expect(useAuthStore.getState().isAuthenticated).toBe(true);
       expect(useAuthStore.getState().user?.email).toBe("another@example.com");
     });

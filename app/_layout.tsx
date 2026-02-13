@@ -1,9 +1,47 @@
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, StyleSheet } from "react-native";
+import * as Linking from "expo-linking";
 import { Colors } from "../src/constants/colors";
+import { useAuthStore } from "../src/store/authStore";
+import { isEmailSignInLink } from "../src/config/firebase";
 
 export default function RootLayout() {
+  const { completeEmailLink } = useAuthStore();
+
+  // Handle deep links for email magic link sign-in
+  useEffect(() => {
+    // Handle link that opened the app
+    const handleInitialURL = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl && isEmailSignInLink(initialUrl)) {
+        try {
+          await completeEmailLink(initialUrl);
+        } catch (error) {
+          console.error("Error completing email link sign-in:", error);
+        }
+      }
+    };
+
+    handleInitialURL();
+
+    // Handle links while the app is open
+    const subscription = Linking.addEventListener("url", async (event) => {
+      if (isEmailSignInLink(event.url)) {
+        try {
+          await completeEmailLink(event.url);
+        } catch (error) {
+          console.error("Error completing email link sign-in:", error);
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [completeEmailLink]);
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />

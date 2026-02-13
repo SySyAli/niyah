@@ -235,34 +235,19 @@ export default function WelcomeScreen() {
             ))}
           </View>
 
-          {/* Auth buttons — Log in (outline) + Sign up (filled) */}
-          <View style={styles.authRow}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.loginButton,
-                pressed && styles.authButtonPressed,
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(auth)/login");
-              }}
-            >
-              <Text style={styles.loginButtonText}>Log in</Text>
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.signupButton,
-                pressed && styles.authButtonPressed,
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                router.push("/(auth)/signup");
-              }}
-            >
-              <Text style={styles.signupButtonText}>Sign up</Text>
-            </Pressable>
-          </View>
+          {/* Get Started button */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.getStartedButton,
+              pressed && styles.authButtonPressed,
+            ]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push("/(auth)/auth-entry");
+            }}
+          >
+            <Text style={styles.getStartedButtonText}>Get Started</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     </Animated.View>
@@ -340,38 +325,16 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-  authRow: {
-    flexDirection: "row",
-    gap: Spacing.md,
-  },
-  loginButton: {
-    flex: 1,
-    height: 44,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.white,
-    backgroundColor: "transparent",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loginButtonText: {
-    fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.medium,
-    color: Colors.white,
-  },
-  signupButton: {
-    flex: 1,
-    height: 44,
+  getStartedButton: {
+    height: 52,
     borderRadius: Radius.full,
     backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: "#000000",
     alignItems: "center",
     justifyContent: "center",
   },
-  signupButtonText: {
-    fontSize: Typography.bodyMedium,
-    fontWeight: FontWeight.medium,
+  getStartedButtonText: {
+    fontSize: Typography.bodyLarge,
+    fontWeight: FontWeight.semibold,
     color: "#000000",
   },
   authButtonPressed: {

@@ -15,6 +15,40 @@ import { useSessionStore } from "../../store/sessionStore";
 import { useWalletStore } from "../../store/walletStore";
 import { CADENCES, DEMO_MODE, INITIAL_BALANCE } from "../../constants/config";
 
+// Helper: simulate authentication by directly setting store state
+// (Firebase is mocked, so we set state directly for integration tests)
+const simulateLogin = (email: string, name?: string) => {
+  useAuthStore.setState({
+    user: {
+      id: `test-${Math.random().toString(36).substr(2, 9)}`,
+      email,
+      name: name || email.split("@")[0],
+      balance: INITIAL_BALANCE,
+      currentStreak: 0,
+      longestStreak: 0,
+      totalSessions: 0,
+      completedSessions: 0,
+      totalEarnings: 0,
+      createdAt: new Date(),
+      reputation: {
+        score: 50,
+        level: "sapling",
+        paymentsCompleted: 0,
+        paymentsMissed: 0,
+        totalOwedPaid: 0,
+        totalOwedMissed: 0,
+        lastUpdated: new Date(),
+      },
+      authProvider: "email",
+      profileComplete: true,
+    },
+    isAuthenticated: true,
+    isInitialized: true,
+    profileComplete: true,
+    isLoading: false,
+  });
+};
+
 describe("Session Flow Integration Tests", () => {
   beforeEach(async () => {
     // Reset all stores to initial state
@@ -48,10 +82,8 @@ describe("Session Flow Integration Tests", () => {
   describe("Complete User Journey: New User", () => {
     it("should complete full journey from signup to first session completion", async () => {
       // Step 1: User signs up
-      await act(async () => {
-        await useAuthStore
-          .getState()
-          .signup("new@user.com", "password", "New User");
+      act(() => {
+        simulateLogin("new@user.com", "New User");
       });
 
       // Verify user is authenticated
@@ -106,7 +138,7 @@ describe("Session Flow Integration Tests", () => {
     it("should handle user surrendering a session correctly", async () => {
       // Setup: Login user
       await act(async () => {
-        await useAuthStore.getState().login("user@test.com", "password");
+        simulateLogin("user@test.com");
       });
 
       // Give user a streak to verify it resets
@@ -154,7 +186,7 @@ describe("Session Flow Integration Tests", () => {
   describe("Streak Building", () => {
     it("should build streak across multiple completed sessions", async () => {
       await act(async () => {
-        await useAuthStore.getState().login("streak@test.com", "password");
+        simulateLogin("streak@test.com");
       });
 
       // Complete 5 daily sessions
@@ -180,7 +212,7 @@ describe("Session Flow Integration Tests", () => {
 
     it("should reset streak on surrender but preserve longest", async () => {
       await act(async () => {
-        await useAuthStore.getState().login("streak@test.com", "password");
+        simulateLogin("streak@test.com");
       });
 
       // Complete 3 sessions to build streak
@@ -213,7 +245,7 @@ describe("Session Flow Integration Tests", () => {
   describe("Financial Flow", () => {
     it("should track earnings correctly across sessions", async () => {
       await act(async () => {
-        await useAuthStore.getState().login("finance@test.com", "password");
+        simulateLogin("finance@test.com");
       });
 
       const initialBalance = useWalletStore.getState().balance;
@@ -253,7 +285,7 @@ describe("Session Flow Integration Tests", () => {
 
     it("should correctly calculate loss from surrendered session", async () => {
       await act(async () => {
-        await useAuthStore.getState().login("finance@test.com", "password");
+        simulateLogin("finance@test.com");
       });
 
       const initialBalance = useWalletStore.getState().balance;
@@ -279,7 +311,7 @@ describe("Session Flow Integration Tests", () => {
   describe("Transaction History", () => {
     it("should maintain complete transaction history", async () => {
       await act(async () => {
-        await useAuthStore.getState().login("history@test.com", "password");
+        simulateLogin("history@test.com");
       });
 
       // Start and complete a session
@@ -303,7 +335,7 @@ describe("Session Flow Integration Tests", () => {
 
     it("should link transactions to sessions", async () => {
       await act(async () => {
-        await useAuthStore.getState().login("history@test.com", "password");
+        simulateLogin("history@test.com");
       });
 
       act(() => {
@@ -429,7 +461,7 @@ describe("Session Flow Integration Tests", () => {
   describe("Concurrent Operations", () => {
     it("should maintain consistency during rapid operations", async () => {
       await act(async () => {
-        await useAuthStore.getState().login("rapid@test.com", "password");
+        simulateLogin("rapid@test.com");
       });
 
       const initialBalance = useWalletStore.getState().balance;

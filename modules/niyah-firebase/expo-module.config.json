@@ -1,0 +1,7 @@
+{
+  "platforms": ["ios"],
+  "ios": {
+    "modules": ["NiyahFirebaseAuthModule", "NiyahFirestoreModule"],
+    "podspecPath": "./NiyahFirebase.podspec"
+  }
+}

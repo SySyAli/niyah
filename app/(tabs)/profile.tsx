@@ -40,8 +40,12 @@ export default function ProfileScreen() {
       {
         text: "Sign Out",
         style: "destructive",
-        onPress: () => {
-          logout();
+        onPress: async () => {
+          try {
+            await logout();
+          } catch (error) {
+            console.error("Logout error:", error);
+          }
           router.replace("/(auth)/welcome");
         },
       },

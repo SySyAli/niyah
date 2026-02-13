@@ -1,6 +1,10 @@
 import { vi, afterEach } from "vitest";
 import React from "react";
 
+// Define __DEV__ globally for expo modules that reference it
+// @ts-expect-error __DEV__ is a React Native global
+globalThis.__DEV__ = true;
+
 // ============================================================================
 // REACT NATIVE MOCKS
 // ============================================================================
@@ -28,6 +32,21 @@ vi.mock("react-native-svg", () => ({
   Defs: mockComponent("Defs"),
   LinearGradient: mockComponent("LinearGradient"),
   Stop: mockComponent("Stop"),
+}));
+
+// Mock expo-crypto
+vi.mock("expo-crypto", () => ({
+  getRandomBytesAsync: vi.fn((byteCount: number) =>
+    Promise.resolve(new Uint8Array(byteCount).fill(0xab)),
+  ),
+  digestStringAsync: vi.fn((_algorithm: string, _data: string) =>
+    Promise.resolve(
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ),
+  ),
+  CryptoDigestAlgorithm: {
+    SHA256: "SHA-256",
+  },
 }));
 
 // Mock expo-haptics
@@ -137,6 +156,85 @@ vi.mock("react-native-gesture-handler", () => ({
   PanGestureHandler: "PanGestureHandler",
   ScrollView: "ScrollView",
   FlatList: "FlatList",
+}));
+
+// Mock expo module (requireNativeModule etc.)
+vi.mock("expo", () => ({
+  requireNativeModule: vi.fn((name: string) => {
+    // Return empty object — real mocks are in the module-level mock below
+    return {};
+  }),
+  NativeModule: class {},
+}));
+
+// Mock the niyah-firebase Expo modules
+vi.mock("../../modules/niyah-firebase", () => ({
+  NiyahFirebaseAuth: {
+    signInWithCredential: vi.fn(() =>
+      Promise.resolve({
+        uid: "mock-uid",
+        email: "test@example.com",
+        displayName: "Test User",
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "google.com",
+        isNewUser: false,
+      }),
+    ),
+    sendSignInLinkToEmail: vi.fn(() => Promise.resolve()),
+    isSignInWithEmailLink: vi.fn(() => false),
+    signInWithEmailLink: vi.fn(() =>
+      Promise.resolve({
+        uid: "mock-uid",
+        email: "test@example.com",
+        displayName: null,
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "password",
+        isNewUser: false,
+      }),
+    ),
+    signOut: vi.fn(() => Promise.resolve()),
+    getCurrentUser: vi.fn(() => null),
+    addListener: vi.fn(() => ({ remove: vi.fn() })),
+  },
+  NiyahFirestore: {
+    getDoc: vi.fn(() => Promise.resolve(null)),
+    setDoc: vi.fn(() => Promise.resolve()),
+    updateDoc: vi.fn(() => Promise.resolve()),
+    deleteDoc: vi.fn(() => Promise.resolve()),
+    serverTimestamp: vi.fn(() => ({ __type: "serverTimestamp" })),
+  },
+}));
+
+// Mock expo-linking
+vi.mock("expo-linking", () => ({
+  createURL: vi.fn((path: string) => `niyah://${path}`),
+  getInitialURL: vi.fn(() => Promise.resolve(null)),
+  addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+  openURL: vi.fn(() => Promise.resolve()),
+}));
+
+// Mock expo-apple-authentication
+vi.mock("expo-apple-authentication", () => ({
+  signInAsync: vi.fn(() =>
+    Promise.resolve({
+      identityToken: "mock-apple-token",
+      fullName: { givenName: "Test", familyName: "User" },
+      email: "test@icloud.com",
+    }),
+  ),
+  AppleAuthenticationScope: {
+    FULL_NAME: 0,
+    EMAIL: 1,
+  },
+  AppleAuthenticationButton: "AppleAuthenticationButton",
+  AppleAuthenticationButtonType: {
+    SIGN_IN: 0,
+  },
+  AppleAuthenticationButtonStyle: {
+    WHITE: 0,
+  },
 }));
 
 // Mock @react-native-google-signin/google-signin

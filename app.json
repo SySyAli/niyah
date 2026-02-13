@@ -18,10 +18,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.niyah.app",
       "usesAppleSignIn": true,
+      "associatedDomains": ["applinks:niyah-b972d.firebaseapp.com"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      },
-      "googleServicesFile": "./GoogleService-Info.plist"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +29,21 @@
         "backgroundColor": "#1A1714"
       },
       "package": "com.niyah.app",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "niyah-b972d.firebaseapp.com",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -40,15 +54,18 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps._some_id_here_"
+          "iosUrlScheme": "com.googleusercontent.apps.714586513020-42pm28b387sklqgl2fp3dsm16cht01rk"
         }
       ],
       "expo-apple-authentication",
-      "./plugins/withFollyCoroutinesFix"
+      "./plugins/withFollyCoroutinesFix",
+      "./plugins/withGoogleServicesPlist",
+      "./plugins/withFirebaseStaticFrameworks"
     ],
     "experiments": {
       "typedRoutes": true
     },
+    "nativeModulesDir": "modules",
     "extra": {
       "router": {},
       "eas": {

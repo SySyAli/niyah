@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { useAuthStore } from "../store/authStore";
+import { generateNonce, sha256 } from "../config/firebase";
 import { Colors, Radius } from "../constants/colors";
 
 interface AppleSignInButtonProps {
@@ -28,19 +29,29 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
   const handlePress = async () => {
     setIsLoading(true);
     try {
+      // Generate cryptographic nonce for Firebase verification
+      const rawNonce = await generateNonce();
+      const hashedNonce = await sha256(rawNonce);
+
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce,
       });
+
+      if (!credential.identityToken) {
+        throw new Error("Apple Sign-In failed: no identity token received");
+      }
 
       const name = credential.fullName
         ? `${credential.fullName.givenName ?? ""} ${credential.fullName.familyName ?? ""}`.trim()
         : undefined;
 
       await loginWithApple(
-        credential.identityToken ?? "",
+        credential.identityToken,
+        rawNonce,
         name || undefined,
         credential.email || undefined,
       );

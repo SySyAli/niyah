@@ -6,9 +6,11 @@ export type SessionStatus = "active" | "completed" | "surrendered";
 export type ReputationLevel = "seed" | "sprout" | "sapling" | "tree" | "oak";
 
 export interface User {
-  id: string;
+  id: string; // Firebase UID
   email: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   balance: number; // in cents
   currentStreak: number;
   longestStreak: number;
@@ -23,6 +25,12 @@ export interface User {
   phoneNumber?: string;
   phoneVerified?: boolean;
   authProvider?: "email" | "google" | "apple";
+  // Firebase-backed profile
+  profileComplete?: boolean;
+  // Stripe
+  stripeAccountId?: string;
+  stripeCustomerId?: string;
+  stripeAccountStatus?: "pending" | "active" | "restricted";
 }
 
 // Social credit system - tracks payment reliability

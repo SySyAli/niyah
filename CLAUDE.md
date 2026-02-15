@@ -22,7 +22,7 @@ NIYAH is a focus app with financial stakes. Users deposit money, stake it on foc
 ## Project Structure
 
 ```
-niya/
+niyah/
 ├── app/                    # Expo Router screens (file-based routing)
 │   ├── _layout.tsx         # Root layout
 │   ├── index.tsx           # Entry point (redirects to auth or tabs)

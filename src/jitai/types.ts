@@ -16,7 +16,7 @@ export interface UsageEpisode {
   appCategory: AppCategory;
   /** Specific app name (if available) */
   appName?: string;
-  /** Whether this was during an active NIYA session */
+  /** Whether this was during an active NIYAH session */
   duringFocusSession: boolean;
   /** Context as classified by the system */
   classifiedContext: UsageContext;

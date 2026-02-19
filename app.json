@@ -2,7 +2,7 @@
   "expo": {
     "name": "NIYAH",
     "slug": "niyah",
-    "owner": "fbablu",
+    "owner": "niyah-app",
     "version": "1.0.0",
     "scheme": "niyah",
     "orientation": "portrait",
@@ -18,7 +18,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.niyah.app",
       "usesAppleSignIn": true,
-      "associatedDomains": ["applinks:niyah-b972d.firebaseapp.com"],
+      "associatedDomains": [
+        "applinks:niyah-b972d.firebaseapp.com"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -41,7 +43,10 @@
               "pathPrefix": "/"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -69,7 +74,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "70318998-fbd4-4d83-939f-39190c8cfdb4"
+        "projectId": "dea6379a-e2c1-4e15-8d7e-3dc25f03b59b"
       }
     }
   }

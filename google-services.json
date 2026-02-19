@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "714586513020",
+    "project_id": "niyah-b972d",
+    "storage_bucket": "niyah-b972d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714586513020:android:606e948f250af53f11b3f9",
+        "android_client_info": {
+          "package_name": "com.niyah.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "714586513020-6js3bjj8p35b1sra2u06jeakqjqhr27a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCi-Jqy1eqTc3vraB_OA6yYpoYCfn52EQ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "714586513020-6js3bjj8p35b1sra2u06jeakqjqhr27a.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "714586513020-42pm28b387sklqgl2fp3dsm16cht01rk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.niyah.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

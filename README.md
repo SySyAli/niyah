@@ -121,13 +121,23 @@ Then tap `http://10.0.2.2:8081` in the launcher screen.
 
 ### iOS Device (no Mac required)
 
-Ask the Apple Developer account holder to run `eas device:create`, open the link on your iPhone, then install the build they share with you.
+Apple Developer account runs this, sends the link to team, and they download the build.
+
+```bash
+eas device:create
+```
+
+After downloading, run:
 
 ```bash
 pnpm start
 ```
 
-Open the NIYAH app — it connects automatically over Wi-Fi. Rebuilds are only needed when native dependencies change.
+Then, open the NIYAH app, it connects automatically over Wi-Fi. Rebuild when non-typescript things are edited:
+
+```bash
+eas build --profile development-device --platform ios
+```
 
 ---
 

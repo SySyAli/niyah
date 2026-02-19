@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.platforms      = { :ios => '15.1' }
   s.source         = { git: '' }
   s.static_framework = true
-  s.swift_versions = ['5.9', '6.0']
+  s.swift_version  = '5.9'
 
   s.dependency 'ExpoModulesCore'
   s.dependency 'FirebaseCore', '~> 12.0'

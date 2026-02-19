@@ -18,9 +18,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.niyah.app",
       "usesAppleSignIn": true,
-      "associatedDomains": [
-        "applinks:niyah-b972d.firebaseapp.com"
-      ],
+      "associatedDomains": ["applinks:niyah-b972d.firebaseapp.com"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -43,10 +41,7 @@
               "pathPrefix": "/"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },

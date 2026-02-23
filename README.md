@@ -119,23 +119,23 @@ Then tap `http://10.0.2.2:8081` in the launcher screen.
 
 ### iOS Device (no Mac required)
 
-Apple Developer account runs this, sends the link to team, and they download the build.
+1. Apple developer runs this, sends the link to team, and they download the build.
 
 ```bash
 eas device:create
 ```
 
-After downloading, run:
+2. After downloading, run:
 
 ```bash
-pnpm start
+eas build --profile development-device --platform ios --local
 ```
 
-Then, open the NIYAH app, it connects automatically over Wi-Fi. Rebuild when non-typescript things are edited:
+3. Upload the .ipa file to [diawi.com](https://diawi.com) and share link to team.
 
-```bash
-eas build --profile development-device --platform ios
-```
+4) Run pnpm start, enter the Manual URL at the bottom in the app and it will run.
+
+5) The .ts changes update immediately. Any native interaction (swift files, push notifications, screen time, etc), see 2) again.
 
 ---
 

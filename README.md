@@ -1,5 +1,3 @@
-# Niyah - نیت - नीयत - নিয়ত —_Intention_
-
 **Put your money where your mind is.**
 
 ## Problem

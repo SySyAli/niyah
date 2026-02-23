@@ -4,7 +4,7 @@
   "main": "expo-router/entry",
   "packageManager": "pnpm@10.29.3",
   "scripts": {
-    "start": "expo start --dev-client",
+    "start": "node scripts/print-dev-url.js & expo start --dev-client",
     "start:go": "expo start --go",
     "android": "expo start --android --dev-client",
     "ios": "expo start --ios --dev-client",

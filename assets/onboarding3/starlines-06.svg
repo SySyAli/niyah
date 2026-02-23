@@ -1,0 +1,12 @@
+<svg viewBox="0 0 115.976 35.284" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="phone-dead-starlines-06" filter="url(#filter0_f_110_60)">
+<path d="M57.9883 4.5C72.8676 4.50003 86.3217 6.02454 96.041 8.48047C100.904 9.70934 104.804 11.1643 107.477 12.7607C110.181 14.3762 111.475 16.0414 111.476 17.6416C111.476 19.2419 110.181 20.9068 107.477 22.5225C104.804 24.1189 100.904 25.5748 96.041 26.8037C86.3217 29.2596 72.8676 30.7842 57.9883 30.7842C43.109 30.7842 29.6549 29.2596 19.9355 26.8037C15.072 25.5748 11.1714 24.119 8.49902 22.5225C5.79483 20.9069 4.5 19.2418 4.5 17.6416C4.50022 16.0414 5.79491 14.3762 8.49902 12.7607C11.1714 11.1643 15.0721 9.70939 19.9355 8.48047C29.6549 6.02456 43.109 4.5 57.9883 4.5Z" stroke="white"/>
+</g>
+<defs>
+<filter id="filter0_f_110_60" x="0" y="0" width="115.976" height="35.284" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="2" result="effect1_foregroundBlur_110_60"/>
+</filter>
+</defs>
+</svg>

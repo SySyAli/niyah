@@ -111,8 +111,8 @@ export const ContinuousScene: React.FC<ContinuousSceneProps> = ({
   const shieldStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       progress.value,
-      [1.3, 1.8, 2, 2.4, 2.9],
-      [0, 0.5, 1, 0.5, 0],
+      [1.3, 1.6, 1.8],
+      [0, 0, 0],
       Extrapolation.CLAMP,
     ),
     transform: [
@@ -146,7 +146,7 @@ export const ContinuousScene: React.FC<ContinuousSceneProps> = ({
     opacity: interpolate(
       progress.value,
       [1.5, 2, 2.5, 3],
-      [0, 0.55, 0.35, 0],
+      [0, 0, 0, 0],
       Extrapolation.CLAMP,
     ),
     transform: [{ rotate: "-90deg" }],
@@ -156,7 +156,7 @@ export const ContinuousScene: React.FC<ContinuousSceneProps> = ({
     opacity: interpolate(
       progress.value,
       [1.6, 2, 2.4, 2.8],
-      [0, 0.55, 0.4, 0],
+      [0, 0, 0, 0],
       Extrapolation.CLAMP,
     ),
   }));

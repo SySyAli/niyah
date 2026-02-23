@@ -35,7 +35,12 @@ import {
   ContinuousScene,
   BlobsScene,
   Onboarding2Scene,
+  Onboarding3Scene,
 } from "../../src/components/onboarding";
+
+// ── DEBUG: Set to true to enable drag-to-position mode on Onboarding3Scene ──
+// Must match DEBUG_LAYOUT in Onboarding3Scene.tsx
+const DEBUG_LAYOUT = false;
 
 // --- Page data ---
 
@@ -52,9 +57,9 @@ const PAGES = [
       "Block distracting apps and set limits.\nPut up real $$ to test your strength.",
   },
   {
-    title: "Block\nDistractions",
+    title: "Earn real f*ckin\nmoney.",
     subtitle:
-      "Distracting apps are locked during\nyour session. No willpower needed.",
+      "Withdraw immediately once you hit your\ngoal. Only lose what you put in.",
   },
   {
     title: "Grow Your\nWealth",
@@ -64,7 +69,7 @@ const PAGES = [
 ];
 
 // Dark green palette — pages 0-1 match Figma (#1B4332), then transition darker
-const BG_COLORS = ["#1B4332", "#1B4332", "#221F19", "#252019"];
+const BG_COLORS = ["#1B4332", "#1B4332", "#1B4332", "#252019"];
 
 // --- Niyah logo (brand mark shown on page 0) ---
 
@@ -303,7 +308,10 @@ export default function WelcomeScreen() {
           </View>
 
           {/* Continuous scene — Stages 1-3 illustrations (non-interactive) */}
-          <View style={styles.sceneArea} pointerEvents="none">
+          <View
+            style={styles.sceneArea}
+            pointerEvents={DEBUG_LAYOUT ? "box-none" : "none"}
+          >
             <ContinuousScene
               scrollX={scrollX}
               pageWidth={width}
@@ -328,6 +336,24 @@ export default function WelcomeScreen() {
                 size={width}
               />
             </View>
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  paddingTop: 0,
+                  ...(DEBUG_LAYOUT ? { zIndex: 9999 } : {}),
+                },
+              ]}
+              pointerEvents={DEBUG_LAYOUT ? undefined : "none"}
+            >
+              <Onboarding3Scene
+                scrollX={scrollX}
+                pageWidth={width}
+                size={width}
+              />
+            </View>
           </View>
 
           {/* Invisible scroll capture — captures swipe gestures */}
@@ -342,15 +368,18 @@ export default function WelcomeScreen() {
             decelerationRate="fast"
             overScrollMode="never"
             onMomentumScrollEnd={handleMomentumEnd}
+            pointerEvents={DEBUG_LAYOUT ? "none" : undefined}
           >
             {PAGES.map((_, i) => (
               <View key={i} style={{ width }} />
             ))}
           </Animated.ScrollView>
 
-          {/* Interactive blobs layer — ABOVE ScrollView so taps reach Pressables.
-              pointerEvents="box-none" lets swipes pass through to ScrollView. */}
-          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          {/* Interactive blobs layer — ABOVE ScrollView so taps reach Pressables. */}
+          <View
+            style={StyleSheet.absoluteFill}
+            pointerEvents={DEBUG_LAYOUT ? "none" : "box-none"}
+          >
             {/* Spacer matching textArea height */}
             <View style={{ height: 220 }} pointerEvents="none" />
             {/* Center blobs in the remaining space (mirrors sceneArea layout) */}
@@ -478,6 +507,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
     gap: Spacing.md,
+    zIndex: 10,
   },
   dotsContainer: {
     flexDirection: "row",

@@ -409,6 +409,75 @@ Apply Reanimated techniques across all screens:
 - [ ] Final legal review
 - [ ] App Store submission
 
+### Phase 11: 3D Gem Onboarding — SceneKit (Visual Upgrade, Parallel or Post-Launch)
+
+**Goal:** Replace the flat SVG blob characters on the first onboarding screen with photorealistic 3D gemstone versions using Apple's SceneKit — liquid glass aesthetic with real-time lighting, reflections, and refraction.
+
+**Key advantage:** The raw SVG `bodyPath` strings for all 6 blobs already exist in `src/components/onboarding/BlobsScene.tsx`. Each path can be imported into Blender as SVG, extruded into a rounded gemstone mesh (solidify → subdivision surface → bevel edges), and exported as `.usdz`. The hardest part (shape design) is already done — it's a matter of making each SVG into a 3D rounded extruded gemstone.
+
+**Platform:** iOS only via SceneKit. Android falls back to existing SVG blobs via `Platform.OS` check. Already using EAS dev client builds (no Expo Go), so native module integration needs no workflow changes.
+
+**Architecture:**
+
+```
+React Native (app shell, navigation, scroll)
+  └─ Local Expo Module (modules/gem-scene/)
+       └─ Swift GemSceneView wrapping SCNView
+            └─ 6 gem meshes (.usdz) from Blender pipeline
+            └─ PBR materials (glass, metallic, refraction per gem)
+            └─ HDR environment map for reflections
+            └─ Real-time lighting
+```
+
+**SVG-to-3D gem pipeline:**
+
+```
+BlobsScene.tsx bodyPath strings
+  → Export as .svg files
+  → Blender: Import SVG → Extrude → Subdivision Surface → Bevel edges
+  → Glass/gem BSDF material preview
+  → Export as .usdz
+  → SceneKit PBR: metallic=0, roughness=0.05, clearcoat=1.0,
+    transparency=0.15, fresnelExponent=3.0
+```
+
+**Per-gem material mapping:**
+
+| Blob     | Color   | Gem Type | Material                          |
+| -------- | ------- | -------- | --------------------------------- |
+| plum     | #5C415D | Amethyst | Deep purple glass, high clearcoat |
+| blue     | #329DD8 | Sapphire | Blue glass, strong specular       |
+| red      | #E07A5F | Sunstone | Warm peach glass, inner glow      |
+| yellow   | #B8860B | Topaz    | Golden glass, metallic tint       |
+| offWhite | #F2EDE4 | Diamond  | Near-clear, rainbow caustics      |
+| green    | #40916C | Emerald  | Deep green glass                  |
+
+**Tasks:**
+
+- [ ] Expo Module scaffold (`modules/gem-scene/ios/`)
+- [ ] Swift `GemSceneView` wrapping `SCNView` with transparent background
+- [ ] Convert 6 SVG blob paths to 3D meshes in Blender (SVG → extrude → bevel → USDZ)
+- [ ] PBR glass materials per gem in SceneKit
+- [ ] HDR environment map for realistic reflections
+- [ ] Bridge `scrollX` shared value from RN → native module (gem rotation, parallax)
+- [ ] Bridge tap gestures → gem bounce/spin spring animation (native side)
+- [ ] Cosmic swirling background (pre-rendered image asset or Metal shader)
+- [ ] Gold border + rune text (image asset from Figma or Midjourney)
+- [ ] Shimmer animation on gold border
+- [ ] Android fallback: keep existing SVG `BlobsScene` unchanged
+- [ ] Performance profiling on physical devices (target 60fps)
+
+**Estimated timeline:** 3-4 weeks
+
+| Week | Focus                                                                             |
+| ---- | --------------------------------------------------------------------------------- |
+| 1    | Expo Module scaffold + SceneKit view integration + single gem with glass material |
+| 2    | All 6 gem models via Blender pipeline + per-gem PBR material tuning               |
+| 3    | RN ↔ native gesture bridge (scroll-driven rotation, tap bounce) + background     |
+| 4    | Gold border, shimmer effects, cosmic background, polish + perf testing            |
+
+**Dependencies:** None on other phases. Can be done in parallel with Phases 6-8 or after Phase 10.
+
 ---
 
 ## Learning Resources (Priority Order)

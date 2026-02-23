@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View, Text, TextInput, StyleSheet, Platform } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
 import { Colors, BaseFontFamily } from "../src/constants/colors";
 import { useAuthStore } from "../src/store/authStore";
@@ -56,7 +57,7 @@ export default function RootLayout() {
   }, [completeEmailLink]);
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -76,7 +77,7 @@ export default function RootLayout() {
           }}
         />
       </Stack>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 

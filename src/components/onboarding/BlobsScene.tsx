@@ -375,16 +375,27 @@ const BlobCharacter: React.FC<BlobProps> = ({
   const sf = pageWidth / 400;
   // Target peach position from Figma (Onboarding2Scene coordinates)
   const targetCenterScreenX = 25 * sf + (132 * sf) / 2;
-  const targetCenterScreenY = (262 - FIGMA_Y_OFF) * sf + (129 * sf) / 2;
+  const targetCenterScreenY = (235 - FIGMA_Y_OFF) * sf + (129 * sf) / 2;
   // Blob's current center on screen
   const blobsOffsetX = (pageWidth - size) / 2;
   const blobsOffsetY = size * 0.05;
   const blobCenterScreenX = blobsOffsetX + size * blob.x + (size * blob.w) / 2;
   const blobCenterScreenY = blobsOffsetY + size * blob.y + (size * blob.h) / 2;
-  // Delta to move hero blob to peach position
+  // Delta to move hero blob to peach position (screen 2)
   const heroDeltaX = blob.isHero ? targetCenterScreenX - blobCenterScreenX : 0;
   const heroDeltaY = blob.isHero ? targetCenterScreenY - blobCenterScreenY : 0;
   const heroTargetScale = blob.isHero ? (132 * sf) / (size * blob.w) : 1;
+
+  // Screen 3 target — peach blob in pot (centered in cauldron)
+  const target3CenterScreenX = 200 * sf;
+  const target3CenterScreenY = (440 - FIGMA_Y_OFF) * sf;
+  const heroDelta3X = blob.isHero
+    ? target3CenterScreenX - blobCenterScreenX
+    : 0;
+  const heroDelta3Y = blob.isHero
+    ? target3CenterScreenY - blobCenterScreenY
+    : 0;
+  const heroTarget3Scale = blob.isHero ? (180 * sf) / (size * blob.w) : 1;
 
   const animStyle = useAnimatedStyle(() => {
     // Gentle vertical float
@@ -394,32 +405,40 @@ const BlobCharacter: React.FC<BlobProps> = ({
     const breatheScale = interpolate(breathe.value, [0, 1], [1, 1.006]);
 
     if (blob.isHero) {
-      // Hero blob: stays fully opaque through page 1, fades out during 1→2
+      // Hero blob: visible pages 0-2, continuous movement, no fade through screens
       const scrollOpacity = interpolate(
         progress.value,
-        [0, 1, 1.3, 1.8],
-        [1, 1, 0.6, 0],
+        [0, 2.5, 3.0],
+        [1, 1, 0],
         Extrapolation.CLAMP,
       );
 
       const heroScale = interpolate(
         progress.value,
-        [0, 0.85],
-        [1, heroTargetScale],
+        [0, 0.85, 1.85],
+        [1, heroTargetScale, heroTarget3Scale],
         Extrapolation.CLAMP,
       );
 
       const moveX = interpolate(
         progress.value,
-        [0, 0.85],
-        [0, heroDeltaX],
+        [0, 0.85, 1.85],
+        [0, heroDeltaX, heroDelta3X],
         Extrapolation.CLAMP,
       );
 
       const moveY = interpolate(
         progress.value,
-        [0, 0.85],
-        [0, heroDeltaY],
+        [0, 0.85, 1.85],
+        [0, heroDeltaY, heroDelta3Y],
+        Extrapolation.CLAMP,
+      );
+
+      // Rotate hero blob to match pot angle on screen 3
+      const heroRot = interpolate(
+        progress.value,
+        [0, 0.85, 1.85],
+        [blob.baseRot, blob.baseRot, blob.baseRot + 30],
         Extrapolation.CLAMP,
       );
 
@@ -428,7 +447,7 @@ const BlobCharacter: React.FC<BlobProps> = ({
         transform: [
           { translateX: moveX },
           { translateY: moveY + floatY },
-          { rotate: `${blob.baseRot + tapRotate.value}deg` },
+          { rotate: `${heroRot + tapRotate.value}deg` },
           { scale: tapScale.value * breatheScale * entrance.value * heroScale },
         ],
       };
@@ -473,15 +492,15 @@ const BlobCharacter: React.FC<BlobProps> = ({
 
     const glowIntensity = interpolate(
       progress.value,
-      [0, 0.5, 1.0],
-      [0.45, 0.55, 0.65],
+      [0, 0.5, 1.0, 2.0],
+      [0.45, 0.55, 0.65, 0.65],
       Extrapolation.CLAMP,
     );
 
     const glowRadius = interpolate(
       progress.value,
-      [0, 0.5, 1.0],
-      [16, 22, 30],
+      [0, 0.5, 1.0, 2.0],
+      [16, 22, 30, 30],
       Extrapolation.CLAMP,
     );
 

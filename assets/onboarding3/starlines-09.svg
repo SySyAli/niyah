@@ -1,0 +1,12 @@
+<svg viewBox="0 0 113.688 31.6042" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="phone-dead-starlines-09" filter="url(#filter0_f_110_200)">
+<ellipse cx="56.8442" cy="15.8021" rx="55.8442" ry="14.8021" fill="#EBF22A"/>
+</g>
+<defs>
+<filter id="filter0_f_110_200" x="0" y="0" width="113.688" height="31.6042" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="0.5" result="effect1_foregroundBlur_110_200"/>
+</filter>
+</defs>
+</svg>

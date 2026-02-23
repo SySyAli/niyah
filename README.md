@@ -186,3 +186,19 @@ pnpm install
 npx expo prebuild --clean
 npx expo run:ios
 ```
+
+### Windows (WSL) Setup
+
+Run this on every restart of your computer in PowerShell as Administrator:
+
+```powershell
+.\wsl_dev_setup.ps1
+```
+
+This sets up port forwarding from Windows into WSL2 and ensures the firewall allows your phone to connect. Then start the dev server from inside WSL:
+
+```bash
+npx expo start --dev-client --host lan
+```
+
+On your phone, open the app and connect to `http://<YOUR_WIFI_IP>:8081`.

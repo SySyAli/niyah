@@ -19,34 +19,50 @@ import {
 } from "../../src/constants/colors";
 import { Card, Button } from "../../src/components";
 import * as Haptics from "expo-haptics";
-import { usePartnerStore } from "../../src/store/partnerStore";
+import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useAuthStore } from "../../src/store/authStore";
+import { GroupSession } from "../../src/types";
 import { formatMoney } from "../../src/utils/format";
 
 export default function SurrenderScreen() {
   const router = useRouter();
-  const { activeDuoSession, completeDuoSession, getVenmoPayLink } =
-    usePartnerStore();
+  const { activeGroupSession, completeGroupSession, getVenmoPayLink } =
+    useGroupSessionStore();
+  const userId = useAuthStore((state) => state.user?.id);
   const [confirmText, setConfirmText] = useState("");
   const [showPayment, setShowPayment] = useState(false);
+  const [completedSession, setCompletedSession] = useState<GroupSession | null>(null);
 
   const canSurrender = confirmText.toLowerCase() === "quit";
 
+  // Derived from completedSession (available after surrender)
+  const settledPartner = completedSession?.participants.find((p) => p.userId !== userId);
+  const outboundTransfer = completedSession?.transfers.find((t) => t.fromUserId === userId);
+  const amountOwed = outboundTransfer?.amount ?? completedSession?.stakePerParticipant ?? 0;
+
   const handleSurrender = () => {
-    if (canSurrender && activeDuoSession) {
+    if (canSurrender && activeGroupSession) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      // Complete session with user failed, partner completed (assumed)
-      completeDuoSession(false, true);
+      const results = activeGroupSession.participants.map((p) => ({
+        userId: p.userId,
+        completed: p.userId !== userId, // current user surrenders, partner assumed complete
+      }));
+      const completed = completeGroupSession(results);
+      setCompletedSession(completed ?? null);
       setShowPayment(true);
     }
   };
 
+  // Derived from activeGroupSession (available before surrender)
+  const activePartner = activeGroupSession?.participants.find((p) => p.userId !== userId);
+
   const handlePayVenmo = async (): Promise<void> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (activeDuoSession?.partnerVenmo) {
+    if (settledPartner?.venmoHandle) {
       const venmoUrl = getVenmoPayLink(
-        activeDuoSession.stakeAmount,
-        activeDuoSession.partnerVenmo,
-        `NIYAH session - lost to ${activeDuoSession.partnerName}`,
+        amountOwed,
+        settledPartner.venmoHandle,
+        `NIYAH session - lost to ${settledPartner.name}`,
       );
 
       try {
@@ -54,9 +70,8 @@ export default function SurrenderScreen() {
         if (canOpen) {
           await Linking.openURL(venmoUrl);
         } else {
-          // Fallback to web
           await Linking.openURL(
-            `https://venmo.com/${activeDuoSession.partnerVenmo.replace("@", "")}`,
+            `https://venmo.com/${settledPartner.venmoHandle.replace("@", "")}`,
           );
         }
       } catch {
@@ -91,12 +106,12 @@ export default function SurrenderScreen() {
   };
 
   useEffect(() => {
-    if (!activeDuoSession && !showPayment) {
+    if (!activeGroupSession && !showPayment) {
       router.replace("/(tabs)");
     }
-  }, [activeDuoSession, showPayment, router]);
+  }, [activeGroupSession, showPayment, router]);
 
-  if (!activeDuoSession && !showPayment) {
+  if (!activeGroupSession && !showPayment) {
     return null;
   }
 
@@ -115,14 +130,14 @@ export default function SurrenderScreen() {
           <Card style={styles.paymentCard}>
             <Text style={styles.paymentLabel}>You owe</Text>
             <Text style={styles.paymentAmount}>
-              {formatMoney(activeDuoSession?.stakeAmount || 0)}
+              {formatMoney(amountOwed)}
             </Text>
             <Text style={styles.paymentTo}>
-              to {activeDuoSession?.partnerName}
+              to {settledPartner?.name}
             </Text>
-            {activeDuoSession?.partnerVenmo && (
+            {settledPartner?.venmoHandle && (
               <Text style={styles.venmoHandle}>
-                {activeDuoSession.partnerVenmo}
+                {settledPartner.venmoHandle}
               </Text>
             )}
           </Card>
@@ -180,15 +195,15 @@ export default function SurrenderScreen() {
         <Card style={styles.warningCard}>
           <Text style={styles.warningLabel}>You will owe your partner</Text>
           <Text style={styles.lossAmount}>
-            {formatMoney(activeDuoSession?.stakeAmount || 0)}
+            {formatMoney(activeGroupSession?.stakePerParticipant || 0)}
           </Text>
           <View style={styles.partnerInfo}>
             <Text style={styles.warningNote}>
-              Pay {activeDuoSession?.partnerName} via Venmo
+              Pay {activePartner?.name} via Venmo
             </Text>
-            {activeDuoSession?.partnerVenmo && (
+            {activePartner?.venmoHandle && (
               <Text style={styles.partnerVenmo}>
-                {activeDuoSession.partnerVenmo}
+                {activePartner.venmoHandle}
               </Text>
             )}
           </View>

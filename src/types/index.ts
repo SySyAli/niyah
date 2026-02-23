@@ -126,3 +126,52 @@ export interface MoneyPlantData {
   partners: Partner[];
   totalEarned: number; // Lifetime earnings from duo sessions
 }
+
+// ─── Group Session (N-person generalization of DuoSession) ──────────────────
+
+export type TransferStatus =
+  | "none" // no transfer needed (all participants broke even)
+  | "pending" // transfer required; payer has not acted
+  | "payment_indicated" // payer marked as paid; awaiting recipient confirmation
+  | "settled" // recipient confirmed receipt
+  | "overdue" // grace period elapsed without payment
+  | "disputed";
+
+export interface SessionParticipant {
+  userId: string;
+  name: string;
+  venmoHandle?: string;
+  profileImage?: string;
+  reputation: UserReputation;
+  stakeAmount: number; // in cents — set from cadence config when session starts
+  // Populated on completion
+  completed?: boolean;
+  screenTime?: number; // ms of usage during session (input to payout algorithm)
+  payout?: number; // in cents — share of pool from algorithm
+}
+
+export interface SessionTransfer {
+  id: string;
+  fromUserId: string;
+  fromUserName: string;
+  toUserId: string;
+  toUserName: string;
+  amount: number; // in cents, always positive
+  status: TransferStatus;
+  createdAt: Date;
+  paidAt?: Date;
+  confirmedAt?: Date;
+}
+
+export interface GroupSession {
+  id: string;
+  cadence: CadenceType;
+  stakePerParticipant: number; // in cents
+  poolTotal: number; // stakePerParticipant × participants.length
+  startedAt: Date;
+  endsAt: Date;
+  status: SessionStatus; // from current user's perspective
+  completedAt?: Date;
+  participants: SessionParticipant[];
+  transfers: SessionTransfer[]; // empty while active; populated on completion
+}

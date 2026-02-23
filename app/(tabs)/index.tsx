@@ -21,6 +21,7 @@ import { Card, Balance, Button, MoneyPlant } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
+import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { formatMoney, formatRelativeTime } from "../../src/utils/format";
 
 interface ActionButtonProps {
@@ -95,7 +96,8 @@ export default function DashboardScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const balance = useWalletStore((state) => state.balance);
-  const { activeDuoSession, duoSessionHistory, partners } = usePartnerStore();
+  const { partners } = usePartnerStore();
+  const { activeGroupSession, groupSessionHistory } = useGroupSessionStore();
 
   const completionRate =
     user && user.totalSessions > 0
@@ -105,7 +107,9 @@ export default function DashboardScreen() {
   const totalEarnings = user?.totalEarnings || 0;
 
   // Calculate money plant stats
-  const totalLeaves = duoSessionHistory.filter((s) => s.userCompleted).length;
+  const totalLeaves = groupSessionHistory.filter(
+    (s) => s.participants.find((p) => p.userId === user?.id)?.completed,
+  ).length;
   const growthStage = Math.min(5, Math.floor(totalLeaves / 3) + 1);
 
   return (
@@ -154,7 +158,7 @@ export default function DashboardScreen() {
         </Card>
 
         {/* Active Session Banner */}
-        {activeDuoSession && (
+        {activeGroupSession && (
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -168,12 +172,15 @@ export default function DashboardScreen() {
                   DUO SESSION IN PROGRESS
                 </Text>
                 <Text style={styles.activeSessionText}>
-                  {activeDuoSession.cadence.charAt(0).toUpperCase() +
-                    activeDuoSession.cadence.slice(1)}{" "}
-                  Focus with {activeDuoSession.partnerName}
+                  {activeGroupSession.cadence.charAt(0).toUpperCase() +
+                    activeGroupSession.cadence.slice(1)}{" "}
+                  Focus with{" "}
+                  {activeGroupSession.participants.find(
+                    (p) => p.userId !== user?.id,
+                  )?.name ?? "Partner"}
                 </Text>
                 <Text style={styles.activeSessionPayout}>
-                  Stake: {formatMoney(activeDuoSession.stakeAmount)}
+                  Stake: {formatMoney(activeGroupSession.stakePerParticipant)}
                 </Text>
               </View>
               <Text style={styles.activeSessionArrow}>View</Text>
@@ -182,7 +189,7 @@ export default function DashboardScreen() {
         )}
 
         {/* Quick Start CTA */}
-        {!activeDuoSession && (
+        {!activeGroupSession && (
           <Card style={styles.ctaCard}>
             <Text style={styles.ctaTitle}>Ready to focus?</Text>
             <Text style={styles.ctaSubtitle}>
@@ -229,52 +236,62 @@ export default function DashboardScreen() {
         </View>
 
         {/* Recent Activity */}
-        {duoSessionHistory.length > 0 && (
+        {groupSessionHistory.length > 0 && (
           <View style={styles.recentSection}>
             <Text style={styles.sectionTitle}>Recent Duo Sessions</Text>
-            {duoSessionHistory.slice(0, 3).map((session) => (
-              <Card key={session.id} style={styles.activityCard}>
-                <View style={styles.activityRow}>
-                  <View style={styles.activityInfo}>
-                    <Text style={styles.activityTitle}>
-                      {session.cadence.charAt(0).toUpperCase() +
-                        session.cadence.slice(1)}{" "}
-                      with {session.partnerName}
-                    </Text>
-                    <Text style={styles.activityDate}>
-                      {session.completedAt
-                        ? formatRelativeTime(session.completedAt)
-                        : "In progress"}
-                    </Text>
+            {groupSessionHistory.slice(0, 3).map((session) => {
+              const me = session.participants.find((p) => p.userId === user?.id);
+              const sessionPartner = session.participants.find(
+                (p) => p.userId !== user?.id,
+              );
+              const inbound = session.transfers.find(
+                (t) => t.toUserId === user?.id && t.status !== "none",
+              );
+              const didComplete = me?.completed ?? false;
+              return (
+                <Card key={session.id} style={styles.activityCard}>
+                  <View style={styles.activityRow}>
+                    <View style={styles.activityInfo}>
+                      <Text style={styles.activityTitle}>
+                        {session.cadence.charAt(0).toUpperCase() +
+                          session.cadence.slice(1)}{" "}
+                        with {sessionPartner?.name ?? "Partner"}
+                      </Text>
+                      <Text style={styles.activityDate}>
+                        {session.completedAt
+                          ? formatRelativeTime(session.completedAt)
+                          : "In progress"}
+                      </Text>
+                    </View>
+                    <View style={styles.activityResult}>
+                      {didComplete ? (
+                        <>
+                          <Text style={styles.activityEarned}>
+                            {inbound
+                              ? `Won ${formatMoney(inbound.amount)}`
+                              : "Stake kept"}
+                          </Text>
+                          <View style={styles.statusBadge}>
+                            <Text style={styles.statusSuccess}>Completed</Text>
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={styles.activityLost}>
+                            -{formatMoney(session.stakePerParticipant)}
+                          </Text>
+                          <View
+                            style={[styles.statusBadge, styles.statusBadgeFailed]}
+                          >
+                            <Text style={styles.statusFailed}>Surrendered</Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
                   </View>
-                  <View style={styles.activityResult}>
-                    {session.userCompleted ? (
-                      <>
-                        <Text style={styles.activityEarned}>
-                          {session.amountOwed && session.amountOwed < 0
-                            ? `Won ${formatMoney(Math.abs(session.amountOwed))}`
-                            : "Stake kept"}
-                        </Text>
-                        <View style={styles.statusBadge}>
-                          <Text style={styles.statusSuccess}>Completed</Text>
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        <Text style={styles.activityLost}>
-                          -{formatMoney(session.stakeAmount)}
-                        </Text>
-                        <View
-                          style={[styles.statusBadge, styles.statusBadgeFailed]}
-                        >
-                          <Text style={styles.statusFailed}>Surrendered</Text>
-                        </View>
-                      </>
-                    )}
-                  </View>
-                </View>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </View>
         )}
       </ScrollView>

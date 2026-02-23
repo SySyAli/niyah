@@ -12,22 +12,25 @@ import {
 import { Card, Button, Balance, Confetti } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
-import { usePartnerStore } from "../../src/store/partnerStore";
+import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { formatMoney } from "../../src/utils/format";
 
 export default function CompleteScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const { duoSessionHistory, markSettlementReceived } = usePartnerStore();
+  const { groupSessionHistory, markTransferConfirmed } = useGroupSessionStore();
   const [showConfetti, setShowConfetti] = useState(true);
 
-  const lastSession = duoSessionHistory[0];
+  const lastSession = groupSessionHistory[0];
+  const myParticipant = lastSession?.participants.find((p) => p.userId === user?.id);
+  const partner = lastSession?.participants.find((p) => p.userId !== user?.id);
+  const inboundTransfer = lastSession?.transfers.find(
+    (t) => t.toUserId === user?.id && t.status !== "none",
+  );
 
   // Determine outcome
-  const userWon = lastSession?.userCompleted && !lastSession?.partnerCompleted;
-  const bothCompleted =
-    lastSession?.userCompleted && lastSession?.partnerCompleted;
-  const amountOwed = lastSession?.amountOwed || 0;
+  const userWon = (myParticipant?.completed ?? false) && !(partner?.completed ?? false);
+  const bothCompleted = (myParticipant?.completed ?? false) && (partner?.completed ?? false);
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -60,9 +63,9 @@ export default function CompleteScreen() {
   };
 
   const handleMarkReceived = () => {
-    if (lastSession) {
+    if (lastSession && inboundTransfer) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      markSettlementReceived(lastSession.id);
+      markTransferConfirmed(lastSession.id, inboundTransfer.id);
     }
   };
 
@@ -80,7 +83,7 @@ export default function CompleteScreen() {
       return "You and your partner both completed! You both keep your stakes.";
     }
     if (userWon) {
-      return `You won! ${lastSession?.partnerName} owes you ${formatMoney(Math.abs(amountOwed))}.`;
+      return `You won! ${partner?.name} owes you ${formatMoney(inboundTransfer?.amount ?? 0)}.`;
     }
     return "Great job completing your session!";
   };
@@ -121,23 +124,23 @@ export default function CompleteScreen() {
           <View style={styles.stakeRow}>
             <Text style={styles.stakeLabel}>Stake returned:</Text>
             <Balance
-              amount={lastSession?.stakeAmount || 0}
+              amount={lastSession?.stakePerParticipant || 0}
               size="large"
               color="gain"
             />
           </View>
         </Card>
 
-        {/* Settlement Card - if user won */}
-        {userWon && amountOwed < 0 && (
+        {/* Settlement Card - if user won and transfer is pending */}
+        {userWon && !!inboundTransfer && (
           <Card style={styles.settlementCard}>
             <Text style={styles.settlementTitle}>Awaiting Payment</Text>
             <Text style={styles.settlementText}>
-              {lastSession?.partnerName} should pay you{" "}
-              {formatMoney(Math.abs(amountOwed))} via Venmo
+              {partner?.name} should pay you{" "}
+              {formatMoney(inboundTransfer.amount)} via Venmo
             </Text>
-            {lastSession?.partnerVenmo && (
-              <Text style={styles.venmoHandle}>{lastSession.partnerVenmo}</Text>
+            {partner?.venmoHandle && (
+              <Text style={styles.venmoHandle}>{partner.venmoHandle}</Text>
             )}
             <View style={styles.settlementButtons}>
               <Button

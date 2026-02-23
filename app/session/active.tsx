@@ -11,35 +11,40 @@ import {
 } from "../../src/constants/colors";
 import { Card, Button, Timer } from "../../src/components";
 import * as Haptics from "expo-haptics";
-import { usePartnerStore } from "../../src/store/partnerStore";
+import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useCountdown } from "../../src/hooks/useCountdown";
 import { formatMoney } from "../../src/utils/format";
 
 export default function ActiveSessionScreen() {
   const router = useRouter();
-  const { activeDuoSession, completeDuoSession } = usePartnerStore();
+  const { activeGroupSession, completeGroupSession } = useGroupSessionStore();
 
   const { timeRemaining, start } = useCountdown({
     onComplete: () => {
-      completeDuoSession(true, true); // User completed, assume partner completed for demo
+      const session = useGroupSessionStore.getState().activeGroupSession;
+      if (session) {
+        completeGroupSession(
+          session.participants.map((p) => ({ userId: p.userId, completed: true })),
+        );
+      }
       router.replace("/session/complete");
     },
   });
 
   useEffect(() => {
-    if (activeDuoSession) {
-      start(activeDuoSession.endsAt);
+    if (activeGroupSession) {
+      start(activeGroupSession.endsAt);
     } else {
       router.replace("/(tabs)");
     }
-  }, [activeDuoSession, router, start]);
+  }, [activeGroupSession, router, start]);
 
-  if (!activeDuoSession) {
+  if (!activeGroupSession) {
     return null;
   }
 
   const totalDuration =
-    activeDuoSession.endsAt.getTime() - activeDuoSession.startedAt.getTime();
+    activeGroupSession.endsAt.getTime() - activeGroupSession.startedAt.getTime();
   const progress = 1 - timeRemaining / totalDuration;
   const progressPercent = Math.min(
     100,
@@ -83,7 +88,7 @@ export default function ActiveSessionScreen() {
         <Card style={styles.payoutCard}>
           <Text style={styles.payoutLabel}>Complete to keep</Text>
           <Text style={styles.payoutAmount}>
-            {formatMoney(activeDuoSession.stakeAmount)}
+            {formatMoney(activeGroupSession.stakePerParticipant)}
           </Text>
         </Card>
 
@@ -117,7 +122,7 @@ export default function ActiveSessionScreen() {
           />
           <Text style={styles.warningText}>
             Warning: Surrendering forfeits your{" "}
-            {formatMoney(activeDuoSession.stakeAmount)} stake
+            {formatMoney(activeGroupSession.stakePerParticipant)} stake
           </Text>
         </View>
       </View>

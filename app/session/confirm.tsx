@@ -18,6 +18,8 @@ import {
 import { Card, Button } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
+import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useAuthStore } from "../../src/store/authStore";
 import {
   CADENCES,
   CadenceId,
@@ -38,17 +40,34 @@ const BLOCKED_APPS = [
 export default function ConfirmSessionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { currentPartner, startDuoSession } = usePartnerStore();
+  const { currentPartner } = usePartnerStore();
+  const { startGroupSession } = useGroupSessionStore();
+  const user = useAuthStore((state) => state.user);
 
   const cadence = (params.cadence as CadenceId) || "daily";
   const config = CADENCES[cadence];
 
   const handleConfirm = () => {
-    if (currentPartner) {
+    if (currentPartner && user) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      startDuoSession(cadence);
+      startGroupSession(cadence, [
+        {
+          userId: user.id,
+          name: user.name,
+          venmoHandle: user.venmoHandle,
+          profileImage: user.profileImage,
+          reputation: user.reputation,
+        },
+        {
+          userId: currentPartner.oderId,
+          name: currentPartner.name,
+          venmoHandle: currentPartner.venmoHandle,
+          profileImage: currentPartner.profileImage,
+          reputation: currentPartner.reputation,
+        },
+      ]);
       router.replace("/session/active");
-    } else {
+    } else if (!currentPartner) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       // No partner selected - go to partner selection
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

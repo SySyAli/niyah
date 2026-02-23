@@ -18,7 +18,8 @@ import {
 } from "../../src/constants/colors";
 import * as Haptics from "expo-haptics";
 import { Card, Button } from "../../src/components";
-import { usePartnerStore } from "../../src/store/partnerStore";
+import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { CADENCES } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
@@ -113,17 +114,22 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
 
 export default function SessionTabScreen() {
   const router = useRouter();
-  const { activeDuoSession } = usePartnerStore();
+  const { activeGroupSession } = useGroupSessionStore();
+  const userId = useAuthStore((state) => state.user?.id);
   const balance = useWalletStore((state) => state.balance);
 
-  if (activeDuoSession) {
+  const activePartner = activeGroupSession?.participants.find(
+    (p) => p.userId !== userId,
+  );
+
+  if (activeGroupSession) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
           <View style={styles.activeHeader}>
             <Text style={styles.title}>Duo Session Active</Text>
             <Text style={styles.subtitle}>
-              Focus session with {activeDuoSession.partnerName}
+              Focus session with {activePartner?.name ?? "Partner"}
             </Text>
           </View>
 
@@ -133,12 +139,12 @@ export default function SessionTabScreen() {
               <View style={styles.pulseInner} />
             </View>
             <Text style={styles.activeTitle}>
-              {activeDuoSession.cadence.charAt(0).toUpperCase() +
-                activeDuoSession.cadence.slice(1)}{" "}
+              {activeGroupSession.cadence.charAt(0).toUpperCase() +
+                activeGroupSession.cadence.slice(1)}{" "}
               Session
             </Text>
             <Text style={styles.activeSubtitle}>
-              Stake: {formatMoney(activeDuoSession.stakeAmount)}
+              Stake: {formatMoney(activeGroupSession.stakePerParticipant)}
             </Text>
           </Card>
 

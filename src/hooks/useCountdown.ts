@@ -21,6 +21,11 @@ export const useCountdown = (
   const [isRunning, setIsRunning] = useState(false);
   const endTimeRef = useRef<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Store onComplete in a ref so its identity never changes, preventing
+  // downstream useCallback deps (updateTimeRemaining → start) from
+  // being recreated on every render and causing infinite useEffect loops.
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -38,11 +43,11 @@ export const useCountdown = (
       setTimeRemaining(0);
       setIsRunning(false);
       clearTimer();
-      onComplete?.();
+      onCompleteRef.current?.();
     } else {
       setTimeRemaining(remaining);
     }
-  }, [clearTimer, onComplete]);
+  }, [clearTimer]); // onComplete removed from deps — accessed via ref
 
   const start = useCallback(
     (endTime: Date) => {

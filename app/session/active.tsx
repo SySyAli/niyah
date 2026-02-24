@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -18,9 +18,13 @@ import { formatMoney } from "../../src/utils/format";
 export default function ActiveSessionScreen() {
   const router = useRouter();
   const { activeGroupSession, completeGroupSession } = useGroupSessionStore();
+  // Tracks intentional navigation away (complete or surrender) so the
+  // useEffect guard doesn't redirect home when activeGroupSession clears.
+  const isNavigatingAwayRef = useRef(false);
 
   const { timeRemaining, start } = useCountdown({
     onComplete: () => {
+      isNavigatingAwayRef.current = true;
       const session = useGroupSessionStore.getState().activeGroupSession;
       if (session) {
         completeGroupSession(
@@ -34,7 +38,8 @@ export default function ActiveSessionScreen() {
   useEffect(() => {
     if (activeGroupSession) {
       start(activeGroupSession.endsAt);
-    } else {
+    } else if (!isNavigatingAwayRef.current) {
+      // No active session and we didn't navigate away ourselves — stale route.
       router.replace("/(tabs)");
     }
   }, [activeGroupSession, router, start]);
@@ -115,6 +120,7 @@ export default function ActiveSessionScreen() {
             title="I Need to Surrender"
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              isNavigatingAwayRef.current = true;
               router.push("/session/surrender");
             }}
             variant="outline"

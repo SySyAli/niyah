@@ -54,7 +54,6 @@ export const useCountdown = (
       endTimeRef.current = endTime;
       setIsRunning(true);
       updateTimeRemaining();
-
       clearTimer();
       intervalRef.current = setInterval(updateTimeRemaining, interval);
     },

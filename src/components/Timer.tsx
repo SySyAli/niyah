@@ -1,6 +1,8 @@
 import React, { useRef, useEffect } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 import {
   Colors,
   Typography,
@@ -54,7 +56,17 @@ export const Timer: React.FC<TimerProps> = ({
   // SVG circle calculations
   const radius = (timerSize.ring - timerSize.stroke) / 2;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - progress);
+
+  // Start at 0 (fully filled) so there is no initial fill animation on mount.
+  // useNativeDriver must be false because SVG props run on the JS thread.
+  const offsetAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(offsetAnim, {
+      toValue: circumference * (1 - progress),
+      duration: 950, // slightly under 1 second so it completes before the next tick
+      useNativeDriver: false,
+    }).start();
+  }, [circumference, offsetAnim, progress]);
 
   const getColor = () => {
     if (isCritical) return Colors.danger;
@@ -75,7 +87,7 @@ export const Timer: React.FC<TimerProps> = ({
           <Svg
             width={timerSize.ring}
             height={timerSize.ring}
-            style={styles.svgContainer}
+            style={[styles.svgContainer, { transform: [{ scaleX: -1 }] }]}
           >
             {/* Background circle */}
             <Circle
@@ -86,8 +98,8 @@ export const Timer: React.FC<TimerProps> = ({
               strokeWidth={timerSize.stroke}
               fill="transparent"
             />
-            {/* Progress circle */}
-            <Circle
+            {/* Progress circle — uses AnimatedCircle for smooth movement */}
+            <AnimatedCircle
               cx={timerSize.ring / 2}
               cy={timerSize.ring / 2}
               r={radius}
@@ -95,7 +107,7 @@ export const Timer: React.FC<TimerProps> = ({
               strokeWidth={timerSize.stroke}
               fill="transparent"
               strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
+              strokeDashoffset={offsetAnim}
               strokeLinecap="round"
               rotation="-90"
               origin={`${timerSize.ring / 2}, ${timerSize.ring / 2}`}

@@ -25,13 +25,17 @@ export default function ActiveSessionScreen() {
   const { timeRemaining, start } = useCountdown({
     onComplete: () => {
       isNavigatingAwayRef.current = true;
-      const session = useGroupSessionStore.getState().activeGroupSession;
-      if (session) {
-        completeGroupSession(
-          session.participants.map((p) => ({ userId: p.userId, completed: true })),
-        );
-      }
-      router.replace("/session/complete");
+      // Delay by one animation cycle (950ms + buffer) so the final drain
+      // animation reaches 100% before we navigate away.
+      setTimeout(() => {
+        const session = useGroupSessionStore.getState().activeGroupSession;
+        if (session) {
+          completeGroupSession(
+            session.participants.map((p) => ({ userId: p.userId, completed: true })),
+          );
+        }
+        router.replace("/session/complete");
+      }, 1000);
     },
   });
 

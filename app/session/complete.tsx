@@ -1,5 +1,13 @@
 import React, { useRef, useEffect, useState } from "react";
-import { View, Text, StyleSheet, Animated } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  ScrollView,
+  Linking,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
@@ -9,35 +17,30 @@ import {
   Radius,
   Font,
 } from "../../src/constants/colors";
-import { Card, Button, Balance, Confetti } from "../../src/components";
+import { Card, Button, Confetti } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { formatMoney } from "../../src/utils/format";
+import type { SessionTransfer } from "../../src/types";
 
 export default function CompleteScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const { groupSessionHistory, markTransferConfirmed } = useGroupSessionStore();
+  const { groupSessionHistory, markTransferConfirmed, markTransferPaid, getVenmoPayLink } =
+    useGroupSessionStore();
   const [showConfetti, setShowConfetti] = useState(true);
 
   const lastSession = groupSessionHistory[0];
   const myParticipant = lastSession?.participants.find((p) => p.userId === user?.id);
-  const partner = lastSession?.participants.find((p) => p.userId !== user?.id);
-  const inboundTransfer = lastSession?.transfers.find(
-    (t) => t.toUserId === user?.id && t.status !== "none",
-  );
-
-  // Determine outcome
-  const userWon = (myParticipant?.completed ?? false) && !(partner?.completed ?? false);
-  const bothCompleted = (myParticipant?.completed ?? false) && (partner?.completed ?? false);
+  // Transfers that require actual settlement (exclude "none" status from even-split)
+  const activeTransfers = lastSession?.transfers.filter((t) => t.status !== "none") ?? [];
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -51,8 +54,6 @@ export default function CompleteScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-
-    // Hide confetti after animation completes
     const timer = setTimeout(() => setShowConfetti(false), 4000);
     return () => clearTimeout(timer);
   }, [opacityAnim, scaleAnim]);
@@ -62,10 +63,39 @@ export default function CompleteScreen() {
     router.replace("/(tabs)");
   };
 
-  const handleMarkReceived = () => {
-    if (lastSession && inboundTransfer) {
+  const handleMarkReceived = (transferId: string) => {
+    if (lastSession) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      markTransferConfirmed(lastSession.id, inboundTransfer.id);
+      markTransferConfirmed(lastSession.id, transferId);
+    }
+  };
+
+  const handlePayVenmo = async (transfer: SessionTransfer) => {
+    const recipient = lastSession?.participants.find((p) => p.userId === transfer.toUserId);
+    if (!recipient?.venmoHandle) {
+      Alert.alert(
+        "No Venmo Handle",
+        `${recipient?.name ?? "Your partner"} hasn't added their Venmo handle. Pay them directly.`,
+      );
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const venmoUrl = getVenmoPayLink(
+      transfer.amount,
+      recipient.venmoHandle,
+      `NIYAH session payment`,
+    );
+    try {
+      const canOpen = await Linking.canOpenURL(venmoUrl);
+      await Linking.openURL(
+        canOpen ? venmoUrl : `https://venmo.com/${recipient.venmoHandle.replace("@", "")}`,
+      );
+      // Mark as payment indicated once they've been sent to Venmo
+      if (lastSession) {
+        markTransferPaid(lastSession.id, transfer.id);
+      }
+    } catch {
+      Alert.alert("Error", "Could not open Venmo. Please pay your partner manually.");
     }
   };
 
@@ -78,84 +108,163 @@ export default function CompleteScreen() {
     return `${streak}-day streak! Keep it going!`;
   };
 
-  const getOutcomeMessage = () => {
-    if (bothCompleted) {
-      return "You and your partner both completed! You both keep your stakes.";
-    }
-    if (userWon) {
-      return `You won! ${partner?.name} owes you ${formatMoney(inboundTransfer?.amount ?? 0)}.`;
-    }
-    return "Great job completing your session!";
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {showConfetti && <Confetti count={60} />}
-      <View style={styles.content}>
-        {/* Success Animation */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
         <Animated.View
           style={[
             styles.header,
-            {
-              transform: [{ scale: scaleAnim }],
-              opacity: opacityAnim,
-            },
+            { transform: [{ scale: scaleAnim }], opacity: opacityAnim },
           ]}
         >
           <View style={styles.checkCircle}>
-            <Text style={styles.checkmark}>Done</Text>
+            <Text style={styles.checkmark}>✓</Text>
           </View>
-          <Text style={styles.title}>Congratulations</Text>
-          <Text style={styles.subtitle}>You completed your duo session</Text>
+          <Text style={styles.title}>Session Complete</Text>
+          <Text style={styles.subtitle}>
+            {myParticipant?.completed ? "You stayed focused!" : "Session ended"}
+          </Text>
         </Animated.View>
 
-        {/* Outcome Card */}
-        <Card style={styles.outcomeCard}>
-          <Text style={styles.outcomeLabel}>
-            {bothCompleted
-              ? "Both Completed"
-              : userWon
-                ? "You Won!"
-                : "Session Complete"}
-          </Text>
-          <Text style={styles.outcomeMessage}>{getOutcomeMessage()}</Text>
-
-          {/* Stake returned */}
-          <View style={styles.stakeRow}>
-            <Text style={styles.stakeLabel}>Stake returned:</Text>
-            <Balance
-              amount={lastSession?.stakePerParticipant || 0}
-              size="large"
-              color="gain"
-            />
-          </View>
-        </Card>
-
-        {/* Settlement Card - if user won and transfer is pending */}
-        {userWon && !!inboundTransfer && (
-          <Card style={styles.settlementCard}>
-            <Text style={styles.settlementTitle}>Awaiting Payment</Text>
-            <Text style={styles.settlementText}>
-              {partner?.name} should pay you{" "}
-              {formatMoney(inboundTransfer.amount)} via Venmo
-            </Text>
-            {partner?.venmoHandle && (
-              <Text style={styles.venmoHandle}>{partner.venmoHandle}</Text>
-            )}
-            <View style={styles.settlementButtons}>
-              <Button
-                title="Mark as Received"
-                onPress={handleMarkReceived}
-                variant="primary"
-              />
-            </View>
-            <Text style={styles.settlementNote}>
-              Mark as received once payment is confirmed
-            </Text>
+        {/* Results: who completed and what they earned */}
+        {lastSession && (
+          <Card style={styles.resultsCard}>
+            <Text style={styles.sectionTitle}>Results</Text>
+            {lastSession.participants.map((p) => (
+              <View key={p.userId} style={styles.participantRow}>
+                <View style={styles.participantLeft}>
+                  <Text style={styles.participantName}>
+                    {p.userId === user?.id ? "You" : p.name}
+                  </Text>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      p.completed ? styles.badgeCompleted : styles.badgeFailed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusBadgeText,
+                        p.completed ? styles.badgeTextCompleted : styles.badgeTextFailed,
+                      ]}
+                    >
+                      {p.completed ? "Completed" : "Surrendered"}
+                    </Text>
+                  </View>
+                </View>
+                <Text
+                  style={[
+                    styles.payoutValue,
+                    p.completed ? styles.payoutGain : styles.payoutNeutral,
+                  ]}
+                >
+                  {formatMoney(p.payout ?? p.stakeAmount)}
+                </Text>
+              </View>
+            ))}
           </Card>
         )}
 
-        {/* Stats Grid */}
+        {/* Payments: who owes who and current state */}
+        <View style={styles.paymentsSection}>
+          <Text style={styles.sectionTitle}>Payments</Text>
+
+          {activeTransfers.length === 0 ? (
+            <Card style={styles.noPaymentsCard}>
+              <Text style={styles.noPaymentsText}>No payments needed</Text>
+              <Text style={styles.noPaymentsSubtext}>
+                Everyone's stake has been settled automatically.
+              </Text>
+            </Card>
+          ) : (
+            activeTransfers.map((transfer) => {
+              const iAmPayer = transfer.fromUserId === user?.id;
+              const iAmRecipient = transfer.toUserId === user?.id;
+              const counterparty = lastSession?.participants.find(
+                (p) => p.userId === (iAmPayer ? transfer.toUserId : transfer.fromUserId),
+              );
+
+              return (
+                <Card
+                  key={transfer.id}
+                  style={[
+                    styles.transferCard,
+                    transfer.status === "overdue" && styles.transferCardOverdue,
+                    transfer.status === "settled" && styles.transferCardSettled,
+                    transfer.status === "disputed" && styles.transferCardDisputed,
+                  ]}
+                >
+                  <View style={styles.transferRow}>
+                    <Text style={styles.transferDirection}>
+                      {iAmPayer
+                        ? `You owe ${counterparty?.name ?? transfer.toUserName}`
+                        : iAmRecipient
+                          ? `${counterparty?.name ?? transfer.fromUserName} owes you`
+                          : `${transfer.fromUserName} → ${transfer.toUserName}`}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.transferAmount,
+                        iAmPayer ? styles.amountOwed : styles.amountIncoming,
+                      ]}
+                    >
+                      {formatMoney(transfer.amount)}
+                    </Text>
+                  </View>
+
+                  {counterparty?.venmoHandle && (
+                    <Text style={styles.venmoHandle}>{counterparty.venmoHandle}</Text>
+                  )}
+
+                  <View style={styles.transferAction}>
+                    {(transfer.status === "pending" || transfer.status === "overdue") &&
+                      iAmPayer && (
+                        <Button
+                          title={
+                            transfer.status === "overdue" ? "Pay Now (Overdue)" : "Pay via Venmo"
+                          }
+                          onPress={() => handlePayVenmo(transfer)}
+                          variant={transfer.status === "overdue" ? "danger" : "primary"}
+                          size="small"
+                        />
+                      )}
+                    {transfer.status === "pending" && iAmRecipient && (
+                      <Text style={styles.awaitingText}>Awaiting payment</Text>
+                    )}
+                    {transfer.status === "overdue" && iAmRecipient && (
+                      <Text style={styles.overdueText}>Payment overdue</Text>
+                    )}
+                    {transfer.status === "payment_indicated" && iAmRecipient && (
+                      <Button
+                        title="Mark as Received"
+                        onPress={() => handleMarkReceived(transfer.id)}
+                        variant="secondary"
+                        size="small"
+                      />
+                    )}
+                    {transfer.status === "payment_indicated" && iAmPayer && (
+                      <Text style={styles.awaitingText}>Sent — awaiting confirmation</Text>
+                    )}
+                    {transfer.status === "settled" && (
+                      <Text style={styles.settledText}>Settled ✓</Text>
+                    )}
+                    {transfer.status === "disputed" && (
+                      <Text style={styles.disputedText}>Disputed</Text>
+                    )}
+                  </View>
+                </Card>
+              );
+            })
+          )}
+        </View>
+
+        {/* Stats */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{user?.currentStreak || 0}</Text>
@@ -163,23 +272,20 @@ export default function CompleteScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {user?.reputation?.score || 50}
-            </Text>
+            <Text style={styles.statValue}>{user?.reputation?.score || 50}</Text>
             <Text style={styles.statLabel}>Rep Score</Text>
           </View>
         </View>
 
-        {/* Motivation Card */}
+        {/* Motivation */}
         <Card style={styles.motivationCard}>
           <Text style={styles.motivationText}>{getStreakMessage()}</Text>
         </Card>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Button title="Done" onPress={handleDone} size="large" />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -189,13 +295,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  content: {
+  scroll: {
     flex: 1,
-    padding: Spacing.lg,
-    justifyContent: "center",
   },
+  content: {
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+  },
+  // Header
   header: {
     alignItems: "center",
+    marginTop: Spacing.lg,
     marginBottom: Spacing.xl,
   },
   checkCircle: {
@@ -210,8 +320,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   checkmark: {
-    fontSize: Typography.titleMedium,
-    ...Font.bold,
+    fontSize: 40,
     color: Colors.gain,
   },
   title: {
@@ -224,70 +333,156 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
-  // Outcome card
-  outcomeCard: {
-    alignItems: "center",
-    backgroundColor: Colors.gainLight,
-    borderWidth: 1,
-    borderColor: Colors.gain,
-    paddingVertical: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  outcomeLabel: {
+  // Section title (shared)
+  sectionTitle: {
     fontSize: Typography.titleSmall,
     ...Font.semibold,
-    color: Colors.gain,
-    marginBottom: Spacing.xs,
-  },
-  outcomeMessage: {
-    fontSize: Typography.bodySmall,
     color: Colors.text,
-    textAlign: "center",
     marginBottom: Spacing.md,
   },
-  stakeRow: {
+  // Results card
+  resultsCard: {
+    marginBottom: Spacing.md,
+  },
+  participantRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  participantLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
+    flex: 1,
   },
-  stakeLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
+  participantName: {
+    fontSize: Typography.bodyMedium,
+    ...Font.medium,
+    color: Colors.text,
   },
-  // Settlement card
-  settlementCard: {
-    alignItems: "center",
-    backgroundColor: Colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingVertical: Spacing.lg,
+  statusBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+  },
+  badgeCompleted: {
+    backgroundColor: Colors.gainLight,
+  },
+  badgeFailed: {
+    backgroundColor: Colors.lossLight,
+  },
+  statusBadgeText: {
+    fontSize: Typography.labelSmall,
+    ...Font.semibold,
+  },
+  badgeTextCompleted: {
+    color: Colors.gain,
+  },
+  badgeTextFailed: {
+    color: Colors.loss,
+  },
+  payoutValue: {
+    fontSize: Typography.titleSmall,
+    ...Font.semibold,
+  },
+  payoutGain: {
+    color: Colors.gain,
+  },
+  payoutNeutral: {
+    color: Colors.textMuted,
+  },
+  // Payments section
+  paymentsSection: {
     marginBottom: Spacing.md,
   },
-  settlementTitle: {
+  noPaymentsCard: {
+    alignItems: "center",
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.backgroundCard,
+  },
+  noPaymentsText: {
     fontSize: Typography.titleSmall,
     ...Font.semibold,
     color: Colors.text,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
-  settlementText: {
+  noPaymentsSubtext: {
     fontSize: Typography.bodySmall,
     color: Colors.textSecondary,
     textAlign: "center",
+  },
+  // Transfer cards
+  transferCard: {
     marginBottom: Spacing.sm,
+  },
+  transferCardOverdue: {
+    borderWidth: 1,
+    borderColor: Colors.loss,
+    backgroundColor: Colors.lossLight,
+  },
+  transferCardSettled: {
+    borderWidth: 1,
+    borderColor: Colors.gain,
+    backgroundColor: Colors.gainLight,
+  },
+  transferCardDisputed: {
+    borderWidth: 1,
+    borderColor: Colors.warning,
+    backgroundColor: Colors.warningLight,
+  },
+  transferRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.xs,
+  },
+  transferDirection: {
+    fontSize: Typography.bodyMedium,
+    ...Font.medium,
+    color: Colors.text,
+    flex: 1,
+  },
+  transferAmount: {
+    fontSize: Typography.titleSmall,
+    ...Font.bold,
+  },
+  amountOwed: {
+    color: Colors.loss,
+  },
+  amountIncoming: {
+    color: Colors.gain,
   },
   venmoHandle: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
+    fontSize: Typography.labelMedium,
     color: Colors.primary,
-    marginBottom: Spacing.md,
-  },
-  settlementButtons: {
+    ...Font.medium,
     marginBottom: Spacing.sm,
   },
-  settlementNote: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    textAlign: "center",
+  transferAction: {
+    marginTop: Spacing.xs,
+  },
+  awaitingText: {
+    fontSize: Typography.labelMedium,
+    color: Colors.textSecondary,
+    ...Font.medium,
+  },
+  overdueText: {
+    fontSize: Typography.labelMedium,
+    color: Colors.loss,
+    ...Font.semibold,
+  },
+  settledText: {
+    fontSize: Typography.labelMedium,
+    color: Colors.gain,
+    ...Font.semibold,
+  },
+  disputedText: {
+    fontSize: Typography.labelMedium,
+    color: Colors.warning,
+    ...Font.semibold,
   },
   // Stats
   statsGrid: {
@@ -316,6 +511,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
+  // Motivation
   motivationCard: {
     backgroundColor: Colors.primaryMuted,
     borderWidth: 1,

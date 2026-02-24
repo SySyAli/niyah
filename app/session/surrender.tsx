@@ -26,7 +26,7 @@ import { formatMoney } from "../../src/utils/format";
 
 export default function SurrenderScreen() {
   const router = useRouter();
-  const { activeGroupSession, completeGroupSession, getVenmoPayLink } =
+  const { activeGroupSession, completeGroupSession, getVenmoPayLink, markTransferPaid } =
     useGroupSessionStore();
   const userId = useAuthStore((state) => state.user?.id);
   const [confirmText, setConfirmText] = useState("");
@@ -85,8 +85,9 @@ export default function SurrenderScreen() {
 
   const handleMarkPaid = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Mark as paid and go home
-    // Note: In real app, we'd get the session ID from completed session
+    if (completedSession && outboundTransfer) {
+      markTransferPaid(completedSession.id, outboundTransfer.id);
+    }
     router.replace("/(tabs)");
   };
 

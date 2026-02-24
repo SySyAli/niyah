@@ -32,7 +32,7 @@ export const formatMoneyCompact = (cents: number): string => {
  * Format milliseconds to time string (HH:MM:SS or MM:SS)
  */
 export const formatTime = (ms: number): string => {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;

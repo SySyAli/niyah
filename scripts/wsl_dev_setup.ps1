@@ -29,7 +29,7 @@ foreach ($port in $ports) {
         connectport=$port `
         connectaddress=$wslIp
 
-    Write-Host "Port proxy set: 0.0.0.0:$port -> $wslIp:$port" -ForegroundColor Green
+    Write-Host "Port proxy set: 0.0.0.0:${port} -> ${wslIp}:${port}" -ForegroundColor Green
 
     # Add firewall rule if it doesn't already exist
     $ruleName = "Expo Port $port"

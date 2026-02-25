@@ -49,6 +49,7 @@ interface AuthState {
   updateUser: (updates: Partial<User>) => void;
   updateReputation: (updates: Partial<UserReputation>) => void;
   setVenmoHandle: (handle: string) => void;
+  setZelleHandle: (handle: string) => void;
 }
 
 // Default reputation for new users
@@ -112,6 +113,7 @@ const buildUser = (
         referralCount: rep.referralCount || 0,
       },
       venmoHandle: firestoreData.venmoHandle as string | undefined,
+      zelleHandle: firestoreData.zelleHandle as string | undefined,
       phoneNumber: firestoreData.phone as string | undefined,
       authProvider: firestoreData.authProvider as
         | "email"
@@ -445,6 +447,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (user) {
       set({ user: { ...user, venmoHandle: handle } });
+    }
+  },
+
+  /**
+   * Set the user's Zelle handle.
+   */
+  setZelleHandle: (handle: string) => {
+    const { user } = get();
+    if (user) {
+      set({ user: { ...user, zelleHandle: handle } });
     }
   },
 }));

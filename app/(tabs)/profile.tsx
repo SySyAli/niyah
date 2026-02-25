@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -22,16 +22,25 @@ import { Card, Balance } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
+import { useSocialStore } from "../../src/store/socialStore";
 import { formatMoney, formatRelativeTime } from "../../src/utils/format";
 import { REPUTATION_LEVELS } from "../../src/constants/config";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout, setVenmoHandle } = useAuthStore();
+  const { user, logout, setVenmoHandle, setZelleHandle } = useAuthStore();
   const { balance, transactions, pendingWithdrawal } = useWalletStore();
   const { partners } = usePartnerStore();
-  const [showVenmoInput, setShowVenmoInput] = useState(false);
+  const { following, loadMyFollows } = useSocialStore();
+  const [showPaymentEditor, setShowPaymentEditor] = useState(false);
   const [venmoInput, setVenmoInput] = useState(user?.venmoHandle || "");
+  const [zelleInput, setZelleInput] = useState(user?.zelleHandle || "");
+
+  useEffect(() => {
+    if (user?.id) {
+      loadMyFollows(user.id).catch(() => {});
+    }
+  }, [user?.id, loadMyFollows]);
 
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -69,13 +78,23 @@ export default function ProfileScreen() {
     return Colors.loss;
   };
 
-  const handleSaveVenmo = () => {
-    if (venmoInput) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const handle = venmoInput.startsWith("@") ? venmoInput : `@${venmoInput}`;
-      setVenmoHandle(handle);
-      setShowVenmoInput(false);
-    }
+  const handleSavePaymentHandles = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const trimmedVenmo = venmoInput.trim();
+    const venmoHandle = trimmedVenmo
+      ? trimmedVenmo.startsWith("@")
+        ? trimmedVenmo
+        : `@${trimmedVenmo}`
+      : "";
+    setVenmoHandle(venmoHandle);
+    setZelleHandle(zelleInput.trim());
+    setShowPaymentEditor(false);
+  };
+
+  const handleCancelPaymentEdit = () => {
+    setVenmoInput(user?.venmoHandle || "");
+    setZelleInput(user?.zelleHandle || "");
+    setShowPaymentEditor(false);
   };
 
   return (
@@ -94,6 +113,30 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
+
+          <View style={styles.headerStatsRow}>
+            <Pressable
+              style={styles.headerStatItem}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/(tabs)/friends?tab=following");
+              }}
+            >
+              <Text style={styles.headerStatValue}>{following.length}</Text>
+              <Text style={styles.headerStatLabel}>Following</Text>
+            </Pressable>
+            <View style={styles.headerStatDivider} />
+            <Pressable
+              style={styles.headerStatItem}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/(tabs)/friends?tab=partners");
+              }}
+            >
+              <Text style={styles.headerStatValue}>{partners.length}</Text>
+              <Text style={styles.headerStatLabel}>Partners</Text>
+            </Pressable>
+          </View>
 
           {/* Reputation Badge */}
           <View style={styles.reputationBadge}>
@@ -161,7 +204,9 @@ export default function ProfileScreen() {
               <Text style={styles.paymentLabel}>Partners</Text>
             </View>
             <View style={styles.paymentStat}>
-              <Text style={[styles.paymentValue, { color: Colors.primaryLight }]}>
+              <Text
+                style={[styles.paymentValue, { color: Colors.primaryLight }]}
+              >
                 {reputation?.referralCount || 0}
               </Text>
               <Text style={styles.paymentLabel}>Referred</Text>
@@ -190,50 +235,100 @@ export default function ProfileScreen() {
           </View>
         </Pressable>
 
-        {/* Venmo Handle */}
-        <Card style={styles.venmoCard}>
-          <Text style={styles.venmoTitle}>Venmo Handle</Text>
-          {showVenmoInput ? (
-            <View style={styles.venmoInputRow}>
-              <TextInput
-                style={styles.venmoInput}
-                placeholder="@your-handle"
-                placeholderTextColor={Colors.textMuted}
-                value={venmoInput}
-                onChangeText={setVenmoInput}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+        {/* Payment Handles */}
+        <Card style={styles.paymentHandlesCard}>
+          <View style={styles.paymentHandlesHeader}>
+            <Text style={styles.venmoTitle}>Payment Handles</Text>
+            {!showPaymentEditor && (
               <Pressable
-                style={styles.venmoSaveButton}
-                onPress={handleSaveVenmo}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowPaymentEditor(true);
+                }}
               >
-                <Text style={styles.venmoSaveText}>Save</Text>
+                <Text style={styles.venmoEditText}>Edit</Text>
               </Pressable>
-            </View>
+            )}
+          </View>
+
+          {showPaymentEditor ? (
+            <>
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalInputLabel}>Venmo Handle</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="@your-handle"
+                  placeholderTextColor={Colors.textMuted}
+                  value={venmoInput}
+                  onChangeText={setVenmoInput}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <View style={styles.modalInputGroup}>
+                <Text style={styles.modalInputLabel}>Zelle</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="email or phone"
+                  placeholderTextColor={Colors.textMuted}
+                  value={zelleInput}
+                  onChangeText={setZelleInput}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <View style={styles.modalActions}>
+                <Pressable
+                  style={styles.modalCancelButton}
+                  onPress={handleCancelPaymentEdit}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.modalSaveButton}
+                  onPress={handleSavePaymentHandles}
+                >
+                  <Text style={styles.modalSaveText}>Save</Text>
+                </Pressable>
+              </View>
+            </>
           ) : (
-            <Pressable
-              style={styles.venmoDisplay}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setShowVenmoInput(true);
-              }}
-            >
-              <Text
-                style={
-                  user?.venmoHandle
-                    ? styles.venmoHandleText
-                    : styles.venmoPlaceholder
-                }
-              >
-                {user?.venmoHandle || "Tap to add"}
+            <>
+              <View style={styles.paymentHandleRow}>
+                <Text style={styles.paymentHandleLabel}>Venmo</Text>
+                <Text
+                  style={
+                    user?.venmoHandle
+                      ? styles.venmoHandleText
+                      : styles.venmoPlaceholder
+                  }
+                >
+                  {user?.venmoHandle || "Tap Edit to add"}
+                </Text>
+              </View>
+
+              <View style={styles.paymentHandleDivider} />
+
+              <View style={styles.paymentHandleRow}>
+                <Text style={styles.paymentHandleLabel}>Zelle</Text>
+                <Text
+                  style={
+                    user?.zelleHandle
+                      ? styles.venmoHandleText
+                      : styles.venmoPlaceholder
+                  }
+                >
+                  {user?.zelleHandle || "Tap Edit to add"}
+                </Text>
+              </View>
+
+              <Text style={styles.venmoNote}>
+                Partners can pay you with either option
               </Text>
-              <Text style={styles.venmoEditText}>Edit</Text>
-            </Pressable>
+            </>
           )}
-          <Text style={styles.venmoNote}>
-            Partners use this to pay you when they lose
-          </Text>
         </Card>
 
         {/* Balance Card */}
@@ -373,6 +468,35 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
+  headerStatsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: Spacing.md,
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+  },
+  headerStatItem: {
+    alignItems: "center",
+    minWidth: 88,
+  },
+  headerStatValue: {
+    fontSize: Typography.titleMedium,
+    ...Font.bold,
+    color: Colors.text,
+  },
+  headerStatLabel: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  headerStatDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: Colors.border,
+    marginHorizontal: Spacing.md,
+  },
   // Reputation badge in header
   reputationBadge: {
     flexDirection: "row",
@@ -492,48 +616,36 @@ const styles = StyleSheet.create({
     ...Font.bold,
     color: Colors.white,
   },
-  // Venmo card
-  venmoCard: {
+  // Payment methods
+  paymentHandlesCard: {
     marginBottom: Spacing.md,
+  },
+  paymentHandlesHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  paymentHandleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: Spacing.sm,
+    gap: Spacing.md,
+  },
+  paymentHandleLabel: {
+    fontSize: Typography.bodyMedium,
+    color: Colors.textSecondary,
+    ...Font.medium,
+  },
+  paymentHandleDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
   },
   venmoTitle: {
     fontSize: Typography.titleSmall,
     ...Font.semibold,
     color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  venmoInputRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  venmoInput: {
-    flex: 1,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: Typography.bodyMedium,
-    color: Colors.text,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  venmoSaveButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Radius.md,
-    justifyContent: "center",
-  },
-  venmoSaveText: {
-    fontSize: Typography.labelMedium,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  venmoDisplay: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: Colors.backgroundCard,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
   },
   venmoHandleText: {
     fontSize: Typography.bodyMedium,
@@ -552,6 +664,54 @@ const styles = StyleSheet.create({
     fontSize: Typography.labelSmall,
     color: Colors.textMuted,
     marginTop: Spacing.sm,
+  },
+  modalInputGroup: {
+    marginBottom: Spacing.md,
+  },
+  modalInputLabel: {
+    fontSize: Typography.labelMedium,
+    ...Font.medium,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+  },
+  modalInput: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    fontSize: Typography.bodyMedium,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  modalCancelButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  modalCancelText: {
+    fontSize: Typography.labelMedium,
+    ...Font.medium,
+    color: Colors.textSecondary,
+  },
+  modalSaveButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+  },
+  modalSaveText: {
+    fontSize: Typography.labelMedium,
+    ...Font.semibold,
+    color: Colors.text,
   },
   balanceCard: {
     marginBottom: Spacing.md,

@@ -30,6 +30,7 @@ export interface User {
   // Reputation/Social Credit
   reputation: UserReputation;
   venmoHandle?: string; // For settlements
+  zelleHandle?: string; // Email or phone for Zelle settlements
   profileImage?: string;
   phoneNumber?: string;
   phoneVerified?: boolean;

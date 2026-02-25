@@ -8,7 +8,7 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Colors,
   Spacing,
@@ -177,6 +177,9 @@ const PartnerRow: React.FC<{
 
 export default function FriendsScreen() {
   const router = useRouter();
+  const { tab: requestedTab } = useLocalSearchParams<{
+    tab?: "following" | "partners";
+  }>();
   const { user } = useAuthStore();
   const { partners } = usePartnerStore();
   const {
@@ -190,7 +193,9 @@ export default function FriendsScreen() {
     isFollowing,
   } = useSocialStore();
 
-  const [tab, setTab] = useState<"following" | "partners">("following");
+  const [tab, setTab] = useState<"following" | "partners">(
+    requestedTab === "partners" ? "partners" : "following",
+  );
   const [loadingUids, setLoadingUids] = useState<Record<string, boolean>>({});
 
   const myUid = user?.id ?? "";
@@ -200,6 +205,12 @@ export default function FriendsScreen() {
       loadMyFollows(myUid);
     }
   }, [myUid]);
+
+  useEffect(() => {
+    if (requestedTab === "following" || requestedTab === "partners") {
+      setTab(requestedTab);
+    }
+  }, [requestedTab]);
 
   // Load profiles for everyone we follow
   useEffect(() => {

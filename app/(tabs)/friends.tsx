@@ -269,7 +269,7 @@ export default function FriendsScreen() {
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Text style={styles.title}>Friends</Text>
-        <Pressable onPress={() => router.push("/invite")}>
+        <Pressable onPress={() => router.push("/invite" as never)}>
           <Text style={styles.inviteLink}>Invite →</Text>
         </Pressable>
       </View>

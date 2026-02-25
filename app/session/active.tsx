@@ -14,6 +14,11 @@ import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useCountdown } from "../../src/hooks/useCountdown";
 import { formatMoney } from "../../src/utils/format";
+import {
+  stopBlocking,
+  onShieldViolation,
+  isScreenTimeAvailable,
+} from "../../src/config/screentime";
 
 export default function ActiveSessionScreen() {
   const router = useRouter();
@@ -24,10 +29,15 @@ export default function ActiveSessionScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [pauseStartedAt, setPauseStartedAt] = useState<number | null>(null);
   const [totalPausedMs, setTotalPausedMs] = useState(0);
+  const [violationCount, setViolationCount] = useState(0);
 
   const { timeRemaining, start, stop } = useCountdown({
     onComplete: () => {
       isNavigatingAwayRef.current = true;
+      // Stop blocking apps when session completes
+      if (isScreenTimeAvailable) {
+        stopBlocking().catch(() => {});
+      }
       // Delay by one animation cycle (950ms + buffer) so the final drain
       // animation reaches 100% before we navigate away.
       setTimeout(() => {
@@ -44,6 +54,16 @@ export default function ActiveSessionScreen() {
       }, 1000);
     },
   });
+
+  // Listen for shield violation events (user tried to open a blocked app)
+  useEffect(() => {
+    if (!isScreenTimeAvailable || !activeGroupSession) return;
+    const unsubscribe = onShieldViolation(() => {
+      setViolationCount((prev) => prev + 1);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    });
+    return unsubscribe;
+  }, [activeGroupSession]);
 
   useEffect(() => {
     if (activeGroupSession) {
@@ -144,6 +164,14 @@ export default function ActiveSessionScreen() {
           </Text>
         </Card>
 
+        {/* Violation Counter */}
+        {violationCount > 0 && (
+          <Card style={styles.violationCard}>
+            <Text style={styles.violationLabel}>Blocked app attempts</Text>
+            <Text style={styles.violationCount}>{violationCount}</Text>
+          </Card>
+        )}
+
         {/* Tips */}
         <View style={styles.tipsSection}>
           <Text style={styles.tipsTitle}>Stay strong</Text>
@@ -178,6 +206,10 @@ export default function ActiveSessionScreen() {
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                   isNavigatingAwayRef.current = true;
+                  // Stop blocking apps when navigating to surrender
+                  if (isScreenTimeAvailable) {
+                    stopBlocking().catch(() => {});
+                  }
                   router.push("/session/surrender");
                 }}
                 variant="outline"
@@ -273,6 +305,28 @@ const styles = StyleSheet.create({
     borderColor: Colors.gain,
     paddingVertical: Spacing.md,
     marginBottom: Spacing.md,
+  },
+  violationCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: Colors.lossLight,
+    borderWidth: 1,
+    borderColor: Colors.loss,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    borderRadius: Radius.lg,
+  },
+  violationLabel: {
+    fontSize: Typography.bodySmall,
+    color: Colors.loss,
+    ...Font.medium,
+  },
+  violationCount: {
+    fontSize: Typography.titleMedium,
+    ...Font.bold,
+    color: Colors.loss,
   },
   payoutLabel: {
     fontSize: Typography.labelMedium,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -25,6 +25,14 @@ import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
 import { formatMoney, formatRelativeTime } from "../../src/utils/format";
 import { REPUTATION_LEVELS } from "../../src/constants/config";
+import {
+  isScreenTimeAvailable,
+  requestScreenTimeAuth,
+  getScreenTimeAuthStatus,
+  presentAppPicker,
+  getSavedAppSelection,
+} from "../../src/config/screentime";
+import type { AuthorizationStatus } from "../../modules/niyah-screentime";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -36,11 +44,28 @@ export default function ProfileScreen() {
   const [venmoInput, setVenmoInput] = useState(user?.venmoHandle || "");
   const [zelleInput, setZelleInput] = useState(user?.zelleHandle || "");
 
+  // Screen Time state
+  const [screenTimeAuth, setScreenTimeAuth] =
+    useState<AuthorizationStatus>("notDetermined");
+  const [appSelectionCount, setAppSelectionCount] = useState(0);
+
+  const refreshScreenTimeStatus = useCallback(() => {
+    if (!isScreenTimeAvailable) return;
+    try {
+      setScreenTimeAuth(getScreenTimeAuthStatus());
+      const selection = getSavedAppSelection();
+      setAppSelectionCount(selection?.appCount ?? 0);
+    } catch {
+      // Native module not loaded (simulator, etc.)
+    }
+  }, []);
+
   useEffect(() => {
     if (user?.id) {
       loadMyFollows(user.id).catch(() => {});
     }
-  }, [user?.id, loadMyFollows]);
+    refreshScreenTimeStatus();
+  }, [user?.id, loadMyFollows, refreshScreenTimeStatus]);
 
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -135,7 +160,10 @@ export default function ProfileScreen() {
               style={styles.headerStatItem}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(tabs)/friends?tab=following");
+                router.push({
+                  pathname: "/(tabs)/friends" as never,
+                  params: { tab: "following" },
+                });
               }}
             >
               <Text style={styles.headerStatValue}>{following.length}</Text>
@@ -146,7 +174,10 @@ export default function ProfileScreen() {
               style={styles.headerStatItem}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(tabs)/friends?tab=partners");
+                router.push({
+                  pathname: "/(tabs)/friends" as never,
+                  params: { tab: "partners" },
+                });
               }}
             >
               <Text style={styles.headerStatValue}>{partners.length}</Text>
@@ -218,7 +249,7 @@ export default function ProfileScreen() {
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push("/invite");
+            router.push("/invite" as never);
           }}
           style={styles.inviteCard}
         >
@@ -234,6 +265,74 @@ export default function ProfileScreen() {
             </View>
           </View>
         </Pressable>
+
+        {/* Screen Time Setup */}
+        {isScreenTimeAvailable && (
+          <Card style={styles.screenTimeCard}>
+            <Text style={styles.screenTimeTitle}>Screen Time</Text>
+            <Text style={styles.screenTimeDescription}>
+              {screenTimeAuth === "approved"
+                ? appSelectionCount > 0
+                  ? `${appSelectionCount} app${appSelectionCount !== 1 ? "s" : ""} will be blocked during sessions`
+                  : "Select which apps to block during sessions"
+                : "Allow NIYAH to block distracting apps during sessions"}
+            </Text>
+
+            {screenTimeAuth !== "approved" ? (
+              <Pressable
+                style={styles.screenTimeButton}
+                onPress={async () => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  try {
+                    const status = await requestScreenTimeAuth();
+                    setScreenTimeAuth(status);
+                    if (status === "denied") {
+                      Alert.alert(
+                        "Permission Denied",
+                        "You can enable Screen Time access in Settings > NIYAH > Screen Time.",
+                      );
+                    }
+                  } catch (error) {
+                    Alert.alert(
+                      "Error",
+                      "Could not request Screen Time permission. Make sure you're on a physical device with iOS 16+.",
+                    );
+                  }
+                }}
+              >
+                <Text style={styles.screenTimeButtonText}>
+                  Enable Screen Time
+                </Text>
+              </Pressable>
+            ) : (
+              <View style={styles.screenTimeActions}>
+                <Pressable
+                  style={styles.screenTimeButton}
+                  onPress={async () => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    try {
+                      const selection = await presentAppPicker();
+                      setAppSelectionCount(selection.appCount);
+                    } catch (error) {
+                      // User cancelled the picker — that's fine
+                    }
+                  }}
+                >
+                  <Text style={styles.screenTimeButtonText}>
+                    {appSelectionCount > 0 ? "Change Apps" : "Select Apps"}
+                  </Text>
+                </Pressable>
+
+                {appSelectionCount > 0 && (
+                  <View style={styles.screenTimeStatusBadge}>
+                    <View style={styles.screenTimeStatusDot} />
+                    <Text style={styles.screenTimeStatusText}>Ready</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </Card>
+        )}
 
         {/* Payment Handles */}
         <Card style={styles.paymentHandlesCard}>
@@ -613,6 +712,60 @@ const styles = StyleSheet.create({
     fontSize: Typography.labelLarge,
     ...Font.bold,
     color: Colors.white,
+  },
+  // Screen Time
+  screenTimeCard: {
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.backgroundCard,
+  },
+  screenTimeTitle: {
+    fontSize: Typography.titleSmall,
+    ...Font.semibold,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  screenTimeDescription: {
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+    lineHeight: 20,
+  },
+  screenTimeButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    alignSelf: "flex-start",
+  },
+  screenTimeButtonText: {
+    fontSize: Typography.labelMedium,
+    ...Font.semibold,
+    color: Colors.text,
+  },
+  screenTimeActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  screenTimeStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.gainLight,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+  },
+  screenTimeStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.gain,
+    marginRight: Spacing.xs,
+  },
+  screenTimeStatusText: {
+    fontSize: Typography.labelSmall,
+    ...Font.semibold,
+    color: Colors.gain,
   },
   // Payment methods
   paymentHandlesCard: {

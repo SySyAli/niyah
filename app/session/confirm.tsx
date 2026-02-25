@@ -27,6 +27,12 @@ import {
   REPUTATION_LEVELS,
 } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
+import {
+  isScreenTimeAvailable,
+  startBlocking,
+  getSavedAppSelection,
+  getScreenTimeAuthStatus,
+} from "../../src/config/screentime";
 
 const BLOCKED_APPS = [
   "Instagram",
@@ -47,7 +53,7 @@ export default function ConfirmSessionScreen() {
   const cadence = (params.cadence as CadenceId) || "daily";
   const config = CADENCES[cadence];
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (currentPartner && user) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       startGroupSession(cadence, [
@@ -66,6 +72,16 @@ export default function ConfirmSessionScreen() {
           reputation: currentPartner.reputation,
         },
       ]);
+
+      // Start blocking selected apps via Screen Time API
+      if (isScreenTimeAvailable && getScreenTimeAuthStatus() === "approved") {
+        try {
+          await startBlocking();
+        } catch (error) {
+          console.warn("Failed to start Screen Time blocking:", error);
+        }
+      }
+
       router.replace("/session/active");
     } else if (!currentPartner) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -228,16 +244,37 @@ export default function ConfirmSessionScreen() {
         {/* Blocked Apps */}
         <View style={styles.blockedSection}>
           <Text style={styles.blockedTitle}>Apps that will be blocked</Text>
-          <View style={styles.appList}>
-            {BLOCKED_APPS.map((app) => (
-              <View key={app} style={styles.appBadge}>
-                <Text style={styles.appName}>{app}</Text>
+          {isScreenTimeAvailable &&
+          getScreenTimeAuthStatus() === "approved" &&
+          getSavedAppSelection() ? (
+            <>
+              <View style={styles.appList}>
+                <View style={[styles.appBadge, styles.appBadgeActive]}>
+                  <Text style={[styles.appName, styles.appNameActive]}>
+                    {getSavedAppSelection()?.label ?? "Selected apps"}
+                  </Text>
+                </View>
               </View>
-            ))}
-          </View>
-          <Text style={styles.blockedNote}>
-            Demo mode: Apps are not actually blocked
-          </Text>
+              <Text style={styles.blockedNote}>
+                Apps will be blocked when session starts
+              </Text>
+            </>
+          ) : (
+            <>
+              <View style={styles.appList}>
+                {BLOCKED_APPS.map((app) => (
+                  <View key={app} style={styles.appBadge}>
+                    <Text style={styles.appName}>{app}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.blockedNote}>
+                {isScreenTimeAvailable
+                  ? "Set up Screen Time in Profile to actually block apps"
+                  : "Demo mode: Apps are not actually blocked"}
+              </Text>
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -466,9 +503,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  appBadgeActive: {
+    backgroundColor: Colors.gainLight,
+    borderColor: Colors.gain,
+  },
   appName: {
     fontSize: Typography.labelSmall,
     color: Colors.textSecondary,
+  },
+  appNameActive: {
+    color: Colors.gain,
+    ...Font.semibold,
   },
   blockedNote: {
     fontSize: Typography.labelSmall,

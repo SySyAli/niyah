@@ -269,6 +269,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: "center",
     marginTop: Spacing.md,
+    marginBottom: Spacing.md,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: Colors.border,

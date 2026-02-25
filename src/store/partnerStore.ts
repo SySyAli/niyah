@@ -3,6 +3,7 @@ import { Partner, DuoSession, CadenceType } from "../types";
 import { CADENCES, DEMO_MODE } from "../constants/config";
 import { useAuthStore } from "./authStore";
 import { useWalletStore } from "./walletStore";
+import { fetchUserProfile, awardReferralToUser } from "../config/firebase";
 
 interface PartnerState {
   // Current partner for duo sessions
@@ -40,8 +41,8 @@ interface PartnerState {
     note: string,
   ) => string;
   // Called on the new user's device after they authenticate via a referral link.
-  // Boosts their social credit score and adds the referrer as a partner.
-  applyReferralBonus: (referrerUid: string) => void;
+  // Fetches the referrer's name, boosts new user's credit, and awards the referrer.
+  applyReferralBonus: (referrerUid: string) => Promise<void>;
 }
 
 interface PartnerInvite {
@@ -330,18 +331,30 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     }
   },
 
-  applyReferralBonus: (referrerUid: string) => {
+  applyReferralBonus: async (referrerUid: string) => {
     const { partners } = get();
 
     // Idempotency: do nothing if this referrer is already in the partner list
     if (partners.some((p) => p.oderId === referrerUid)) return;
 
-    // Add the referrer as a partner with default reputation.
-    // In production this would fetch their profile from the backend.
+    // Fetch the referrer's actual name from Firestore
+    let referrerName = "Unknown";
+    try {
+      const profile = await fetchUserProfile(referrerUid);
+      if (profile?.name) {
+        referrerName = profile.name as string;
+      } else if (profile?.firstName) {
+        referrerName = `${profile.firstName}${profile.lastName ? " " + profile.lastName : ""}`;
+      }
+    } catch {
+      // Non-critical — fall back to "Unknown"
+    }
+
     const newPartner: Partner = {
       id: Math.random().toString(36).substr(2, 9),
       oderId: referrerUid,
-      name: "Your Referrer",
+      name: referrerName,
+      tag: "Your Referrer",
       email: "",
       reputation: {
         score: 50,
@@ -351,6 +364,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         totalOwedPaid: 0,
         totalOwedMissed: 0,
         lastUpdated: new Date(),
+        referralCount: 0,
       },
       connectedAt: new Date(),
       totalSessionsTogether: 0,
@@ -363,6 +377,9 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const authStore = useAuthStore.getState();
     const currentCount = authStore.user?.reputation.referralCount ?? 0;
     authStore.updateReputation({ referralCount: currentCount + 1 });
+
+    // Award the referrer their boost in Firestore (visible on their next open)
+    awardReferralToUser(referrerUid);
   },
 
   getVenmoPayLink: (amount: number, recipientHandle: string, note: string) => {

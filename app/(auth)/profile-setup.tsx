@@ -85,7 +85,7 @@ export default function ProfileSetupScreen() {
       // Apply referral bonus if this user was invited via a deep link
       const referrerUid = await AsyncStorage.getItem(PENDING_REFERRAL_KEY);
       if (referrerUid) {
-        applyReferralBonus(referrerUid);
+        await applyReferralBonus(referrerUid);
         await AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
       }
 

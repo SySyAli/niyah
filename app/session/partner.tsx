@@ -77,7 +77,14 @@ export default function PartnerSelectionScreen() {
               </Text>
             </View>
             <View style={styles.partnerInfo}>
-              <Text style={styles.partnerName}>{partner.name}</Text>
+              <View style={styles.partnerNameRow}>
+                <Text style={styles.partnerName}>{partner.name}</Text>
+                {partner.tag && (
+                  <View style={styles.partnerTag}>
+                    <Text style={styles.partnerTagText}>{partner.tag}</Text>
+                  </View>
+                )}
+              </View>
               <View style={styles.partnerMeta}>
                 <View
                   style={[
@@ -174,16 +181,20 @@ export default function PartnerSelectionScreen() {
               autoCapitalize="none"
             />
             <View style={styles.inviteButtons}>
-              <Button
-                title="Cancel"
-                variant="secondary"
-                onPress={() => setShowInvite(false)}
-              />
-              <Button
-                title="Send Invite"
-                onPress={handleSendInvite}
-                disabled={!inviteEmail || !inviteName}
-              />
+              <View style={styles.inviteButtonFlex}>
+                <Button
+                  title="Cancel"
+                  variant="secondary"
+                  onPress={() => setShowInvite(false)}
+                />
+              </View>
+              <View style={styles.inviteButtonFlex}>
+                <Button
+                  title="Send Invite"
+                  onPress={handleSendInvite}
+                  disabled={!inviteEmail || !inviteName}
+                />
+              </View>
             </View>
           </Card>
         ) : (
@@ -300,6 +311,25 @@ const styles = StyleSheet.create({
   partnerInfo: {
     flex: 1,
   },
+  partnerNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    flexWrap: "wrap",
+  },
+  partnerTag: {
+    backgroundColor: Colors.primaryMuted,
+    borderRadius: Radius.full,
+    paddingVertical: 2,
+    paddingHorizontal: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
+  },
+  partnerTagText: {
+    fontSize: Typography.labelSmall,
+    ...Font.medium,
+    color: Colors.primaryLight,
+  },
   partnerName: {
     fontSize: Typography.titleSmall,
     ...Font.semibold,
@@ -403,6 +433,9 @@ const styles = StyleSheet.create({
   inviteButtons: {
     flexDirection: "row",
     gap: Spacing.md,
+  },
+  inviteButtonFlex: {
+    flex: 1,
   },
   infoCard: {
     backgroundColor: Colors.backgroundCard,

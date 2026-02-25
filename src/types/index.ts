@@ -58,6 +58,7 @@ export interface Partner {
   totalSessionsTogether: number;
   // For the money plant visualization
   isActive: boolean; // Currently in a session together
+  tag?: string; // Optional label e.g. "Your Referrer"
 }
 
 // Duo session - both partners stake, loser pays winner

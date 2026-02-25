@@ -269,6 +269,47 @@ export const fetchUserProfile = async (
   return getUserDoc(uid);
 };
 
+/**
+ * Increment a referrer's referralCount in Firestore and recalculate their
+ * reputation score so the boost is visible the next time they open the app.
+ * Fire-and-forget safe — errors are swallowed so the caller's flow is unaffected.
+ */
+export const awardReferralToUser = async (referrerUid: string): Promise<void> => {
+  try {
+    const doc = await NiyahFirestore.getDoc("users", referrerUid);
+    const rep = (doc?.reputation as Record<string, number>) ?? {};
+
+    const referralCount = (rep.referralCount ?? 0) + 1;
+    const paymentsCompleted = rep.paymentsCompleted ?? 0;
+    const paymentsMissed = rep.paymentsMissed ?? 0;
+    const totalPayments = paymentsCompleted + paymentsMissed;
+
+    let score = 50;
+    if (totalPayments > 0) {
+      const successRate = paymentsCompleted / totalPayments;
+      score = Math.round(50 + (successRate - 0.5) * 100);
+      score = Math.max(0, Math.min(100, score));
+    }
+    score = Math.min(100, score + referralCount * 10);
+
+    const level =
+      score <= 20 ? "seed"
+      : score <= 40 ? "sprout"
+      : score <= 60 ? "sapling"
+      : score <= 80 ? "tree"
+      : "oak";
+
+    await NiyahFirestore.setDoc(
+      "users",
+      referrerUid,
+      { reputation: { ...rep, referralCount, score, level } },
+      true,
+    );
+  } catch (error) {
+    console.warn("awardReferralToUser failed (non-critical):", error);
+  }
+};
+
 // Re-export for convenience
 export { statusCodes };
 export type { FirebaseUser };

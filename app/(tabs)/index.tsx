@@ -488,7 +488,7 @@ export default function DashboardScreen() {
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push("/invite");
+            router.push("/invite" as never);
           }}
           style={styles.inviteCard}
         >

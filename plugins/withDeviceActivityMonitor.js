@@ -7,20 +7,15 @@
  * (interval start/end, usage threshold reached).
  *
  * This plugin:
- *   1. Creates a new "NiyahDeviceActivityMonitor" target in the Xcode project
- *   2. Adds the extension's Swift source file
+ *   1. Copies extension source files into the ios/ build directory
+ *   2. Creates the extension target with proper build phases
  *   3. Configures entitlements (FamilyControls, App Groups)
- *   4. Sets the correct bundle ID, deployment target, and build settings
- *   5. Creates the extension's Info.plist
+ *   4. Adds a target dependency + embed phase to the main app target
  *
  * The actual Swift code lives in:
  *   modules/niyah-screentime/ios/NiyahDeviceActivityMonitor/
  */
-const {
-  withXcodeProject,
-  withDangerousMod,
-  withEntitlementsPlist,
-} = require("expo/config-plugins");
+const { withXcodeProject, withDangerousMod } = require("expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
 
@@ -32,19 +27,18 @@ function withDeviceActivityMonitor(config) {
   const mainBundleId = config.ios?.bundleIdentifier ?? "com.niyah.app";
   const extensionBundleId = mainBundleId + EXTENSION_BUNDLE_ID_SUFFIX;
 
-  // 1. Copy extension source files into the ios/ build directory
+  // Step 1: Copy extension source files into ios/ build directory
   config = withDangerousMod(config, [
     "ios",
     async (config) => {
       const iosRoot = config.modRequest.platformProjectRoot;
       const extDir = path.join(iosRoot, EXTENSION_NAME);
 
-      // Create extension directory
       if (!fs.existsSync(extDir)) {
         fs.mkdirSync(extDir, { recursive: true });
       }
 
-      // Copy the Swift source file from the module
+      // Copy Swift source
       const srcFile = path.join(
         config.modRequest.projectRoot,
         "modules",
@@ -57,56 +51,55 @@ function withDeviceActivityMonitor(config) {
         extDir,
         "DeviceActivityMonitorExtension.swift",
       );
-
       if (fs.existsSync(srcFile)) {
         fs.copyFileSync(srcFile, destFile);
       }
 
-      // Write Info.plist for the extension
+      // Write Info.plist
       const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleDevelopmentRegion</key>
-  <string>$(DEVELOPMENT_LANGUAGE)</string>
-  <key>CFBundleDisplayName</key>
-  <string>${EXTENSION_NAME}</string>
-  <key>CFBundleExecutable</key>
-  <string>$(EXECUTABLE_NAME)</string>
-  <key>CFBundleIdentifier</key>
-  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-  <key>CFBundleInfoDictionaryVersion</key>
-  <string>6.0</string>
-  <key>CFBundleName</key>
-  <string>$(PRODUCT_NAME)</string>
-  <key>CFBundlePackageType</key>
-  <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
-  <key>CFBundleShortVersionString</key>
-  <string>1.0</string>
-  <key>CFBundleVersion</key>
-  <string>1</string>
-  <key>NSExtension</key>
-  <dict>
-    <key>NSExtensionPointIdentifier</key>
-    <string>com.apple.deviceactivitymonitor</string>
-    <key>NSExtensionPrincipalClass</key>
-    <string>$(PRODUCT_MODULE_NAME).NiyahDeviceActivityMonitorExtension</string>
-  </dict>
+\t<key>CFBundleDevelopmentRegion</key>
+\t<string>$(DEVELOPMENT_LANGUAGE)</string>
+\t<key>CFBundleDisplayName</key>
+\t<string>${EXTENSION_NAME}</string>
+\t<key>CFBundleExecutable</key>
+\t<string>$(EXECUTABLE_NAME)</string>
+\t<key>CFBundleIdentifier</key>
+\t<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+\t<key>CFBundleInfoDictionaryVersion</key>
+\t<string>6.0</string>
+\t<key>CFBundleName</key>
+\t<string>$(PRODUCT_NAME)</string>
+\t<key>CFBundlePackageType</key>
+\t<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+\t<key>CFBundleShortVersionString</key>
+\t<string>1.0</string>
+\t<key>CFBundleVersion</key>
+\t<string>1</string>
+\t<key>NSExtension</key>
+\t<dict>
+\t\t<key>NSExtensionPointIdentifier</key>
+\t\t<string>com.apple.deviceactivitymonitor</string>
+\t\t<key>NSExtensionPrincipalClass</key>
+\t\t<string>$(PRODUCT_MODULE_NAME).NiyahDeviceActivityMonitorExtension</string>
+\t</dict>
 </dict>
 </plist>`;
       fs.writeFileSync(path.join(extDir, "Info.plist"), infoPlist);
 
-      // Write entitlements for the extension
+      // Write entitlements
       const entitlements = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>com.apple.developer.family-controls</key>
-  <true/>
-  <key>com.apple.security.application-groups</key>
-  <array>
-    <string>${APP_GROUP_ID}</string>
-  </array>
+\t<key>com.apple.developer.family-controls</key>
+\t<true/>
+\t<key>com.apple.security.application-groups</key>
+\t<array>
+\t\t<string>${APP_GROUP_ID}</string>
+\t</array>
 </dict>
 </plist>`;
       fs.writeFileSync(
@@ -118,18 +111,17 @@ function withDeviceActivityMonitor(config) {
     },
   ]);
 
-  // 2. Add the extension target to the Xcode project
+  // Step 2: Add extension target to Xcode project
   config = withXcodeProject(config, (config) => {
     const project = config.modResults;
-    const projectRoot = config.modRequest.platformProjectRoot;
 
-    // Check if target already exists
-    const existingTarget = project.pbxTargetByName(EXTENSION_NAME);
-    if (existingTarget) {
+    // Skip if target already exists
+    if (project.pbxTargetByName(EXTENSION_NAME)) {
       return config;
     }
 
-    // Add the extension target
+    // --- Create the extension target ---
+    // addTarget creates: PBXNativeTarget, product reference, default build configs
     const target = project.addTarget(
       EXTENSION_NAME,
       "app_extension",
@@ -137,58 +129,51 @@ function withDeviceActivityMonitor(config) {
       extensionBundleId,
     );
 
-    // Add source file to the target's build phase
-    const extDir = path.join(projectRoot, EXTENSION_NAME);
-    const swiftFile = path.join(extDir, "DeviceActivityMonitorExtension.swift");
+    // --- Add PBXGroup for the extension files ---
+    const groupKey = project.pbxCreateGroup(EXTENSION_NAME, EXTENSION_NAME);
 
-    if (fs.existsSync(swiftFile)) {
-      project.addSourceFile(
-        `${EXTENSION_NAME}/DeviceActivityMonitorExtension.swift`,
-        { target: target.uuid },
-        project.findPBXGroupKey({ name: EXTENSION_NAME }) ||
-          project.addPbxGroup(
-            [
-              "DeviceActivityMonitorExtension.swift",
-              "Info.plist",
-              `${EXTENSION_NAME}.entitlements`,
-            ],
-            EXTENSION_NAME,
-            EXTENSION_NAME,
-          ).uuid,
-      );
-    }
+    // Add file references to the group
+    const swiftFileRef = project.addFile(
+      `${EXTENSION_NAME}/DeviceActivityMonitorExtension.swift`,
+      groupKey,
+      { target: target.uuid, lastKnownFileType: "sourcecode.swift" },
+    );
 
-    // Configure build settings for the extension target
+    // Add the group to the main project group
+    const mainGroupKey = project.getFirstProject().firstProject.mainGroup;
+    project.addToPbxGroup(groupKey, mainGroupKey);
+
+    // --- Configure build settings ---
     const configurations = project.pbxXCBuildConfigurationSection();
     for (const key in configurations) {
-      const config = configurations[key];
+      const buildConfig = configurations[key];
       if (
-        typeof config === "object" &&
-        config.buildSettings &&
-        config.buildSettings.PRODUCT_BUNDLE_IDENTIFIER ===
+        typeof buildConfig === "object" &&
+        buildConfig.buildSettings &&
+        buildConfig.buildSettings.PRODUCT_BUNDLE_IDENTIFIER ===
           `"${extensionBundleId}"`
       ) {
-        config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = "16.0";
-        config.buildSettings.SWIFT_VERSION = "5.9";
-        config.buildSettings.CODE_SIGN_ENTITLEMENTS = `${EXTENSION_NAME}/${EXTENSION_NAME}.entitlements`;
-        config.buildSettings.TARGETED_DEVICE_FAMILY = '"1,2"';
-        config.buildSettings.GENERATE_INFOPLIST_FILE = "NO";
-        config.buildSettings.INFOPLIST_FILE = `${EXTENSION_NAME}/Info.plist`;
-        config.buildSettings.CURRENT_PROJECT_VERSION = "1";
-        config.buildSettings.MARKETING_VERSION = "1.0";
+        Object.assign(buildConfig.buildSettings, {
+          IPHONEOS_DEPLOYMENT_TARGET: "16.0",
+          SWIFT_VERSION: "5.9",
+          CODE_SIGN_ENTITLEMENTS: `${EXTENSION_NAME}/${EXTENSION_NAME}.entitlements`,
+          CODE_SIGN_STYLE: "Automatic",
+          TARGETED_DEVICE_FAMILY: '"1,2"',
+          GENERATE_INFOPLIST_FILE: "NO",
+          INFOPLIST_FILE: `${EXTENSION_NAME}/Info.plist`,
+          CURRENT_PROJECT_VERSION: "1",
+          MARKETING_VERSION: "1.0",
+          // Ensure the extension can import DeviceActivity etc.
+          LD_RUNPATH_SEARCH_PATHS:
+            '"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"',
+        });
       }
     }
 
-    // Embed the extension in the main app
+    // --- Add target dependency from main app to extension ---
     const mainTarget = project.getFirstTarget();
-    if (mainTarget) {
-      project.addBuildPhase(
-        [`${EXTENSION_NAME}.appex`],
-        "PBXCopyFilesBuildPhase",
-        "Embed App Extensions",
-        mainTarget.uuid,
-        "app_extension",
-      );
+    if (mainTarget && mainTarget.firstTarget) {
+      project.addTargetDependency(mainTarget.firstTarget.uuid, [target.uuid]);
     }
 
     return config;

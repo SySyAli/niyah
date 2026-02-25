@@ -1,27 +1,34 @@
 import ExpoModulesCore
+
+// FamilyControls / ManagedSettings are weak-linked via the podspec.
+// Available on iOS 16+ only. Each call site uses `guard #available`.
+#if canImport(FamilyControls)
 import FamilyControls
+#endif
+#if canImport(ManagedSettings)
 import ManagedSettings
+#endif
+
+// Named store extension — keeps session shields isolated and cleanup simple.
+#if canImport(ManagedSettings)
+@available(iOS 16.0, *)
+extension ManagedSettingsStore.Name {
+  static let niyahSession = Self("niyah.session")
+}
+#endif
 
 /// Expo module bridging iOS Screen Time API to JavaScript.
 ///
-/// Provides:
-///   - FamilyControls authorization (request Screen Time access)
-///   - App selection persistence (save/load user's chosen apps to block)
-///   - ManagedSettings shield (block selected apps during a NIYAH session)
-///
-/// Requires:
-///   - iOS 16.0+
-///   - com.apple.developer.family-controls entitlement
-///   - Physical device (Screen Time API does not work in Simulator)
-@available(iOS 16.0, *)
+/// Key learnings applied from working apps (Opal, One Sec, ScreenZen):
+///   - Use PropertyListEncoder (NOT JSON) for FamilyActivitySelection persistence.
+///     JSON silently corrupts opaque ApplicationToken data.
+///   - Keep selection in memory as primary; persist to UserDefaults for extension use.
+///   - Use named ManagedSettingsStore for session isolation.
+///   - Use clearAllSettings() for deterministic cleanup.
+///   - No DeviceActivitySchedule needed for direct blocking.
 public class NiyahScreenTimeModule: Module {
 
-  /// The managed settings store that applies/removes app shields.
-  /// Using `.default` store -- this is the standard approach for self-use apps.
-  private let store = ManagedSettingsStore()
-
-  /// Shared UserDefaults suite for App Group.
-  /// Both the main app and the DeviceActivityMonitor extension read/write here.
+  // ── App Group constants ────────────────────────────────────────────────────
   private static let appGroupID = "group.com.niyah.app"
   private static let selectionKey = "niyah_app_selection"
   private static let blockingKey = "niyah_is_blocking"
@@ -30,19 +37,52 @@ public class NiyahScreenTimeModule: Module {
     UserDefaults(suiteName: Self.appGroupID) ?? .standard
   }
 
-  /// Persisted app selection from FamilyActivityPicker.
-  /// Saved to the App Group shared UserDefaults so the DeviceActivityMonitor
-  /// extension can also access it.
+  private var isCurrentlyBlocking: Bool {
+    get { sharedDefaults.bool(forKey: Self.blockingKey) }
+    set { sharedDefaults.set(newValue, forKey: Self.blockingKey) }
+  }
+
+  // ── iOS 16+ state ─────────────────────────────────────────────────────────
+  // Stored as `Any?` because the types don't exist on iOS <16.
+  // The @available computed properties provide typed access.
+
+  /// In-memory selection — this is the PRIMARY source.
+  /// UserDefaults is only used for cross-process persistence (extensions).
+  private var _inMemorySelection: Any?
+
+  /// Named ManagedSettingsStore for session-scoped shields.
+  private var _managedStore: Any?
+
+  @available(iOS 16.0, *)
+  private var managedStore: ManagedSettingsStore {
+    if let store = _managedStore as? ManagedSettingsStore { return store }
+    let store = ManagedSettingsStore(named: .niyahSession)
+    _managedStore = store
+    return store
+  }
+
+  /// Get/set the current app selection, with in-memory primary + UserDefaults backup.
+  @available(iOS 16.0, *)
   private var savedSelection: FamilyActivitySelection? {
     get {
-      guard let data = sharedDefaults.data(forKey: Self.selectionKey) else {
-        return nil
+      // Prefer in-memory (avoids encode/decode issues)
+      if let memSelection = _inMemorySelection as? FamilyActivitySelection {
+        return memSelection
       }
-      return try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
+      // Fall back to persisted (e.g. after app restart)
+      guard let data = sharedDefaults.data(forKey: Self.selectionKey) else { return nil }
+      let selection = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: data)
+      // Cache in memory for subsequent reads
+      if let selection = selection {
+        _inMemorySelection = selection
+      }
+      return selection
     }
     set {
-      if let newValue = newValue,
-         let data = try? JSONEncoder().encode(newValue) {
+      _inMemorySelection = newValue
+      // Also persist to shared UserDefaults for the extension
+      if let value = newValue,
+         let data = try? PropertyListEncoder().encode(value) {
         sharedDefaults.set(data, forKey: Self.selectionKey)
       } else {
         sharedDefaults.removeObject(forKey: Self.selectionKey)
@@ -50,12 +90,7 @@ public class NiyahScreenTimeModule: Module {
     }
   }
 
-  /// Track whether we are currently blocking.
-  /// Persisted to shared defaults so the extension can check blocking state.
-  private var isCurrentlyBlocking: Bool {
-    get { sharedDefaults.bool(forKey: Self.blockingKey) }
-    set { sharedDefaults.set(newValue, forKey: Self.blockingKey) }
-  }
+  // ── Module Definition ──────────────────────────────────────────────────────
 
   public func definition() -> ModuleDefinition {
     Name("NiyahScreenTime")
@@ -66,23 +101,21 @@ public class NiyahScreenTimeModule: Module {
     // MARK: - Authorization
     // ================================================================
 
-    /// Request FamilyControls authorization.
-    /// Shows the native iOS dialog asking the user to approve Screen Time access.
-    /// Returns: "approved", "denied", or "notDetermined"
     AsyncFunction("requestAuthorization") { () -> String in
+      guard #available(iOS 16.0, *) else { return "denied" }
       do {
         try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+        NSLog("[NiyahScreenTime] Authorization approved")
         return "approved"
       } catch {
-        // AuthorizationCenter throws if the user denies or if the entitlement
-        // is missing. Map to a status string rather than throwing to JS.
         let status = AuthorizationCenter.shared.authorizationStatus
+        NSLog("[NiyahScreenTime] Authorization result: \(self.serializeAuthStatus(status)), error: \(error)")
         return self.serializeAuthStatus(status)
       }
     }
 
-    /// Get current authorization status without prompting.
     Function("getAuthorizationStatus") { () -> String in
+      guard #available(iOS 16.0, *) else { return "denied" }
       let status = AuthorizationCenter.shared.authorizationStatus
       return self.serializeAuthStatus(status)
     }
@@ -91,18 +124,16 @@ public class NiyahScreenTimeModule: Module {
     // MARK: - App Selection
     // ================================================================
 
-    /// Present the native FamilyActivityPicker.
-    ///
-    /// NOTE: FamilyActivityPicker is a SwiftUI view. Presenting it from
-    /// an Expo module requires wrapping it in a UIHostingController.
-    /// This function presents it modally over the current view controller.
-    ///
-    /// Returns a summary of the selection (app count, category count).
     AsyncFunction("presentAppPicker") { [weak self] () -> [String: Any] in
+      guard #available(iOS 16.0, *) else {
+        throw NSError(
+          domain: "NiyahScreenTime", code: 0,
+          userInfo: [NSLocalizedDescriptionKey: "Screen Time requires iOS 16+"]
+        )
+      }
       guard let self = self else {
         throw NSError(
-          domain: "NiyahScreenTime",
-          code: 1,
+          domain: "NiyahScreenTime", code: 1,
           userInfo: [NSLocalizedDescriptionKey: "Module deallocated"]
         )
       }
@@ -110,7 +141,12 @@ public class NiyahScreenTimeModule: Module {
       return try await withCheckedThrowingContinuation { continuation in
         DispatchQueue.main.async {
           let pickerVC = AppPickerHostingController { selection in
+            // Save in memory AND persist
             self.savedSelection = selection
+
+            let appCount = selection.applicationTokens.count
+            let catCount = selection.categoryTokens.count
+            NSLog("[NiyahScreenTime] App picker done: \(appCount) apps, \(catCount) categories")
 
             let summary = self.serializeSelection(selection)
             continuation.resume(returning: summary)
@@ -119,8 +155,7 @@ public class NiyahScreenTimeModule: Module {
 
           guard let rootVC = self.findRootViewController() else {
             continuation.resume(throwing: NSError(
-              domain: "NiyahScreenTime",
-              code: 2,
+              domain: "NiyahScreenTime", code: 2,
               userInfo: [NSLocalizedDescriptionKey: "Could not find root view controller"]
             ))
             return
@@ -131,14 +166,14 @@ public class NiyahScreenTimeModule: Module {
       }
     }
 
-    /// Get the currently saved app selection (returns null if none).
     Function("getSavedSelection") { [weak self] () -> [String: Any]? in
+      guard #available(iOS 16.0, *) else { return nil }
       guard let selection = self?.savedSelection else { return nil }
       return self?.serializeSelection(selection)
     }
 
-    /// Clear the saved app selection.
     AsyncFunction("clearSelection") { [weak self] () in
+      guard #available(iOS 16.0, *) else { return }
       self?.savedSelection = nil
     }
 
@@ -146,43 +181,46 @@ public class NiyahScreenTimeModule: Module {
     // MARK: - Blocking (Session Lifecycle)
     // ================================================================
 
-    /// Start blocking the selected apps by applying a ManagedSettings shield.
-    /// Call this when a NIYAH session begins.
     AsyncFunction("startBlocking") { [weak self] () in
+      guard #available(iOS 16.0, *) else { return }
       guard let self = self else { return }
       guard let selection = self.savedSelection else {
+        NSLog("[NiyahScreenTime] startBlocking FAILED: no saved selection")
         throw NSError(
-          domain: "NiyahScreenTime",
-          code: 3,
+          domain: "NiyahScreenTime", code: 3,
           userInfo: [NSLocalizedDescriptionKey: "No apps selected. Present the app picker first."]
         )
       }
 
+      let appCount = selection.applicationTokens.count
+      let catCount = selection.categoryTokens.count
+      let webCount = selection.webDomainTokens.count
+      NSLog("[NiyahScreenTime] startBlocking: \(appCount) apps, \(catCount) categories, \(webCount) web domains")
+
       // Apply shield to selected apps and categories
-      self.store.shield.applications = selection.applicationTokens.isEmpty
-        ? nil
-        : selection.applicationTokens
-      self.store.shield.applicationCategories = selection.categoryTokens.isEmpty
-        ? nil
-        : ShieldSettings.ActivityCategoryPolicy<Application>.specific(selection.categoryTokens)
-      self.store.shield.webDomains = selection.webDomainTokens.isEmpty
-        ? nil
-        : selection.webDomainTokens
+      // Always assign the full token sets — empty set = "shield nothing"
+      self.managedStore.shield.applications = selection.applicationTokens.isEmpty
+        ? nil : selection.applicationTokens
+      self.managedStore.shield.applicationCategories = selection.categoryTokens.isEmpty
+        ? nil : ShieldSettings.ActivityCategoryPolicy<Application>.specific(selection.categoryTokens)
+      self.managedStore.shield.webDomains = selection.webDomainTokens.isEmpty
+        ? nil : selection.webDomainTokens
 
       self.isCurrentlyBlocking = true
+      NSLog("[NiyahScreenTime] startBlocking: shields applied successfully")
     }
 
-    /// Stop blocking. Removes the ManagedSettings shield.
-    /// Call when a session ends (completed or surrendered).
     AsyncFunction("stopBlocking") { [weak self] () in
+      guard #available(iOS 16.0, *) else { return }
       guard let self = self else { return }
-      self.store.shield.applications = nil
-      self.store.shield.applicationCategories = nil
-      self.store.shield.webDomains = nil
+      // clearAllSettings is the nuclear option — removes all shield/application
+      // settings from this named store in one call. More reliable than nil-ing
+      // individual properties.
+      self.managedStore.clearAllSettings()
       self.isCurrentlyBlocking = false
+      NSLog("[NiyahScreenTime] stopBlocking: all settings cleared")
     }
 
-    /// Check if apps are currently being blocked.
     Function("isBlocking") { [weak self] () -> Bool in
       return self?.isCurrentlyBlocking ?? false
     }
@@ -192,6 +230,7 @@ public class NiyahScreenTimeModule: Module {
   // MARK: - Helpers
   // ================================================================
 
+  @available(iOS 16.0, *)
   private func serializeAuthStatus(_ status: AuthorizationStatus) -> String {
     switch status {
     case .notDetermined: return "notDetermined"
@@ -201,11 +240,11 @@ public class NiyahScreenTimeModule: Module {
     }
   }
 
+  @available(iOS 16.0, *)
   private func serializeSelection(_ selection: FamilyActivitySelection) -> [String: Any] {
     let appCount = selection.applicationTokens.count
     let categoryCount = selection.categoryTokens.count
     let webDomainCount = selection.webDomainTokens.count
-    let total = appCount + categoryCount
 
     var parts: [String] = []
     if appCount > 0 { parts.append("\(appCount) app\(appCount == 1 ? "" : "s")") }
@@ -220,7 +259,6 @@ public class NiyahScreenTimeModule: Module {
     ]
   }
 
-  /// Walk the UIWindow hierarchy to find a presentable view controller.
   private func findRootViewController() -> UIViewController? {
     guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
           let window = scene.windows.first(where: { $0.isKeyWindow }),

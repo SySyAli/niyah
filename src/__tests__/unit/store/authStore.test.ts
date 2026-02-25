@@ -70,6 +70,7 @@ const simulateAuthenticated = (overrides: Record<string, unknown> = {}) => {
         totalOwedPaid: 0,
         totalOwedMissed: 0,
         lastUpdated: new Date(),
+        referralCount: 0,
       },
       authProvider: "email",
       profileComplete: true,

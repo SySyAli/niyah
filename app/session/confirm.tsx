@@ -28,6 +28,12 @@ import {
   REPUTATION_LEVELS,
 } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
+import {
+  isScreenTimeAvailable,
+  startBlocking,
+  getSavedAppSelection,
+  getScreenTimeAuthStatus,
+} from "../../src/config/screentime";
 
 const BLOCKED_APPS = [
   "Instagram",
@@ -40,236 +46,245 @@ const BLOCKED_APPS = [
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
-  header: {
-    marginBottom: Spacing.md,
-  },
-  backText: {
-    color: Colors.textSecondary,
-    fontSize: Typography.bodyLarge,
-    ...Font.medium,
-  },
-  titleSection: {
-    alignItems: "center",
-    marginBottom: Spacing.xl,
-  },
-  title: {
-    fontSize: Typography.headlineMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  // Partner card styles
-  partnerCard: {
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  partnerLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-  },
-  partnerInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.md,
-  },
-  partnerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: Spacing.md,
-  },
-  partnerInitial: {
-    fontSize: Typography.titleMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  partnerDetails: {
-    flex: 1,
-  },
-  partnerName: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  reputationBadge: {
-    backgroundColor: Colors.backgroundCard,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.sm,
-    alignSelf: "flex-start",
-  },
-  reputationText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-  },
-  changePartnerButton: {
-    alignItems: "center",
-    paddingVertical: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  changePartnerText: {
-    fontSize: Typography.labelMedium,
-    color: Colors.primary,
-    ...Font.medium,
-  },
-  noPartnerCard: {
-    marginBottom: Spacing.md,
-    alignItems: "center",
-    paddingVertical: Spacing.xl,
-  },
-  noPartnerText: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.md,
-  },
-  // Details card
-  detailsCard: {
-    marginBottom: Spacing.md,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.sm,
-  },
-  detailLabel: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-  },
-  detailValue: {
-    fontSize: Typography.bodySmall,
-    ...Font.medium,
-    color: Colors.text,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: Spacing.md,
-  },
-  stakeValue: {
-    fontSize: Typography.titleMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  // How it works card
-  howItWorksCard: {
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.backgroundCard,
-  },
-  howItWorksTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  outcomeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.sm,
-  },
-  outcomeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-    marginRight: Spacing.sm,
-  },
-  outcomeText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    flex: 1,
-  },
-  outcomeHighlight: {
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  // Warning card
-  warningCard: {
-    backgroundColor: Colors.warningLight,
-    borderWidth: 1,
-    borderColor: Colors.warning,
-    marginBottom: Spacing.md,
-  },
-  warningTitle: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    color: Colors.warning,
-    marginBottom: Spacing.xs,
-  },
-  warningText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.text,
-    lineHeight: 20,
-  },
-  blockedSection: {
-    marginBottom: Spacing.lg,
-  },
-  blockedTitle: {
-    fontSize: Typography.labelMedium,
-    ...Font.medium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-  },
-  appList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
-  },
-  appBadge: {
-    backgroundColor: Colors.backgroundCard,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  appName: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-  },
-  blockedNote: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    marginTop: Spacing.sm,
-    fontStyle: "italic",
-  },
-  footer: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    gap: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  disclaimer: {
-    textAlign: "center",
-    color: Colors.textMuted,
-    fontSize: Typography.labelSmall,
-  },
-});
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xl,
+    },
+    header: {
+      marginBottom: Spacing.md,
+    },
+    backText: {
+      color: Colors.textSecondary,
+      fontSize: Typography.bodyLarge,
+      ...Font.medium,
+    },
+    titleSection: {
+      alignItems: "center",
+      marginBottom: Spacing.xl,
+    },
+    title: {
+      fontSize: Typography.headlineMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    subtitle: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    // Partner card styles
+    partnerCard: {
+      marginBottom: Spacing.md,
+      backgroundColor: Colors.primaryMuted,
+      borderWidth: 1,
+      borderColor: Colors.primary,
+    },
+    partnerLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.sm,
+    },
+    partnerInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: Spacing.md,
+    },
+    partnerAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: Colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: Spacing.md,
+    },
+    partnerInitial: {
+      fontSize: Typography.titleMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    partnerDetails: {
+      flex: 1,
+    },
+    partnerName: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.xs,
+    },
+    reputationBadge: {
+      backgroundColor: Colors.backgroundCard,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.sm,
+      alignSelf: "flex-start",
+    },
+    reputationText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+    },
+    changePartnerButton: {
+      alignItems: "center",
+      paddingVertical: Spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    changePartnerText: {
+      fontSize: Typography.labelMedium,
+      color: Colors.primary,
+      ...Font.medium,
+    },
+    noPartnerCard: {
+      marginBottom: Spacing.md,
+      alignItems: "center",
+      paddingVertical: Spacing.xl,
+    },
+    noPartnerText: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.md,
+    },
+    // Details card
+    detailsCard: {
+      marginBottom: Spacing.md,
+    },
+    detailRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: Spacing.sm,
+    },
+    detailLabel: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+    },
+    detailValue: {
+      fontSize: Typography.bodySmall,
+      ...Font.medium,
+      color: Colors.text,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: Colors.border,
+      marginVertical: Spacing.md,
+    },
+    stakeValue: {
+      fontSize: Typography.titleMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    // How it works card
+    howItWorksCard: {
+      marginBottom: Spacing.md,
+      backgroundColor: Colors.backgroundCard,
+    },
+    howItWorksTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.md,
+    },
+    outcomeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: Spacing.sm,
+    },
+    outcomeDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: Colors.primary,
+      marginRight: Spacing.sm,
+    },
+    outcomeText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      flex: 1,
+    },
+    outcomeHighlight: {
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    // Warning card
+    warningCard: {
+      backgroundColor: Colors.warningLight,
+      borderWidth: 1,
+      borderColor: Colors.warning,
+      marginBottom: Spacing.md,
+    },
+    warningTitle: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.warning,
+      marginBottom: Spacing.xs,
+    },
+    warningText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.text,
+      lineHeight: 20,
+    },
+    blockedSection: {
+      marginBottom: Spacing.lg,
+    },
+    blockedTitle: {
+      fontSize: Typography.labelMedium,
+      ...Font.medium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.sm,
+    },
+    appList: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: Spacing.sm,
+    },
+    appBadge: {
+      backgroundColor: Colors.backgroundCard,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    appBadgeActive: {
+      backgroundColor: Colors.gainLight,
+      borderColor: Colors.gain,
+    },
+    appName: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+    },
+    appNameActive: {
+      color: Colors.gain,
+      ...Font.semibold,
+    },
+    blockedNote: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+      marginTop: Spacing.sm,
+      fontStyle: "italic",
+    },
+    footer: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xl,
+      gap: Spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    disclaimer: {
+      textAlign: "center",
+      color: Colors.textMuted,
+      fontSize: Typography.labelSmall,
+    },
+  });
 
 export default function ConfirmSessionScreen() {
   const Colors = useColors();
@@ -283,7 +298,7 @@ export default function ConfirmSessionScreen() {
   const cadence = (params.cadence as CadenceId) || "daily";
   const config = CADENCES[cadence];
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (currentPartner && user) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       startGroupSession(cadence, [
@@ -302,6 +317,16 @@ export default function ConfirmSessionScreen() {
           reputation: currentPartner.reputation,
         },
       ]);
+
+      // Start blocking selected apps via Screen Time API
+      if (isScreenTimeAvailable && getScreenTimeAuthStatus() === "approved") {
+        try {
+          await startBlocking();
+        } catch (error) {
+          console.warn("Failed to start Screen Time blocking:", error);
+        }
+      }
+
       router.replace("/session/active");
     } else if (!currentPartner) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -464,16 +489,37 @@ export default function ConfirmSessionScreen() {
         {/* Blocked Apps */}
         <View style={styles.blockedSection}>
           <Text style={styles.blockedTitle}>Apps that will be blocked</Text>
-          <View style={styles.appList}>
-            {BLOCKED_APPS.map((app) => (
-              <View key={app} style={styles.appBadge}>
-                <Text style={styles.appName}>{app}</Text>
+          {isScreenTimeAvailable &&
+          getScreenTimeAuthStatus() === "approved" &&
+          getSavedAppSelection() ? (
+            <>
+              <View style={styles.appList}>
+                <View style={[styles.appBadge, styles.appBadgeActive]}>
+                  <Text style={[styles.appName, styles.appNameActive]}>
+                    {getSavedAppSelection()?.label ?? "Selected apps"}
+                  </Text>
+                </View>
               </View>
-            ))}
-          </View>
-          <Text style={styles.blockedNote}>
-            Demo mode: Apps are not actually blocked
-          </Text>
+              <Text style={styles.blockedNote}>
+                Apps will be blocked when session starts
+              </Text>
+            </>
+          ) : (
+            <>
+              <View style={styles.appList}>
+                {BLOCKED_APPS.map((app) => (
+                  <View key={app} style={styles.appBadge}>
+                    <Text style={styles.appName}>{app}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.blockedNote}>
+                {isScreenTimeAvailable
+                  ? "Set up Screen Time in Profile to actually block apps"
+                  : "Demo mode: Apps are not actually blocked"}
+              </Text>
+            </>
+          )}
         </View>
       </ScrollView>
 

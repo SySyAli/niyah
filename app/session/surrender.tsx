@@ -26,19 +26,30 @@ import { formatMoney } from "../../src/utils/format";
 
 export default function SurrenderScreen() {
   const router = useRouter();
-  const { activeGroupSession, completeGroupSession, getVenmoPayLink, markTransferPaid } =
-    useGroupSessionStore();
+  const {
+    activeGroupSession,
+    completeGroupSession,
+    getVenmoPayLink,
+    markTransferPaid,
+  } = useGroupSessionStore();
   const userId = useAuthStore((state) => state.user?.id);
   const [confirmText, setConfirmText] = useState("");
   const [showPayment, setShowPayment] = useState(false);
-  const [completedSession, setCompletedSession] = useState<GroupSession | null>(null);
+  const [completedSession, setCompletedSession] = useState<GroupSession | null>(
+    null,
+  );
 
   const canSurrender = confirmText.toLowerCase() === "quit";
 
   // Derived from completedSession (available after surrender)
-  const settledPartner = completedSession?.participants.find((p) => p.userId !== userId);
-  const outboundTransfer = completedSession?.transfers.find((t) => t.fromUserId === userId);
-  const amountOwed = outboundTransfer?.amount ?? completedSession?.stakePerParticipant ?? 0;
+  const settledPartner = completedSession?.participants.find(
+    (p) => p.userId !== userId,
+  );
+  const outboundTransfer = completedSession?.transfers.find(
+    (t) => t.fromUserId === userId,
+  );
+  const amountOwed =
+    outboundTransfer?.amount ?? completedSession?.stakePerParticipant ?? 0;
 
   const handleSurrender = () => {
     if (canSurrender && activeGroupSession) {
@@ -54,7 +65,9 @@ export default function SurrenderScreen() {
   };
 
   // Derived from activeGroupSession (available before surrender)
-  const activePartner = activeGroupSession?.participants.find((p) => p.userId !== userId);
+  const activePartner = activeGroupSession?.participants.find(
+    (p) => p.userId !== userId,
+  );
 
   const handlePayVenmo = async (): Promise<void> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -130,12 +143,8 @@ export default function SurrenderScreen() {
 
           <Card style={styles.paymentCard}>
             <Text style={styles.paymentLabel}>You owe</Text>
-            <Text style={styles.paymentAmount}>
-              {formatMoney(amountOwed)}
-            </Text>
-            <Text style={styles.paymentTo}>
-              to {settledPartner?.name}
-            </Text>
+            <Text style={styles.paymentAmount}>{formatMoney(amountOwed)}</Text>
+            <Text style={styles.paymentTo}>to {settledPartner?.name}</Text>
             {settledPartner?.venmoHandle && (
               <Text style={styles.venmoHandle}>
                 {settledPartner.venmoHandle}

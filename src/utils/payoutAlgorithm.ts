@@ -52,7 +52,11 @@ export const calculateTransfers = (
   const nets = participants.map((p) => {
     const payout =
       payouts.find((pay) => pay.userId === p.userId)?.payout ?? p.stakeAmount;
-    return { userId: p.userId, name: p.name, remaining: payout - p.stakeAmount };
+    return {
+      userId: p.userId,
+      name: p.name,
+      remaining: payout - p.stakeAmount,
+    };
   });
 
   // Sort creditors largest-first so debtors are drained efficiently.

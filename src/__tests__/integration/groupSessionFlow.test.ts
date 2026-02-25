@@ -12,11 +12,17 @@ import { useGroupSessionStore } from "../../store/groupSessionStore";
 import { useWalletStore } from "../../store/walletStore";
 import { useAuthStore } from "../../store/authStore";
 import { CADENCES, INITIAL_BALANCE } from "../../constants/config";
-import type { GroupSession, SessionTransfer, UserReputation } from "../../types";
+import type {
+  GroupSession,
+  SessionTransfer,
+  UserReputation,
+} from "../../types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const makeReputation = (overrides: Partial<UserReputation> = {}): UserReputation => ({
+const makeReputation = (
+  overrides: Partial<UserReputation> = {},
+): UserReputation => ({
   score: 50,
   level: "sapling",
   paymentsCompleted: 0,
@@ -27,8 +33,18 @@ const makeReputation = (overrides: Partial<UserReputation> = {}): UserReputation
   ...overrides,
 });
 
-const P_A = { userId: "user-a", name: "Alice", venmoHandle: "@alice", reputation: makeReputation() };
-const P_B = { userId: "user-b", name: "Bob", venmoHandle: "@bob", reputation: makeReputation() };
+const P_A = {
+  userId: "user-a",
+  name: "Alice",
+  venmoHandle: "@alice",
+  reputation: makeReputation(),
+};
+const P_B = {
+  userId: "user-b",
+  name: "Bob",
+  venmoHandle: "@bob",
+  reputation: makeReputation(),
+};
 const P_C = { userId: "user-c", name: "Charlie", reputation: makeReputation() };
 
 const resetStores = () => {
@@ -154,7 +170,8 @@ describe("Group Session Flow Integration Tests", () => {
         { userId: "user-a", completed: true },
         { userId: "user-b", completed: true },
       ]);
-      const { participants } = useGroupSessionStore.getState().groupSessionHistory[0];
+      const { participants } =
+        useGroupSessionStore.getState().groupSessionHistory[0];
       expect(participants.every((p) => p.completed)).toBe(true);
     });
   });
@@ -169,7 +186,9 @@ describe("Group Session Flow Integration Tests", () => {
         { userId: "user-a", completed: false },
         { userId: "user-b", completed: true },
       ]);
-      expect(useWalletStore.getState().balance).toBe(initial - CADENCES.daily.stake);
+      expect(useWalletStore.getState().balance).toBe(
+        initial - CADENCES.daily.stake,
+      );
     });
 
     it("session moves to history with surrendered status", () => {
@@ -178,15 +197,17 @@ describe("Group Session Flow Integration Tests", () => {
         { userId: "user-a", completed: false },
         { userId: "user-b", completed: true },
       ]);
-      expect(useGroupSessionStore.getState().groupSessionHistory[0].status).toBe("surrendered");
+      expect(
+        useGroupSessionStore.getState().groupSessionHistory[0].status,
+      ).toBe("surrendered");
     });
 
     it("auth stats: streak resets, totalSessions++, completedSessions unchanged", () => {
       useAuthStore.getState().updateUser({ currentStreak: 5 });
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: false },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
       const user = useAuthStore.getState().user!;
       expect(user.currentStreak).toBe(0);
       expect(user.totalSessions).toBe(1);
@@ -195,9 +216,9 @@ describe("Group Session Flow Integration Tests", () => {
 
     it("transaction history: stake then forfeit, no payout", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: false },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
       const txs = useWalletStore.getState().transactions;
       expect(txs.some((t) => t.type === "stake")).toBe(true);
       expect(txs.some((t) => t.type === "forfeit")).toBe(true);
@@ -210,9 +231,14 @@ describe("Group Session Flow Integration Tests", () => {
         { userId: "user-a", completed: false },
         { userId: "user-b", completed: true },
       ]);
-      const { participants } = useGroupSessionStore.getState().groupSessionHistory[0];
-      expect(participants.find((p) => p.userId === "user-b")?.completed).toBe(true);
-      expect(participants.find((p) => p.userId === "user-a")?.completed).toBe(false);
+      const { participants } =
+        useGroupSessionStore.getState().groupSessionHistory[0];
+      expect(participants.find((p) => p.userId === "user-b")?.completed).toBe(
+        true,
+      );
+      expect(participants.find((p) => p.userId === "user-a")?.completed).toBe(
+        false,
+      );
     });
   });
 
@@ -220,20 +246,29 @@ describe("Group Session Flow Integration Tests", () => {
 
   describe("Three-person session", () => {
     it("poolTotal = stake × 3", () => {
-      useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B, P_C]);
+      useGroupSessionStore
+        .getState()
+        .startGroupSession("daily", [P_A, P_B, P_C]);
       const session = useGroupSessionStore.getState().activeGroupSession!;
       expect(session.poolTotal).toBe(CADENCES.daily.stake * 3);
     });
 
     it("only current user's wallet is debited on start", () => {
       const initial = useWalletStore.getState().balance;
-      useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B, P_C]);
-      expect(useWalletStore.getState().balance).toBe(initial - CADENCES.daily.stake);
+      useGroupSessionStore
+        .getState()
+        .startGroupSession("daily", [P_A, P_B, P_C]);
+      expect(useWalletStore.getState().balance).toBe(
+        initial - CADENCES.daily.stake,
+      );
     });
 
     it("all three participants recorded in session", () => {
-      useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B, P_C]);
-      const { participants } = useGroupSessionStore.getState().activeGroupSession!;
+      useGroupSessionStore
+        .getState()
+        .startGroupSession("daily", [P_A, P_B, P_C]);
+      const { participants } =
+        useGroupSessionStore.getState().activeGroupSession!;
       expect(participants).toHaveLength(3);
       expect(participants.map((p) => p.userId)).toEqual(
         expect.arrayContaining(["user-a", "user-b", "user-c"]),
@@ -242,7 +277,9 @@ describe("Group Session Flow Integration Tests", () => {
 
     it("wallet net = 0 when current user completes (even-split)", () => {
       const initial = useWalletStore.getState().balance;
-      useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B, P_C]);
+      useGroupSessionStore
+        .getState()
+        .startGroupSession("daily", [P_A, P_B, P_C]);
       useGroupSessionStore.getState().completeGroupSession([
         { userId: "user-a", completed: true },
         { userId: "user-b", completed: false },
@@ -252,13 +289,16 @@ describe("Group Session Flow Integration Tests", () => {
     });
 
     it("each participant has payout attached after completion", () => {
-      useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B, P_C]);
+      useGroupSessionStore
+        .getState()
+        .startGroupSession("daily", [P_A, P_B, P_C]);
       useGroupSessionStore.getState().completeGroupSession([
         { userId: "user-a", completed: true },
         { userId: "user-b", completed: true },
         { userId: "user-c", completed: true },
       ]);
-      const { participants } = useGroupSessionStore.getState().groupSessionHistory[0];
+      const { participants } =
+        useGroupSessionStore.getState().groupSessionHistory[0];
       expect(participants).toHaveLength(3);
       participants.forEach((p) => expect(p.payout).toBeDefined());
     });
@@ -270,9 +310,9 @@ describe("Group Session Flow Integration Tests", () => {
     it("builds streak to 5 after 5 consecutive completions", () => {
       for (let i = 0; i < 5; i++) {
         useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-        useGroupSessionStore.getState().completeGroupSession([
-          { userId: "user-a", completed: true },
-        ]);
+        useGroupSessionStore
+          .getState()
+          .completeGroupSession([{ userId: "user-a", completed: true }]);
       }
       const user = useAuthStore.getState().user!;
       expect(user.currentStreak).toBe(5);
@@ -285,9 +325,9 @@ describe("Group Session Flow Integration Tests", () => {
       const initial = useWalletStore.getState().balance;
       for (let i = 0; i < 5; i++) {
         useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-        useGroupSessionStore.getState().completeGroupSession([
-          { userId: "user-a", completed: true },
-        ]);
+        useGroupSessionStore
+          .getState()
+          .completeGroupSession([{ userId: "user-a", completed: true }]);
       }
       expect(useWalletStore.getState().balance).toBe(initial);
     });
@@ -295,9 +335,9 @@ describe("Group Session Flow Integration Tests", () => {
     it("history accumulates all sessions, most recent first, each with unique id", () => {
       for (let i = 0; i < 3; i++) {
         useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-        useGroupSessionStore.getState().completeGroupSession([
-          { userId: "user-a", completed: true },
-        ]);
+        useGroupSessionStore
+          .getState()
+          .completeGroupSession([{ userId: "user-a", completed: true }]);
       }
       const history = useGroupSessionStore.getState().groupSessionHistory;
       expect(history).toHaveLength(3);
@@ -312,17 +352,17 @@ describe("Group Session Flow Integration Tests", () => {
     it("longestStreak is not lowered when current streak resets on surrender", () => {
       for (let i = 0; i < 4; i++) {
         useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-        useGroupSessionStore.getState().completeGroupSession([
-          { userId: "user-a", completed: true },
-        ]);
+        useGroupSessionStore
+          .getState()
+          .completeGroupSession([{ userId: "user-a", completed: true }]);
       }
       expect(useAuthStore.getState().user!.currentStreak).toBe(4);
       expect(useAuthStore.getState().user!.longestStreak).toBe(4);
 
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: false },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
 
       const user = useAuthStore.getState().user!;
       expect(user.currentStreak).toBe(0);
@@ -333,21 +373,21 @@ describe("Group Session Flow Integration Tests", () => {
       // Build streak of 3, break it
       for (let i = 0; i < 3; i++) {
         useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-        useGroupSessionStore.getState().completeGroupSession([
-          { userId: "user-a", completed: true },
-        ]);
+        useGroupSessionStore
+          .getState()
+          .completeGroupSession([{ userId: "user-a", completed: true }]);
       }
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: false },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
 
       // Build new streak past old record
       for (let i = 0; i < 5; i++) {
         useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-        useGroupSessionStore.getState().completeGroupSession([
-          { userId: "user-a", completed: true },
-        ]);
+        useGroupSessionStore
+          .getState()
+          .completeGroupSession([{ userId: "user-a", completed: true }]);
       }
 
       const user = useAuthStore.getState().user!;
@@ -364,9 +404,9 @@ describe("Group Session Flow Integration Tests", () => {
       const stake = CADENCES.daily.stake;
       for (let i = 0; i < 3; i++) {
         useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-        useGroupSessionStore.getState().completeGroupSession([
-          { userId: "user-a", completed: false },
-        ]);
+        useGroupSessionStore
+          .getState()
+          .completeGroupSession([{ userId: "user-a", completed: false }]);
       }
       expect(useWalletStore.getState().balance).toBe(initial - stake * 3);
     });
@@ -376,37 +416,55 @@ describe("Group Session Flow Integration Tests", () => {
       const stake = CADENCES.daily.stake;
 
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: true }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
 
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: true }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
 
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: false }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
 
       expect(useWalletStore.getState().balance).toBe(initial - stake);
     });
 
     it("totalEarnings accumulates only from completions, not surrenders", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: true }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
 
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: false }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
 
       useGroupSessionStore.getState().startGroupSession("weekly", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: true }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
 
       const user = useAuthStore.getState().user!;
-      expect(user.totalEarnings).toBe(CADENCES.daily.stake + CADENCES.weekly.stake);
+      expect(user.totalEarnings).toBe(
+        CADENCES.daily.stake + CADENCES.weekly.stake,
+      );
     });
 
     it("totalSessions counts both completions and surrenders", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: true }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
 
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: false }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
 
       expect(useAuthStore.getState().user!.totalSessions).toBe(2);
       expect(useAuthStore.getState().user!.completedSessions).toBe(1);
@@ -417,14 +475,19 @@ describe("Group Session Flow Integration Tests", () => {
 
   describe("Transfer settlement: pending → payment_indicated → settled", () => {
     it("full lifecycle transitions status at each step", () => {
-      const { sessionId, transferId } = seedSessionWithTransfer({ status: "pending" });
+      const { sessionId, transferId } = seedSessionWithTransfer({
+        status: "pending",
+      });
 
       useGroupSessionStore.getState().markTransferPaid(sessionId, transferId);
-      let t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      let t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.status).toBe("payment_indicated");
       expect(t.paidAt).toBeDefined();
 
-      useGroupSessionStore.getState().markTransferConfirmed(sessionId, transferId);
+      useGroupSessionStore
+        .getState()
+        .markTransferConfirmed(sessionId, transferId);
       t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.status).toBe("settled");
       expect(t.confirmedAt).toBeDefined();
@@ -441,7 +504,9 @@ describe("Group Session Flow Integration Tests", () => {
       const walletBefore = useWalletStore.getState().balance;
       useGroupSessionStore.getState().markTransferPaid(sessionId, transferId);
 
-      expect(useWalletStore.getState().balance).toBe(walletBefore - CADENCES.daily.stake);
+      expect(useWalletStore.getState().balance).toBe(
+        walletBefore - CADENCES.daily.stake,
+      );
       const rep = useAuthStore.getState().user!.reputation;
       expect(rep.paymentsCompleted).toBe(1);
       expect(rep.totalOwedPaid).toBe(CADENCES.daily.stake);
@@ -456,21 +521,33 @@ describe("Group Session Flow Integration Tests", () => {
       });
 
       const walletBefore = useWalletStore.getState().balance;
-      useGroupSessionStore.getState().markTransferConfirmed(sessionId, transferId);
+      useGroupSessionStore
+        .getState()
+        .markTransferConfirmed(sessionId, transferId);
 
-      expect(useWalletStore.getState().balance).toBe(walletBefore + CADENCES.daily.stake);
+      expect(useWalletStore.getState().balance).toBe(
+        walletBefore + CADENCES.daily.stake,
+      );
       expect(
-        useWalletStore.getState().transactions.some((t) => t.type === "settlement_received"),
+        useWalletStore
+          .getState()
+          .transactions.some((t) => t.type === "settlement_received"),
       ).toBe(true);
     });
 
     it("session no longer appears in pending queries after fully settled", () => {
-      const { sessionId, transferId } = seedSessionWithTransfer({ status: "pending" });
+      const { sessionId, transferId } = seedSessionWithTransfer({
+        status: "pending",
+      });
       useGroupSessionStore.getState().markTransferPaid(sessionId, transferId);
-      useGroupSessionStore.getState().markTransferConfirmed(sessionId, transferId);
+      useGroupSessionStore
+        .getState()
+        .markTransferConfirmed(sessionId, transferId);
 
       expect(
-        useGroupSessionStore.getState().getSessionsWithPendingTransfers("user-a"),
+        useGroupSessionStore
+          .getState()
+          .getSessionsWithPendingTransfers("user-a"),
       ).toHaveLength(0);
       expect(
         useGroupSessionStore.getState().getPendingTransfersForUser("user-a"),
@@ -499,13 +576,19 @@ describe("Group Session Flow Integration Tests", () => {
         status: "payment_indicated",
         createdAt: new Date(),
       };
-      const existingHistory = useGroupSessionStore.getState().groupSessionHistory;
+      const existingHistory =
+        useGroupSessionStore.getState().groupSessionHistory;
       useGroupSessionStore.setState({
         groupSessionHistory: [
-          { ...existingHistory[0], transfers: [...existingHistory[0].transfers, receiveTransfer] },
+          {
+            ...existingHistory[0],
+            transfers: [...existingHistory[0].transfers, receiveTransfer],
+          },
         ],
       });
-      useGroupSessionStore.getState().markTransferConfirmed("session-seed", "t2");
+      useGroupSessionStore
+        .getState()
+        .markTransferConfirmed("session-seed", "t2");
 
       const txs = useWalletStore.getState().transactions;
       expect(txs.some((t) => t.type === "settlement_paid")).toBe(true);
@@ -523,7 +606,9 @@ describe("Group Session Flow Integration Tests", () => {
         amount: CADENCES.daily.stake,
       });
 
-      useGroupSessionStore.getState().markTransferOverdue(sessionId, transferId);
+      useGroupSessionStore
+        .getState()
+        .markTransferOverdue(sessionId, transferId);
 
       const rep = useAuthStore.getState().user!.reputation;
       expect(rep.paymentsMissed).toBe(1);
@@ -539,7 +624,9 @@ describe("Group Session Flow Integration Tests", () => {
       useGroupSessionStore.getState().markTransferOverdue(sessionId, "t1");
 
       expect(
-        useGroupSessionStore.getState().getSessionsWithPendingTransfers("user-a"),
+        useGroupSessionStore
+          .getState()
+          .getSessionsWithPendingTransfers("user-a"),
       ).toHaveLength(1);
     });
 
@@ -549,11 +636,17 @@ describe("Group Session Flow Integration Tests", () => {
         fromUserId: "user-a",
       });
 
-      useGroupSessionStore.getState().markTransferOverdue(sessionId, transferId);
-      useGroupSessionStore.getState().markTransferDisputed(sessionId, transferId);
+      useGroupSessionStore
+        .getState()
+        .markTransferOverdue(sessionId, transferId);
+      useGroupSessionStore
+        .getState()
+        .markTransferDisputed(sessionId, transferId);
 
       expect(
-        useGroupSessionStore.getState().getSessionsWithPendingTransfers("user-a"),
+        useGroupSessionStore
+          .getState()
+          .getSessionsWithPendingTransfers("user-a"),
       ).toHaveLength(0);
     });
 
@@ -564,9 +657,13 @@ describe("Group Session Flow Integration Tests", () => {
         amount: CADENCES.daily.stake,
       });
 
-      useGroupSessionStore.getState().markTransferOverdue(sessionId, transferId);
+      useGroupSessionStore
+        .getState()
+        .markTransferOverdue(sessionId, transferId);
       // second call is a no-op because status is already "overdue"
-      useGroupSessionStore.getState().markTransferOverdue(sessionId, transferId);
+      useGroupSessionStore
+        .getState()
+        .markTransferOverdue(sessionId, transferId);
 
       const rep = useAuthStore.getState().user!.reputation;
       expect(rep.paymentsMissed).toBe(1);
@@ -578,35 +675,37 @@ describe("Group Session Flow Integration Tests", () => {
   describe("Cross-store state invariants", () => {
     it("no active session after complete", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: true },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
       expect(useGroupSessionStore.getState().activeGroupSession).toBeNull();
     });
 
     it("no active session after surrender", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: false },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
       expect(useGroupSessionStore.getState().activeGroupSession).toBeNull();
     });
 
     it("session in history has same id as was active", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
       const activeId = useGroupSessionStore.getState().activeGroupSession!.id;
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: true },
-      ]);
-      expect(useGroupSessionStore.getState().groupSessionHistory[0].id).toBe(activeId);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
+      expect(useGroupSessionStore.getState().groupSessionHistory[0].id).toBe(
+        activeId,
+      );
     });
 
     it("stake transaction is linked to session id", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
       const activeId = useGroupSessionStore.getState().activeGroupSession!.id;
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: true },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
       const txs = useWalletStore.getState().transactions;
       const stakeTx = txs.find((t) => t.type === "stake");
       expect(stakeTx?.sessionId).toBe(activeId);
@@ -615,9 +714,9 @@ describe("Group Session Flow Integration Tests", () => {
     it("forfeit transaction is linked to session id", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
       const activeId = useGroupSessionStore.getState().activeGroupSession!.id;
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: false },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
       const txs = useWalletStore.getState().transactions;
       const forfeitTx = txs.find((t) => t.type === "forfeit");
       expect(forfeitTx?.sessionId).toBe(activeId);
@@ -625,9 +724,9 @@ describe("Group Session Flow Integration Tests", () => {
 
     it("completeGroupSession returns the session that ends up in history", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      const returned = useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: true },
-      ]);
+      const returned = useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
       const inHistory = useGroupSessionStore.getState().groupSessionHistory[0];
       expect(returned!.id).toBe(inHistory.id);
       expect(returned!.status).toBe(inHistory.status);

@@ -10,64 +10,139 @@ NIYAH is a focus app with financial stakes. Users deposit money, stake it on foc
 
 ## Tech Stack
 
-- **Framework**: React Native + Expo (SDK 54)
-- **Language**: TypeScript
-- **Navigation**: Expo Router (file-based routing)
+- **Framework**: React Native 0.81 + Expo SDK 54 (New Architecture enabled)
+- **Language**: TypeScript (strict mode)
+- **Navigation**: Expo Router (file-based routing, typed routes)
 - **State Management**: Zustand
-- **Styling**: React Native StyleSheet
-- **Build**: EAS Build (production), Expo Go (development)
-- **Backend**: Firebase (Cloud Functions, Auth, Data Connect) - _future_
-- **Payments**: Trust model for MVP, Stripe for production - _future_
+- **Styling**: React Native StyleSheet, SF Pro Rounded (iOS)
+- **Build**: EAS Build (production), `expo-dev-client` (development) -- NOT Expo Go
+- **Backend**: Firebase Auth + Firestore via custom native Swift Expo module (`modules/niyah-firebase/`)
+- **Auth**: Google Sign-In, Apple Sign-In, Email magic link (passwordless)
+- **Testing**: Vitest (unit + integration)
+- **Linting**: ESLint 9 + Prettier
+- **Package Manager**: pnpm
+- **Payments**: Trust model (virtual balances, Venmo/PayPal settlement outside app). Stripe planned but not integrated.
 
 ## Project Structure
 
 ```
 niyah/
-├── app/                    # Expo Router screens (file-based routing)
-│   ├── _layout.tsx         # Root layout
-│   ├── index.tsx           # Entry point (redirects to auth or tabs)
-│   ├── (auth)/             # Unauthenticated screens
+├── app/                        # Expo Router screens (file-based routing)
+│   ├── _layout.tsx             # Root layout (Firebase auth listener, font loading)
+│   ├── index.tsx               # Entry point (redirects to auth or tabs)
+│   ├── invite.tsx              # Referral/invite screen
+│   ├── (auth)/                 # Unauthenticated screens
 │   │   ├── _layout.tsx
-│   │   ├── welcome.tsx     # Onboarding/welcome screen
-│   │   ├── login.tsx
-│   │   └── signup.tsx
-│   ├── (tabs)/             # Main app tabs (authenticated)
+│   │   ├── welcome.tsx         # Onboarding/welcome screen
+│   │   ├── auth-entry.tsx      # Sign-in options (Google, Apple, Email)
+│   │   ├── check-email.tsx     # Magic link email verification
+│   │   └── profile-setup.tsx   # First-time profile completion
+│   ├── (tabs)/                 # Main app tabs (authenticated)
+│   │   ├── _layout.tsx         # Tab bar layout (AnimatedTabBar)
+│   │   ├── index.tsx           # Dashboard/Home
+│   │   ├── session.tsx         # Start new session
+│   │   ├── friends.tsx         # Friends list, social features
+│   │   └── profile.tsx         # User profile & settings
+│   ├── session/                # Session flow (stack navigation)
 │   │   ├── _layout.tsx
-│   │   ├── index.tsx       # Dashboard/Home
-│   │   ├── session.tsx     # Start new session
-│   │   └── profile.tsx     # User profile & settings
-│   └── session/            # Session flow (stack navigation)
-│       ├── _layout.tsx
-│       ├── select.tsx      # Select cadence
-│       ├── confirm.tsx     # Confirm stake
-│       ├── active.tsx      # Active session with timer
-│       ├── surrender.tsx   # Surrender confirmation
-│       └── complete.tsx    # Session complete celebration
+│   │   ├── select.tsx          # Select cadence (daily/weekly/monthly)
+│   │   ├── confirm.tsx         # Confirm stake
+│   │   ├── active.tsx          # Active session with timer
+│   │   ├── surrender.tsx       # Surrender confirmation
+│   │   ├── complete.tsx        # Session complete celebration
+│   │   ├── partner.tsx         # Partner/duo session flow
+│   │   ├── deposit.tsx         # Deposit funds
+│   │   └── withdraw.tsx        # Withdraw funds
+│   └── user/                   # User profile routes
+│       └── [uid].tsx           # Public user profile (dynamic route)
 ├── src/
-│   ├── components/         # Reusable UI components
-│   │   ├── Button.tsx
-│   │   ├── Card.tsx
-│   │   ├── Balance.tsx
-│   │   └── Timer.tsx
-│   ├── store/              # Zustand state stores
-│   │   ├── authStore.ts
-│   │   ├── sessionStore.ts
-│   │   └── walletStore.ts
-│   ├── hooks/              # Custom React hooks
-│   │   └── useCountdown.ts
-│   ├── types/              # TypeScript type definitions
-│   │   └── index.ts
-│   ├── constants/          # App constants
-│   │   ├── colors.ts
-│   │   └── config.ts
-│   └── utils/              # Utility functions
-│       └── format.ts
-├── assets/                 # Images, fonts, etc.
-├── CLAUDE.md               # This file
-├── README.md
-├── app.json                # Expo config
+│   ├── components/             # Reusable UI components
+│   │   ├── index.ts            # Barrel export
+│   │   ├── AnimatedTabBar.tsx   # Custom animated tab bar
+│   │   ├── AppleSignInButton.tsx
+│   │   ├── Balance.tsx         # Balance display
+│   │   ├── Button.tsx          # Primary button component
+│   │   ├── Card.tsx            # Card container
+│   │   ├── Confetti.tsx        # Celebration animation
+│   │   ├── GoogleSignInButton.tsx
+│   │   ├── MoneyPlant.tsx      # Money plant visualization (partner network)
+│   │   ├── NumPad.tsx          # Numeric input pad
+│   │   ├── OTPInput.tsx        # OTP/code input
+│   │   ├── Timer.tsx           # Countdown timer with SVG ring
+│   │   └── onboarding/         # Onboarding scene components
+│   │       ├── index.ts
+│   │       ├── BlobsScene.tsx       # SVG blob characters
+│   │       ├── ContinuousScene.tsx
+│   │       ├── DebugLayoutEditor.tsx
+│   │       ├── GardenScene.tsx
+│   │       ├── GrowthScene.tsx
+│   │       ├── Onboarding2Scene.tsx
+│   │       ├── Onboarding3Scene.tsx
+│   │       ├── ShieldScene.tsx
+│   │       └── StakeScene.tsx
+│   ├── config/
+│   │   └── firebase.ts         # Firebase helpers (auth, Firestore, social)
+│   ├── context/
+│   │   └── ScrollContext.tsx    # Shared scroll context
+│   ├── store/                  # Zustand state stores
+│   │   ├── authStore.ts        # Auth state, Firebase user, profile
+│   │   ├── sessionStore.ts     # Solo session lifecycle
+│   │   ├── walletStore.ts      # Balance, transactions, settlements
+│   │   ├── partnerStore.ts     # Partner relationships, duo sessions
+│   │   ├── groupSessionStore.ts # N-person group sessions, transfers
+│   │   └── socialStore.ts      # Following/followers, public profiles
+│   ├── hooks/
+│   │   └── useCountdown.ts     # Countdown timer hook
+│   ├── jitai/                  # JITAI adaptive intervention engine
+│   │   ├── index.ts            # Barrel export
+│   │   ├── types.ts            # JITAI type definitions
+│   │   ├── usageDetector.ts    # Simulated usage episode detection
+│   │   ├── contextClassifier.ts # Context feature extraction & classification
+│   │   ├── interventionEngine.ts # Multi-armed bandit intervention selection
+│   │   └── humanFeedbackLoop.ts  # Feedback processing & adaptation
+│   ├── types/
+│   │   ├── index.ts            # All app type definitions
+│   │   └── test-declarations.d.ts
+│   ├── constants/
+│   │   ├── colors.ts           # Colors, Spacing, Typography, Font, Radius
+│   │   └── config.ts           # Cadences, demo mode, reputation, payment info
+│   ├── utils/
+│   │   ├── format.ts           # Formatting utilities
+│   │   └── payoutAlgorithm.ts  # Group payout calculation (placeholder even-split)
+│   ├── __tests__/              # Test suites
+│   │   ├── integration/        # Integration tests (session flows)
+│   │   └── unit/               # Unit tests (components, hooks, store, utils)
+│   └── __mocks__/              # Test mocks
+│       └── react-native.ts
+├── modules/
+│   └── niyah-firebase/         # Custom native Expo module for Firebase
+│       ├── expo-module.config.json
+│       ├── package.json
+│       ├── NiyahFirebase.podspec
+│       ├── index.ts
+│       ├── src/
+│       │   ├── index.ts
+│       │   ├── types.ts
+│       │   ├── NiyahFirebaseAuthModule.ts
+│       │   └── NiyahFirestoreModule.ts
+│       └── ios/
+│           ├── NiyahFirebaseAuthModule.swift   # Firebase Auth bridge
+│           └── NiyahFirestoreModule.swift       # Firestore bridge
+├── plugins/                    # Expo config plugins
+│   ├── withFollyCoroutinesFix.js
+│   ├── withGoogleServicesPlist.js
+│   └── withFirebaseStaticFrameworks.js
+├── scripts/
+│   ├── print-dev-url.js
+│   └── wsl_dev_setup.ps1
+├── assets/                     # Images, fonts, etc.
+├── CLAUDE.md                   # This file
+├── ROADMAP.md                  # Project roadmap & planning
+├── app.json                    # Expo config
 ├── package.json
-└── tsconfig.json
+├── tsconfig.json
+├── vitest.config.ts
+└── eslint.config.mjs
 ```
 
 ## Development Commands
@@ -76,9 +151,9 @@ niyah/
 # Install dependencies (use pnpm, not npm)
 pnpm install
 
-# Start development server
+# Start development server (requires dev client build)
 pnpm start
-# or: npx expo start
+# or: npx expo start --dev-client
 
 # Start with iOS simulator
 pnpm ios
@@ -90,14 +165,29 @@ pnpm android
 npx expo start --clear
 
 # Type check
-npx tsc --noEmit
+pnpm typecheck
+# or: npx tsc --noEmit
 
-# Build for iOS (requires EAS)
-eas build --profile development --platform ios
+# Run tests
+pnpm test              # Run all tests once
+pnpm test:watch        # Watch mode
+pnpm test:integration  # Integration tests only
+pnpm test:unit         # Unit tests only
 
-# Build for Android (requires EAS)
-eas build --profile development --platform android
+# Lint & format
+pnpm lint
+pnpm lint:fix
+pnpm format
+
+# Full CI check
+pnpm ci                # lint + typecheck + test
+
+# Build dev client (required before first `pnpm start`)
+pnpm build:dev         # iOS dev build via EAS
+pnpm build:dev:android # Android dev build via EAS
 ```
+
+**Important**: This project uses `expo-dev-client`, NOT Expo Go. You must build a dev client first (`pnpm build:dev`) before running `pnpm start`. The native Firebase module and other native dependencies require a custom build.
 
 ## Key Conventions
 
@@ -119,14 +209,15 @@ eas build --profile development --platform android
 
 - Use `StyleSheet.create()` for all styles
 - Define styles at bottom of component file
-- Use constants for colors and spacing
-- Follow 8px spacing grid
+- Use constants from `src/constants/colors.ts` for colors, spacing, typography
+- Follow 8px spacing grid (`Spacing.xs/sm/md/lg/xl/xxl`)
+- Use `Font.regular/medium/semibold/bold/heavy` for font styles (SF Pro Rounded on iOS)
 
 ### State Management (Zustand)
 
-- One store per domain (auth, session, wallet)
+- One store per domain: `authStore`, `sessionStore`, `walletStore`, `partnerStore`, `groupSessionStore`, `socialStore`
 - Keep stores flat, avoid nesting
-- Use immer for complex updates if needed
+- Stores call each other directly (e.g., `useWalletStore.getState().deductStake()`)
 - Persist critical state to AsyncStorage
 
 ### Navigation (Expo Router)
@@ -135,355 +226,142 @@ eas build --profile development --platform android
 - Use groups `(groupName)` for layouts
 - Use `router.push()` for navigation
 - Use `router.replace()` for auth redirects
+- Typed routes enabled (`experiments.typedRoutes: true`)
+
+### Native Modules
+
+- Custom Expo modules live in `modules/` directory
+- Swift for iOS, bridged via ExpoModulesCore
+- Module config in `expo-module.config.json`
+- Referenced in `app.json` via `nativeModulesDir: "modules"`
 
 ## Core Features
 
-### Session Flow
+### Authentication (Implemented)
+
+Three sign-in methods, all backed by Firebase Auth:
+
+1. **Google Sign-In** - Native dialog via `@react-native-google-signin/google-signin`
+2. **Apple Sign-In** - Native via `expo-apple-authentication` with nonce
+3. **Email Magic Link** - Passwordless email link via Firebase
+
+Post-auth flow: `auth-entry.tsx` -> (if new user) `profile-setup.tsx` -> tabs
+
+Auth state is managed by `authStore.ts` which listens to Firebase `onAuthStateChanged` and hydrates user data from Firestore.
+
+### Session Modes
+
+**Solo Session** (`sessionStore.ts`):
 
 1. User selects cadence (Daily/Weekly/Monthly)
 2. User confirms stake amount
-3. Session starts, distracting apps are "blocked"
-4. Timer counts down (or tracks usage)
-5. User can "surrender" early (lose stake) or complete (earn payout)
-6. Streak increments on successful completion
+3. Session starts, timer counts down
+4. User can "surrender" early (lose stake) or complete (get stake back)
+
+**Duo Session** (`partnerStore.ts`):
+
+1. User selects a partner from their partner list
+2. Both stake the same amount
+3. Loser pays winner their stake (settled via Venmo outside app)
+
+**Group Session** (`groupSessionStore.ts`):
+
+1. N participants each stake the same amount
+2. Payout algorithm distributes pool based on results
+3. Transfer tracking with status flow: pending -> payment_indicated -> settled
+4. Venmo deep links for settlement
+
+### Wallet & Transactions (`walletStore.ts`)
+
+- Virtual balance in cents
+- Transaction types: deposit, withdrawal, stake, payout, forfeit, settlement_paid, settlement_received
+- Demo mode starts with $50 balance
+
+### Social Features
+
+- **Following/Followers** (`socialStore.ts`) - Backed by Firestore `userFollows` collection
+- **Public Profiles** (`app/user/[uid].tsx`) - View other users' stats and reputation
+- **Reputation System** - 5 tiers: seed (0-20) -> sprout (21-40) -> sapling (41-60) -> tree (61-80) -> oak (81-100). Score based on payment reliability + referral bonuses.
+- **Referral System** - Deep link invites, referrer gets reputation boost, new user gets partner connection
+- **Contacts Integration** - `expo-contacts` for finding friends
 
 ### Payout Structure
 
-| Cadence | Stake | Base Payout | ROI  |
-| ------- | ----- | ----------- | ---- |
-| Daily   | $5    | $10         | 2x   |
-| Weekly  | $25   | $60         | 2.4x |
-| Monthly | $100  | $260        | 2.6x |
+| Cadence | Stake | Model                                                      |
+| ------- | ----- | ---------------------------------------------------------- |
+| Daily   | $5    | stickK model: complete = get stake back, fail = lose stake |
+| Weekly  | $25   | Same                                                       |
+| Monthly | $100  | Same                                                       |
 
-### Streak Multipliers
+**Note**: The current payout algorithm (`src/utils/payoutAlgorithm.ts`) is a placeholder that returns even splits. The real algorithm needs to be implemented.
 
-| Cadence | Milestone 1 | Milestone 2 |
-| ------- | ----------- | ----------- |
-| Daily   | 1.25x @ 5d  | 1.5x @ 10d  |
-| Weekly  | 1.5x @ 4wk  | 2x @ 8wk    |
-| Monthly | 2x @ 3mo    | 3x @ 6mo    |
-
-### Trust Model (MVP)
+### Trust Model (Current)
 
 Instead of real payments:
 
-1. Users see virtual balance
-2. "Deposit" shows Venmo/PayPal handles for manual transfer
-3. "Withdraw" creates pending request
-4. Settlement happens outside the app
+1. Users see virtual balance in-app
+2. Duo/group settlements tracked with transfer status
+3. Venmo deep links generated for actual money transfer
+4. Reputation system tracks payment reliability
 
 ## Demo Mode
 
-For the prototype demo:
+Currently active (`DEMO_MODE = true` in `src/constants/config.ts`):
 
-- No real backend (mock data)
-- No real Screen Time API (simulated blocking)
-- Short timer durations (30 seconds instead of 24 hours)
-- Starting balance of $50
-- Trust model for payments
+- **Auth**: Real Firebase authentication (Google, Apple, Email)
+- **Profile**: Real Firestore persistence
+- **Sessions**: Local mock data, short timer durations (10s daily, 60s weekly, 90s monthly)
+- **Wallet**: Local state with $50 starting balance
+- **Screen Time blocking**: NOT implemented -- no real app blocking yet
+- **Payments**: Trust model (virtual balances, settle outside app)
 
-## Future Features (Post-Demo)
+## Native Modules
 
-- [ ] iOS Screen Time API (FamilyControls)
-- [ ] Android UsageStats integration
-- [ ] Firebase backend
-- [ ] Stripe payments
-- [ ] Group pools/challenges
-- [ ] Push notification check-ins
-- [ ] App Store deployment
+### `modules/niyah-firebase/`
 
-## Critical De-risking Areas
+Custom Expo module bridging Firebase to JavaScript:
 
-### 1. iOS Screen Time API (FamilyControls)
+- **NiyahFirebaseAuthModule** (Swift): Sign-in with Google/Apple credentials, email magic link, auth state listener, sign-out
+- **NiyahFirestoreModule** (Swift): getDoc, setDoc, updateDoc, deleteDoc with server timestamp support
 
-#### Required Frameworks
+Firebase is configured via `GoogleService-Info.plist` (iOS) injected by the `withGoogleServicesPlist` plugin.
 
-| Framework           | Purpose                                          |
-| ------------------- | ------------------------------------------------ |
-| **FamilyControls**  | Authorization & privacy tokens for apps/websites |
-| **ManagedSettings** | Apply restrictions (shield apps, block content)  |
-| **DeviceActivity**  | Monitor usage & execute code on schedules/events |
+### Future: `modules/niyah-screentime/` (Not yet built)
 
-#### Entitlement Requirements
+Will bridge iOS Screen Time API (FamilyControls, ManagedSettings, DeviceActivity) to detect and block app usage during sessions. This is the primary next technical milestone. See ROADMAP.md.
 
-- **`com.apple.developer.family-controls`** - Main entitlement needed
-- Development version: Available immediately for testing
-- Distribution version: **Requires Apple approval** for App Store
+## JITAI Module (`src/jitai/`)
 
-#### Apple Approval Timeline
+Adaptive smartphone overuse intervention engine (research-oriented):
 
-| Scenario                  | Timeline            |
-| ------------------------- | ------------------- |
-| First-time approval       | 2-4 weeks           |
-| Additional bundle IDs     | 1-3 weeks           |
-| Extensions (Shield, etc.) | 2+ weeks additional |
+- **usageDetector**: Simulates and analyzes usage episodes, detects anomalous patterns
+- **contextClassifier**: Extracts context features, classifies episodes using weighted scoring
+- **interventionEngine**: Multi-armed bandit algorithm for selecting appropriate interventions
+- **humanFeedbackLoop**: Processes user feedback, adapts intervention strategy over time
 
-**Action**: Apply for FamilyControls (Distribution) entitlement NOW at Apple Developer Portal
+Currently simulation-only. Will integrate with real Screen Time API data when available.
 
-#### React Native / Expo Compatibility
+## Critical Next Steps
 
-**No maintained RN packages exist.** Native Swift modules required.
+1. **Screen Time API** (HIGH) - Build native module for FamilyControls/ManagedSettings/DeviceActivity. Apply for entitlement. This is the core product differentiator.
+2. **Onboarding Polish** (LOW) - Scene components exist, needs animation and transition work.
+3. **Stripe Integration** (FUTURE) - Not started. Trust model works for now.
 
-| Option                    | Complexity | Timeline   |
-| ------------------------- | ---------- | ---------- |
-| Custom Expo Module        | High       | 4-8 weeks  |
-| Bare RN + Native Module   | High       | 4-8 weeks  |
-| Full Native Swift Rewrite | Highest    | 8-12 weeks |
-
-#### How Opal/one sec Handle This
-
-- Both are **native iOS apps** (not React Native)
-- Both use **Productivity** category (not Parental Controls)
-- Both work for self-control use cases (Individual authorization mode)
-
-#### Recommended Path
-
-1. Apply for entitlement immediately
-2. Build native Swift prototype for Screen Time features
-3. Decide: Full native vs. hybrid architecture after prototype
+See ROADMAP.md for detailed plan.
 
 ---
 
-### 2. Payment Integration
-
-#### Recommended: Stripe
-
-| Requirement      | Rating                                     |
-| ---------------- | ------------------------------------------ |
-| React Native SDK | Official (`@stripe/stripe-react-native`)   |
-| Sandbox Mode     | Excellent (test card: 4242 4242 4242 4242) |
-| Approval Speed   | 1-3 business days                          |
-| Expo Support     | Native plugin support                      |
-
-#### Fees Impact on $5 Stake
-
-```
-Deposit: $5.00
-Stripe fee: -$0.45 (2.9% + $0.30)
-Net received: $4.55
-
-Payout (if user wins): $10.00
-Instant payout fee: -$0.15 (1.5%)
-User receives: $9.85
-
-Your cost per successful session: ~$0.60
-```
-
-#### Other Options Evaluated
-
-| Platform       | Verdict                                      |
-| -------------- | -------------------------------------------- |
-| PayPal         | Risky for stake-based apps (account freezes) |
-| Apple Cash API | Does not exist for third parties             |
-| Cash App API   | Does not exist                               |
-| Venmo          | Only via PayPal integration                  |
-
-#### Demo Implementation (1-2 days)
-
-```typescript
-// Use Stripe test mode
-import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
-
-// Test PaymentSheet with test keys - no real money
-const { initPaymentSheet, presentPaymentSheet } = useStripe();
-```
-
-#### Production Timeline
-
-- Demo (test mode): 1-2 days
-- Production (real payments): 1-2 weeks (includes business verification)
-
-#### Stripe Connect Architecture (Production Plan)
-
-Instead of handling money directly, use **Stripe Connect Express** so Stripe manages KYC, bank accounts, and payouts:
-
-**Required Server Endpoints (Firebase Cloud Functions):**
-
-| Endpoint                             | Purpose                                           |
-| ------------------------------------ | ------------------------------------------------- |
-| `POST /stripe/create-account`        | Create Stripe Connect Express account for user    |
-| `POST /stripe/account-link`          | Generate onboarding URL for identity verification |
-| `POST /stripe/create-payment-intent` | Charge user's payment method (deposit/stake)      |
-| `POST /stripe/create-transfer`       | Transfer winnings to user's connected account     |
-| `GET /stripe/account-status`         | Check if user's account is verified               |
-| `POST /stripe/create-payout`         | Trigger payout from connected account to bank     |
-
-**Client-Side Flow:**
-
-```
-1. User signs up → create Stripe Connect Express account (server)
-2. User taps "Add Payment Method" → Stripe AccountLink URL opens in WebView
-   → Stripe handles: SSN, bank account, identity verification
-   → User never enters sensitive data in our app
-3. User deposits → PaymentIntent created (server) → PaymentSheet (client)
-4. User wins session → Transfer from platform to user's connected account (server)
-5. User requests withdrawal → Payout from connected account to bank (server)
-```
-
-**Key Dependencies:**
-
-- `@stripe/stripe-react-native` — client SDK (already evaluated)
-- Firebase Cloud Functions — server-side Stripe API calls
-- Stripe Dashboard — manage accounts, disputes, compliance
-
-**Why This Avoids Money Transmitter Issues:**
-
-- Stripe is the licensed money transmitter, not Niyah
-- Niyah never custodies funds directly
-- All KYC/AML compliance handled by Stripe
-- Platform charges are "service fees" through Stripe's infrastructure
-
----
-
-### 3. Legal & Regulatory
-
-#### Is NIYAH Gambling?
-
-**Three-element test for gambling:**
-
-1. Consideration (payment) - YES
-2. Prize (something to win) - DEBATABLE
-3. Chance (luck-based outcome) - **NO - user controls outcome**
-
-**Verdict: Likely NOT gambling** because outcome is 100% effort-based, not chance-based.
-
-#### Precedents (Apps That Operate Legally)
-
-| App           | Model                        | Status                                |
-| ------------- | ---------------------------- | ------------------------------------- |
-| **stickK**    | Stakes go to charity if fail | Legal - 10+ years                     |
-| **Beeminder** | Stakes go to company if fail | Legal - 10+ years                     |
-| **DietBet**   | Pool split among winners     | Legal - explicit skill/effort framing |
-
-#### Money Transmission Requirements
-
-**You ARE a money transmitter if you:**
-
-- Custody user funds
-- Transfer funds user-to-user (pool model)
-- Pay out funds to users
-
-**Triggers:** FinCEN registration + State MTLs (49 states) = $50K-$500K+ in fees, 6-24 month timeline
-
-**You are NOT a money transmitter if you:**
-
-- Never custody funds (Splitwise model)
-- Only track debts, users settle outside app
-- Use licensed third party (Stripe) for all payments
-
-#### Recommended Strategies (Safest to Most Complex)
-
-**Strategy A: Splitwise Model (MVP - Recommended)**
-
-- Track virtual balances only
-- Users transfer via Venmo/PayPal outside app
-- No MTL required, no gambling concern
-- Risk: LOW | Scalability: Limited
-
-**Strategy B: Penalty-to-Charity Model**
-
-- If user fails, stake goes to charity (not profit)
-- User can never "win" more than they staked
-- Removes gambling concern entirely
-- Risk: MEDIUM | Scalability: Good
-
-**Strategy C: Forfeit-to-Company Model (Beeminder)**
-
-- If user fails, company keeps stake as "service fee"
-- No user-to-user transfers
-- Risk: LOW-MEDIUM | Scalability: Good
-
-#### App Store Strategy
-
-- **Category**: Productivity or Health & Fitness (NOT Games)
-- **Avoid words**: "bet," "wager," "gamble," "win"
-- **Use words**: "stake," "commitment," "goal," "complete"
-- **Disclaimer**: "Outcomes determined solely by user effort and action"
-
-#### Required Legal Disclaimer
-
-```
-COMMITMENT CONTRACT DISCLAIMER
-
-NIYAH provides commitment contract services, not gambling services.
-The outcome of each focus session is determined solely by the user's
-personal effort and action - not by chance, luck, or random events.
-
-Users stake funds as a commitment device to help achieve their goals.
-Successful completion is entirely within the user's control.
-
-NIYAH is not a gambling, gaming, lottery, or betting service.
-```
-
----
-
-### 4. Pool Mode Payout Formula
-
-For group challenges where users stake equal amounts:
-
-```
-Let c = equal contribution from each person
-Let t_i = screen time for person i
-Let t_max = maximum time in the group
-Let t̄ = mean time of the group
-
-Payout for person i:
-  P_i = c                           if t_max = t̄ (everyone equal)
-  P_i = c × (t_max - t_i)/(t_max - t̄)   otherwise
-```
-
-**Interpretation**: Lower screen time = higher payout. The person with lowest usage gets the most.
-
-**Legal note**: Pool mode has higher gambling risk (zero-sum, user-vs-user). Consider:
-
-- Forfeited stakes go to charity instead of winners
-- Or use Splitwise model for pools (track only, settle outside app)
-
----
-
-### 5. Trust Model Details (MVP)
-
-Instead of real payments for demo/MVP:
-
-1. Users see virtual balance in-app
-2. "Deposit" shows payment handles for manual transfer:
-   - Venmo: @niyah-app
-   - PayPal: payments@niyah.app
-3. "Withdraw" creates pending request (manual fulfillment)
-4. If someone fails to pay, other members can mark their profile
-5. Users "build trust" with small sessions before larger ones
-
-**Benefits**: Zero regulatory burden, fast to implement, validates concept
-
----
-
-## Implementation Phases
-
-### Phase 1: Demo MVP (Current)
-
-- [x] Virtual balances (trust model)
-- [x] Simulated Screen Time blocking
-- [x] Short timer durations (30 sec)
-- [ ] Stripe test mode integration (1-2 days)
-
-### Phase 2: Beta (2-4 weeks)
-
-- [ ] Apply for FamilyControls entitlement
-- [ ] Build native Swift Screen Time prototype
-- [ ] Stripe production integration
-- [ ] Firebase backend
-
-### Phase 3: Production (2-3 months)
-
-- [ ] Full Screen Time API implementation
-- [ ] Real payments with proper compliance
-- [ ] App Store submission
-- [ ] Legal review before launch
-
----
+## Legal Framing
+
+NIYAH is a **commitment contract** app, NOT gambling:
+
+- Outcome is 100% effort-based (user controls whether they use their phone)
+- Same legal model as stickK and Beeminder (10+ years operating legally)
+- App Store category: Productivity (NOT Games)
+- Avoid words: "bet," "wager," "gamble," "win"
+- Use words: "stake," "commitment," "goal," "complete"
 
 ## Contact
 
-- Professor feedback: De-risk Screen Time API, legal/gambling, and payments first
-- Consult: VAIL (Mark & Cat), Dr. White for legal guidance
-- Reference: 40AU (Logan & Andrew) for technical consulting
+- Legal guidance: VAIL (Mark & Cat), Dr. White
+- Technical consulting: 40AU (Logan & Andrew)

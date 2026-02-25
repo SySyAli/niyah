@@ -261,7 +261,9 @@ export default function DashboardScreen() {
           <View style={styles.recentSection}>
             <Text style={styles.sectionTitle}>Recent Duo Sessions</Text>
             {groupSessionHistory.slice(0, 3).map((session) => {
-              const me = session.participants.find((p) => p.userId === user?.id);
+              const me = session.participants.find(
+                (p) => p.userId === user?.id,
+              );
               const sessionPartner = session.participants.find(
                 (p) => p.userId !== user?.id,
               );
@@ -302,7 +304,10 @@ export default function DashboardScreen() {
                             -{formatMoney(session.stakePerParticipant)}
                           </Text>
                           <View
-                            style={[styles.statusBadge, styles.statusBadgeFailed]}
+                            style={[
+                              styles.statusBadge,
+                              styles.statusBadgeFailed,
+                            ]}
                           >
                             <Text style={styles.statusFailed}>Surrendered</Text>
                           </View>

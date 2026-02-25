@@ -126,6 +126,7 @@ export const Button: React.FC<ButtonProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled || loading}
+      style={fullWidth && styles.fullWidth}
     >
       <Animated.View
         style={[

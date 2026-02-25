@@ -63,3 +63,9 @@ export const PAYMENT_INFO = {
   paypal: "payments@niyah.app",
   note: "Deposit for NIYAH focus session",
 };
+
+// Referral system
+// Each accepted referral permanently boosts the new user's social credit score by this amount.
+// e.g. a brand-new user (score 50) who joins via referral starts at 60.
+export const REFERRAL_REPUTATION_BOOST = 10; // points added to score per referral (max 100)
+export const PENDING_REFERRAL_KEY = "@niyah/pending_referral"; // AsyncStorage key

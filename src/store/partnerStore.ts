@@ -39,6 +39,9 @@ interface PartnerState {
     recipientHandle: string,
     note: string,
   ) => string;
+  // Called on the new user's device after they authenticate via a referral link.
+  // Boosts their social credit score and adds the referrer as a partner.
+  applyReferralBonus: (referrerUid: string) => void;
 }
 
 interface PartnerInvite {
@@ -325,6 +328,41 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         ),
       }));
     }
+  },
+
+  applyReferralBonus: (referrerUid: string) => {
+    const { partners } = get();
+
+    // Idempotency: do nothing if this referrer is already in the partner list
+    if (partners.some((p) => p.oderId === referrerUid)) return;
+
+    // Add the referrer as a partner with default reputation.
+    // In production this would fetch their profile from the backend.
+    const newPartner: Partner = {
+      id: Math.random().toString(36).substr(2, 9),
+      oderId: referrerUid,
+      name: "Your Referrer",
+      email: "",
+      reputation: {
+        score: 50,
+        level: "sapling",
+        paymentsCompleted: 0,
+        paymentsMissed: 0,
+        totalOwedPaid: 0,
+        totalOwedMissed: 0,
+        lastUpdated: new Date(),
+      },
+      connectedAt: new Date(),
+      totalSessionsTogether: 0,
+      isActive: false,
+    };
+
+    set((state) => ({ partners: [...state.partners, newPartner] }));
+
+    // Boost the new user's social credit score for joining via referral
+    const authStore = useAuthStore.getState();
+    const currentCount = authStore.user?.reputation.referralCount ?? 0;
+    authStore.updateReputation({ referralCount: currentCount + 1 });
   },
 
   getVenmoPayLink: (amount: number, recipientHandle: string, note: string) => {

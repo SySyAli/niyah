@@ -20,7 +20,8 @@
       "usesAppleSignIn": true,
       "associatedDomains": ["applinks:niyah-b972d.firebaseapp.com"],
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSContactsUsageDescription": "NIYAH uses your contacts to invite friends to focus sessions."
       }
     },
     "android": {
@@ -58,6 +59,7 @@
         }
       ],
       "expo-apple-authentication",
+      "expo-contacts",
       "./plugins/withFollyCoroutinesFix",
       "./plugins/withGoogleServicesPlist",
       "./plugins/withFirebaseStaticFrameworks"

@@ -17,7 +17,7 @@ import {
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
-import { Card, Balance, Button, MoneyPlant } from "../../src/components";
+import { Card, Balance, Button, MoneyPlant, PeachAvatar } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -401,10 +401,11 @@ export default function DashboardScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>Welcome back</Text>
             <Text style={styles.name}>{user?.name || "there"}</Text>
           </View>
+          <PeachAvatar size={56} onPress={() => router.push("/(tabs)/profile")} />
         </View>
 
         {/* Balance Card */}

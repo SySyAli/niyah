@@ -6,3 +6,4 @@ export { NumPad, AmountDisplay } from "./NumPad";
 export { Confetti } from "./Confetti";
 export { MoneyPlant } from "./MoneyPlant";
 export { OTPInput } from "./OTPInput";
+export { PeachAvatar } from "./PeachAvatar";

@@ -263,6 +263,56 @@ export default function SessionTabScreen() {
       gap: Spacing.md,
       marginBottom: Spacing.xl,
     },
+    challengeCard: {
+      backgroundColor: Colors.primaryDark,
+      borderRadius: Radius.lg,
+      padding: Spacing.lg,
+      marginBottom: Spacing.lg,
+    },
+    challengeTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: Spacing.xs,
+    },
+    challengeTitle: {
+      fontSize: Typography.titleMedium,
+      ...Font.bold,
+      color: Colors.white,
+    },
+    challengeArrow: {
+      fontSize: 20,
+      color: "rgba(255,255,255,0.6)",
+    },
+    challengeSubtitle: {
+      fontSize: Typography.bodySmall,
+      color: "rgba(255,255,255,0.65)",
+      marginBottom: Spacing.md,
+    },
+    challengeTags: {
+      flexDirection: "row",
+      gap: Spacing.sm,
+      flexWrap: "wrap",
+    },
+    challengeTag: {
+      paddingVertical: 4,
+      paddingHorizontal: Spacing.sm,
+      borderRadius: Radius.full,
+      backgroundColor: "rgba(255,255,255,0.12)",
+    },
+    challengeTagText: {
+      fontSize: Typography.labelSmall,
+      ...Font.medium,
+      color: "rgba(255,255,255,0.8)",
+    },
+    sectionLabel: {
+      fontSize: Typography.labelMedium,
+      ...Font.semibold,
+      color: Colors.textMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      marginBottom: Spacing.md,
+    },
     // Active session styles
     activeHeader: {
       marginBottom: Spacing.xl,
@@ -393,6 +443,34 @@ export default function SessionTabScreen() {
       >
         <Text style={styles.title}>Start a Session</Text>
         <Text style={styles.subtitle}>Choose your commitment level</Text>
+
+        {/* Challenge a Friend */}
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push("/session/propose");
+          }}
+        >
+          <View style={styles.challengeCard}>
+            <View style={styles.challengeTitleRow}>
+              <Text style={styles.challengeTitle}>Group Challenge</Text>
+              <Text style={styles.challengeArrow}>→</Text>
+            </View>
+            <Text style={styles.challengeSubtitle}>
+              Invite any number of friends, set a stake, pick a time
+            </Text>
+            <View style={styles.challengeTags}>
+              {["Custom stake", "2+ players", "Flexible schedule"].map((tag) => (
+                <View key={tag} style={styles.challengeTag}>
+                  <Text style={styles.challengeTagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </Pressable>
+
+        {/* Recurring Sessions */}
+        <Text style={styles.sectionLabel}>Recurring Sessions</Text>
 
         <View style={styles.cadenceList}>
           {Object.entries(CADENCES).map(([key, config]) => (

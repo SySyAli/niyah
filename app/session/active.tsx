@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -21,8 +21,11 @@ export default function ActiveSessionScreen() {
   // Tracks intentional navigation away (complete or surrender) so the
   // useEffect guard doesn't redirect home when activeGroupSession clears.
   const isNavigatingAwayRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [pauseStartedAt, setPauseStartedAt] = useState<number | null>(null);
+  const [totalPausedMs, setTotalPausedMs] = useState(0);
 
-  const { timeRemaining, start } = useCountdown({
+  const { timeRemaining, start, stop } = useCountdown({
     onComplete: () => {
       isNavigatingAwayRef.current = true;
       // Delay by one animation cycle (950ms + buffer) so the final drain
@@ -31,7 +34,10 @@ export default function ActiveSessionScreen() {
         const session = useGroupSessionStore.getState().activeGroupSession;
         if (session) {
           completeGroupSession(
-            session.participants.map((p) => ({ userId: p.userId, completed: true })),
+            session.participants.map((p) => ({
+              userId: p.userId,
+              completed: true,
+            })),
           );
         }
         router.replace("/session/complete");
@@ -41,19 +47,43 @@ export default function ActiveSessionScreen() {
 
   useEffect(() => {
     if (activeGroupSession) {
-      start(activeGroupSession.endsAt);
+      if (isPaused) {
+        stop();
+      } else {
+        start(new Date(activeGroupSession.endsAt.getTime() + totalPausedMs));
+      }
     } else if (!isNavigatingAwayRef.current) {
       // No active session and we didn't navigate away ourselves — stale route.
       router.replace("/(tabs)");
     }
-  }, [activeGroupSession, router, start]);
+  }, [activeGroupSession, isPaused, router, start, stop, totalPausedMs]);
 
   if (!activeGroupSession) {
     return null;
   }
 
+  const handlePauseResume = () => {
+    if (isPaused) {
+      const pausedAt = pauseStartedAt ?? Date.now();
+      const pausedDuration = Date.now() - pausedAt;
+      setTotalPausedMs((previous) => previous + pausedDuration);
+      setPauseStartedAt(null);
+      setIsPaused(false);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } else {
+      setPauseStartedAt(Date.now());
+      setIsPaused(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  };
+
+  const currentPauseMs =
+    isPaused && pauseStartedAt ? Date.now() - pauseStartedAt : 0;
   const totalDuration =
-    activeGroupSession.endsAt.getTime() - activeGroupSession.startedAt.getTime();
+    activeGroupSession.endsAt.getTime() -
+    activeGroupSession.startedAt.getTime() +
+    totalPausedMs +
+    currentPauseMs;
   const progress = 1 - timeRemaining / totalDuration;
   const progressPercent = Math.min(
     100,
@@ -66,11 +96,24 @@ export default function ActiveSessionScreen() {
         {/* Status Header */}
         <View style={styles.header}>
           <View style={styles.statusBadge}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>SESSION ACTIVE</Text>
+            <View
+              style={[
+                styles.statusDot,
+                isPaused && { backgroundColor: Colors.warning },
+              ]}
+            />
+            <Text
+              style={[styles.statusText, isPaused && { color: Colors.warning }]}
+            >
+              {isPaused ? "SESSION PAUSED" : "SESSION ACTIVE"}
+            </Text>
           </View>
           <Text style={styles.title}>Stay Focused</Text>
-          <Text style={styles.subtitle}>Distracting apps are blocked</Text>
+          <Text style={styles.subtitle}>
+            {isPaused
+              ? "Timer is paused — resume when you're ready"
+              : "Distracting apps are blocked"}
+          </Text>
         </View>
 
         {/* Timer */}
@@ -78,7 +121,7 @@ export default function ActiveSessionScreen() {
           <Timer
             timeRemaining={timeRemaining}
             totalTime={totalDuration}
-            size="large"
+            size="medium"
             showProgress={true}
           />
         </View>
@@ -120,16 +163,28 @@ export default function ActiveSessionScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Button
-            title="I Need to Surrender"
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-              isNavigatingAwayRef.current = true;
-              router.push("/session/surrender");
-            }}
-            variant="outline"
-            size="large"
-          />
+          <View style={styles.footerButtonsRow}>
+            <View style={styles.footerButton}>
+              <Button
+                title={isPaused ? "Resume" : "Pause"}
+                onPress={handlePauseResume}
+                variant="secondary"
+                size="medium"
+              />
+            </View>
+            <View style={styles.footerButton}>
+              <Button
+                title="Surrender"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                  isNavigatingAwayRef.current = true;
+                  router.push("/session/surrender");
+                }}
+                variant="outline"
+                size="medium"
+              />
+            </View>
+          </View>
           <Text style={styles.warningText}>
             Warning: Surrendering forfeits your{" "}
             {formatMoney(activeGroupSession.stakePerParticipant)} stake
@@ -151,8 +206,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   statusBadge: {
     flexDirection: "row",
@@ -177,21 +232,21 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   title: {
-    fontSize: Typography.headlineLarge,
+    fontSize: Typography.headlineMedium,
     ...Font.bold,
     color: Colors.text,
   },
   subtitle: {
-    fontSize: Typography.bodyMedium,
+    fontSize: Typography.bodySmall,
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
   timerSection: {
     alignItems: "center",
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.md,
   },
   progressSection: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.md,
   },
   progressContainer: {
     width: "100%",
@@ -216,8 +271,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gainLight,
     borderWidth: 1,
     borderColor: Colors.gain,
-    paddingVertical: Spacing.lg,
-    marginBottom: Spacing.lg,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.md,
   },
   payoutLabel: {
     fontSize: Typography.labelMedium,
@@ -225,28 +280,29 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   payoutAmount: {
-    fontSize: Typography.displaySmall,
+    fontSize: Typography.titleLarge,
     ...Font.bold,
     color: Colors.gain,
   },
   tipsSection: {
     backgroundColor: Colors.backgroundCard,
     borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
   },
   tipsTitle: {
-    fontSize: Typography.titleSmall,
+    fontSize: Typography.bodyMedium,
     ...Font.semibold,
     color: Colors.text,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   tipsList: {
-    gap: Spacing.xs,
+    gap: 4,
   },
   tipRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+    width: "100%",
   },
   tipBullet: {
     width: 4,
@@ -256,12 +312,21 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   tipText: {
+    flex: 1,
     fontSize: Typography.bodySmall,
     color: Colors.textSecondary,
+    lineHeight: 16,
   },
   footer: {
     marginTop: "auto",
-    gap: Spacing.md,
+    gap: Spacing.sm,
+  },
+  footerButtonsRow: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+  },
+  footerButton: {
+    flex: 1,
   },
   warningText: {
     textAlign: "center",

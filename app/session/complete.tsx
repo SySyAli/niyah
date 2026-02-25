@@ -1,13 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  ScrollView,
-  Linking,
-  Alert,
-} from "react-native";
+import { View, Text, StyleSheet, Animated, Linking, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
@@ -27,14 +19,21 @@ import type { SessionTransfer } from "../../src/types";
 export default function CompleteScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const { groupSessionHistory, markTransferConfirmed, markTransferPaid, getVenmoPayLink } =
-    useGroupSessionStore();
+  const {
+    groupSessionHistory,
+    markTransferConfirmed,
+    markTransferPaid,
+    getVenmoPayLink,
+  } = useGroupSessionStore();
   const [showConfetti, setShowConfetti] = useState(true);
 
   const lastSession = groupSessionHistory[0];
-  const myParticipant = lastSession?.participants.find((p) => p.userId === user?.id);
+  const myParticipant = lastSession?.participants.find(
+    (p) => p.userId === user?.id,
+  );
   // Transfers that require actual settlement (exclude "none" status from even-split)
-  const activeTransfers = lastSession?.transfers.filter((t) => t.status !== "none") ?? [];
+  const activeTransfers =
+    lastSession?.transfers.filter((t) => t.status !== "none") ?? [];
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -71,7 +70,9 @@ export default function CompleteScreen() {
   };
 
   const handlePayVenmo = async (transfer: SessionTransfer) => {
-    const recipient = lastSession?.participants.find((p) => p.userId === transfer.toUserId);
+    const recipient = lastSession?.participants.find(
+      (p) => p.userId === transfer.toUserId,
+    );
     if (!recipient?.venmoHandle) {
       Alert.alert(
         "No Venmo Handle",
@@ -88,14 +89,19 @@ export default function CompleteScreen() {
     try {
       const canOpen = await Linking.canOpenURL(venmoUrl);
       await Linking.openURL(
-        canOpen ? venmoUrl : `https://venmo.com/${recipient.venmoHandle.replace("@", "")}`,
+        canOpen
+          ? venmoUrl
+          : `https://venmo.com/${recipient.venmoHandle.replace("@", "")}`,
       );
       // Mark as payment indicated once they've been sent to Venmo
       if (lastSession) {
         markTransferPaid(lastSession.id, transfer.id);
       }
     } catch {
-      Alert.alert("Error", "Could not open Venmo. Please pay your partner manually.");
+      Alert.alert(
+        "Error",
+        "Could not open Venmo. Please pay your partner manually.",
+      );
     }
   };
 
@@ -111,11 +117,7 @@ export default function CompleteScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {showConfetti && <Confetti count={60} />}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.content}>
         {/* Header */}
         <Animated.View
           style={[
@@ -151,7 +153,9 @@ export default function CompleteScreen() {
                     <Text
                       style={[
                         styles.statusBadgeText,
-                        p.completed ? styles.badgeTextCompleted : styles.badgeTextFailed,
+                        p.completed
+                          ? styles.badgeTextCompleted
+                          : styles.badgeTextFailed,
                       ]}
                     >
                       {p.completed ? "Completed" : "Surrendered"}
@@ -187,7 +191,9 @@ export default function CompleteScreen() {
               const iAmPayer = transfer.fromUserId === user?.id;
               const iAmRecipient = transfer.toUserId === user?.id;
               const counterparty = lastSession?.participants.find(
-                (p) => p.userId === (iAmPayer ? transfer.toUserId : transfer.fromUserId),
+                (p) =>
+                  p.userId ===
+                  (iAmPayer ? transfer.toUserId : transfer.fromUserId),
               );
 
               return (
@@ -197,7 +203,8 @@ export default function CompleteScreen() {
                     styles.transferCard,
                     transfer.status === "overdue" && styles.transferCardOverdue,
                     transfer.status === "settled" && styles.transferCardSettled,
-                    transfer.status === "disputed" && styles.transferCardDisputed,
+                    transfer.status === "disputed" &&
+                      styles.transferCardDisputed,
                   ]}
                 >
                   <View style={styles.transferRow}>
@@ -219,18 +226,25 @@ export default function CompleteScreen() {
                   </View>
 
                   {counterparty?.venmoHandle && (
-                    <Text style={styles.venmoHandle}>{counterparty.venmoHandle}</Text>
+                    <Text style={styles.venmoHandle}>
+                      {counterparty.venmoHandle}
+                    </Text>
                   )}
 
                   <View style={styles.transferAction}>
-                    {(transfer.status === "pending" || transfer.status === "overdue") &&
+                    {(transfer.status === "pending" ||
+                      transfer.status === "overdue") &&
                       iAmPayer && (
                         <Button
                           title={
-                            transfer.status === "overdue" ? "Pay Now (Overdue)" : "Pay via Venmo"
+                            transfer.status === "overdue"
+                              ? "Pay Now (Overdue)"
+                              : "Pay via Venmo"
                           }
                           onPress={() => handlePayVenmo(transfer)}
-                          variant={transfer.status === "overdue" ? "danger" : "primary"}
+                          variant={
+                            transfer.status === "overdue" ? "danger" : "primary"
+                          }
                           size="small"
                         />
                       )}
@@ -240,16 +254,19 @@ export default function CompleteScreen() {
                     {transfer.status === "overdue" && iAmRecipient && (
                       <Text style={styles.overdueText}>Payment overdue</Text>
                     )}
-                    {transfer.status === "payment_indicated" && iAmRecipient && (
-                      <Button
-                        title="Mark as Received"
-                        onPress={() => handleMarkReceived(transfer.id)}
-                        variant="secondary"
-                        size="small"
-                      />
-                    )}
+                    {transfer.status === "payment_indicated" &&
+                      iAmRecipient && (
+                        <Button
+                          title="Mark as Received"
+                          onPress={() => handleMarkReceived(transfer.id)}
+                          variant="secondary"
+                          size="small"
+                        />
+                      )}
                     {transfer.status === "payment_indicated" && iAmPayer && (
-                      <Text style={styles.awaitingText}>Sent — awaiting confirmation</Text>
+                      <Text style={styles.awaitingText}>
+                        Sent — awaiting confirmation
+                      </Text>
                     )}
                     {transfer.status === "settled" && (
                       <Text style={styles.settledText}>Settled ✓</Text>
@@ -272,7 +289,9 @@ export default function CompleteScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{user?.reputation?.score || 50}</Text>
+            <Text style={styles.statValue}>
+              {user?.reputation?.score || 50}
+            </Text>
             <Text style={styles.statLabel}>Rep Score</Text>
           </View>
         </View>
@@ -283,9 +302,9 @@ export default function CompleteScreen() {
         </Card>
 
         <View style={styles.footer}>
-          <Button title="Done" onPress={handleDone} size="large" />
+          <Button title="Done" onPress={handleDone} size="medium" />
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -295,60 +314,60 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  scroll: {
-    flex: 1,
-  },
   content: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
+    flex: 1,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
   },
   // Header
   header: {
     alignItems: "center",
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
+    marginTop: 0,
+    marginBottom: Spacing.md,
   },
   checkCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: Colors.gainLight,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: Colors.gain,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   checkmark: {
-    fontSize: 40,
+    fontSize: 30,
     color: Colors.gain,
   },
   title: {
-    fontSize: Typography.displaySmall,
+    fontSize: Typography.headlineSmall,
     ...Font.bold,
     color: Colors.text,
   },
   subtitle: {
-    fontSize: Typography.bodyMedium,
+    fontSize: Typography.bodySmall,
     color: Colors.textSecondary,
-    marginTop: Spacing.xs,
+    marginTop: 2,
   },
   // Section title (shared)
   sectionTitle: {
-    fontSize: Typography.titleSmall,
+    fontSize: Typography.bodyMedium,
     ...Font.semibold,
     color: Colors.text,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   // Results card
   resultsCard: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
+    paddingVertical: Spacing.sm,
   },
   participantRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: Spacing.sm,
+    paddingVertical: 6,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
@@ -359,7 +378,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   participantName: {
-    fontSize: Typography.bodyMedium,
+    fontSize: Typography.bodySmall,
     ...Font.medium,
     color: Colors.text,
   },
@@ -385,7 +404,7 @@ const styles = StyleSheet.create({
     color: Colors.loss,
   },
   payoutValue: {
-    fontSize: Typography.titleSmall,
+    fontSize: Typography.bodyMedium,
     ...Font.semibold,
   },
   payoutGain: {
@@ -396,15 +415,15 @@ const styles = StyleSheet.create({
   },
   // Payments section
   paymentsSection: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   noPaymentsCard: {
     alignItems: "center",
-    paddingVertical: Spacing.lg,
+    paddingVertical: Spacing.md,
     backgroundColor: Colors.backgroundCard,
   },
   noPaymentsText: {
-    fontSize: Typography.titleSmall,
+    fontSize: Typography.bodyMedium,
     ...Font.semibold,
     color: Colors.text,
     marginBottom: Spacing.xs,
@@ -416,7 +435,8 @@ const styles = StyleSheet.create({
   },
   // Transfer cards
   transferCard: {
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
+    paddingVertical: Spacing.sm,
   },
   transferCardOverdue: {
     borderWidth: 1,
@@ -440,13 +460,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   transferDirection: {
-    fontSize: Typography.bodyMedium,
+    fontSize: Typography.bodySmall,
     ...Font.medium,
     color: Colors.text,
     flex: 1,
   },
   transferAmount: {
-    fontSize: Typography.titleSmall,
+    fontSize: Typography.bodyMedium,
     ...Font.bold,
   },
   amountOwed: {
@@ -456,13 +476,13 @@ const styles = StyleSheet.create({
     color: Colors.gain,
   },
   venmoHandle: {
-    fontSize: Typography.labelMedium,
+    fontSize: Typography.labelSmall,
     color: Colors.primary,
     ...Font.medium,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   transferAction: {
-    marginTop: Spacing.xs,
+    marginTop: 2,
   },
   awaitingText: {
     fontSize: Typography.labelMedium,
@@ -489,8 +509,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: Colors.backgroundCard,
     borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   statCard: {
     flex: 1,
@@ -502,7 +522,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
   },
   statValue: {
-    fontSize: Typography.headlineSmall,
+    fontSize: Typography.titleLarge,
     ...Font.bold,
     color: Colors.text,
   },
@@ -516,15 +536,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryMuted,
     borderWidth: 1,
     borderColor: Colors.primary,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.sm,
+    paddingVertical: Spacing.sm,
   },
   motivationText: {
-    fontSize: Typography.bodyMedium,
+    fontSize: Typography.bodySmall,
     color: Colors.text,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 18,
   },
   footer: {
-    gap: Spacing.md,
+    marginTop: "auto",
+    gap: Spacing.sm,
   },
 });

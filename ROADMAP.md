@@ -35,32 +35,32 @@
 
 The core product differentiator. Goal: start a NIYAH session, open a "blocked" app (e.g. Photos), get an Opal-style shield overlay, and lose money in NIYAH.
 
-**Blocker**: Must apply for FamilyControls Development entitlement first. Do this immediately -- it's available right away for development, no approval wait.
+**Blocker**: Must enable FamilyControls (Development) capability on App ID in the Apple Developer portal. Available immediately, no approval wait. (Distribution entitlement is separate -- apply for that in parallel, takes 2-4 weeks.)
 
-**High-Level Milestones:**
+**Code Status**: Module scaffolded. All Swift code, TypeScript bridge, config plugins, and App Extension written. Needs first dev client build (`pnpm build:dev`) and physical device testing.
 
-| #   | Milestone                                        | What It Delivers                                                        | Est. Time |
-| --- | ------------------------------------------------ | ----------------------------------------------------------------------- | --------- |
-| 1   | Apply for FamilyControls Development entitlement | Unblocks all Screen Time API work                                       | 1 day     |
-| 2   | Scaffold `modules/niyah-screentime/` Expo module | Empty Swift module that loads in dev client build                       | 1-2 days  |
-| 3   | FamilyControls authorization flow                | User grants Screen Time permission (native iOS dialog)                  | 2-3 days  |
-| 4   | App selection with FamilyActivityPicker          | User picks which apps to block during sessions (e.g. Photos, Instagram) | 2-3 days  |
-| 5   | Shield configuration (ManagedSettings)           | Blocked apps show an overlay/shield when opened during a session        | 3-5 days  |
-| 6   | DeviceActivityMonitor extension                  | Detect when user opens a blocked app and fire an event                  | 5-7 days  |
-| 7   | Bridge to RN session store                       | Emit events to JS when violations happen, deduct money                  | 2-3 days  |
-| 8   | End-to-end integration                           | Start session -> open blocked app -> shield appears -> money deducted   | 2-3 days  |
-| 9   | Physical device testing & polish                 | Screen Time API does not work in simulator                              | Ongoing   |
+**Remaining Milestones:**
 
-**Total estimate**: 3-5 weeks of focused work
+| #   | Milestone                                           | Status     | What's Left                                                           |
+| --- | --------------------------------------------------- | ---------- | --------------------------------------------------------------------- |
+| 1   | Enable FamilyControls + App Groups on App ID        | **Do now** | Apple Developer portal                                                |
+| 2   | Scaffold `modules/niyah-screentime/` Expo module    | **Done**   | Swift module, TS types, podspec, config                               |
+| 3   | FamilyControls authorization flow                   | **Done**   | `requestAuthorization()` in Swift + JS wrapper                        |
+| 4   | App selection with FamilyActivityPicker             | **Done**   | SwiftUI picker, hosted modally, selection persisted to App Groups     |
+| 5   | Shield configuration (ManagedSettings)              | **Done**   | `startBlocking()` / `stopBlocking()` apply/remove shields             |
+| 6   | DeviceActivityMonitor extension                     | **Done**   | Extension Swift code + Xcode config plugin to inject target           |
+| 7   | Bridge to RN (JS wrapper)                           | **Done**   | `src/config/screentime.ts` with typed functions + event subscriptions |
+| 8   | Build new dev client                                | **Next**   | `pnpm build:dev` to compile native modules                            |
+| 9   | Physical device testing                             | **Next**   | Test full flow on real iPhone                                         |
+| 10  | Session store integration                           | **Next**   | Wire `onShieldViolation` -> wallet deduction in session flow          |
+| 11  | End-to-end: session -> block -> violation -> deduct | **Next**   | Final integration + polish                                            |
 
 **Technical Notes:**
 
-- DeviceActivityMonitor is an **App Extension** (separate build target), not just a framework import. This is the most complex part.
-- Shield Configuration also requires its own extension target.
-- No maintained React Native packages exist for Screen Time API -- this is fully custom Swift.
+- DeviceActivityMonitor is an **App Extension** (separate build target). The `withDeviceActivityMonitor.js` config plugin handles injecting it into the Xcode project during `expo prebuild`.
+- App Groups (`group.com.niyah.app`) enable data sharing between the main app and the extension (violation timestamps, blocking state, app selection).
 - All testing must be on a **physical iOS device**. The Screen Time API does not work in the iOS Simulator.
-- The existing `modules/niyah-firebase/` Expo module pattern is the template for the new module.
-- Opal and one sec are fully native iOS apps. We're proving this can work in a React Native/Expo architecture.
+- Opal and one sec are fully native iOS apps. This module proves Screen Time API can work in a React Native/Expo architecture.
 
 **Key Apple Frameworks:**
 

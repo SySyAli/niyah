@@ -30,11 +30,11 @@
     "ci": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "dependencies": {
-    "@expo/vector-icons": "^15.0.3",
+    "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-google-signin/google-signin": "^14.0.2",
     "eas": "^0.1.0",
-    "eas-cli": "^18.0.1",
+    "eas-cli": "^18.0.5",
     "expo": "~54.0.33",
     "expo-apple-authentication": "^8.0.8",
     "expo-auth-session": "^7.0.10",
@@ -61,13 +61,13 @@
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "^15.15.3",
-    "react-native-worklets": "^0.7.3",
+    "react-native-worklets": "^0.7.4",
     "sf-symbols-typescript": "^2.2.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
-    "@eslint/js": "^9.39.2",
+    "@eslint/js": "^9.39.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/react-native": "^12.9.0",
@@ -75,7 +75,7 @@
     "@vitest/coverage-v8": "^2.1.9",
     "@vitest/ui": "^2.1.9",
     "babel-preset-expo": "^54.0.10",
-    "eslint": "^9.39.2",
+    "eslint": "^9.39.3",
     "eslint-config-expo": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
@@ -86,7 +86,7 @@
     "react-native-web": "~0.20.0",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.55.0",
+    "typescript-eslint": "^8.56.1",
     "vitest": "^2.1.9"
   },
   "private": true

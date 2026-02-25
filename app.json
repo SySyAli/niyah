@@ -62,7 +62,9 @@
       "expo-contacts",
       "./plugins/withFollyCoroutinesFix",
       "./plugins/withGoogleServicesPlist",
-      "./plugins/withFirebaseStaticFrameworks"
+      "./plugins/withFirebaseStaticFrameworks",
+      "./plugins/withScreenTimeEntitlement",
+      "./plugins/withDeviceActivityMonitor"
     ],
     "experiments": {
       "typedRoutes": true

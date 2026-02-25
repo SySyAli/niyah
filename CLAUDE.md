@@ -115,23 +115,39 @@ niyah/
 │   └── __mocks__/              # Test mocks
 │       └── react-native.ts
 ├── modules/
-│   └── niyah-firebase/         # Custom native Expo module for Firebase
+│   ├── niyah-firebase/         # Custom native Expo module for Firebase
+│   │   ├── expo-module.config.json
+│   │   ├── package.json
+│   │   ├── NiyahFirebase.podspec
+│   │   ├── index.ts
+│   │   ├── src/
+│   │   │   ├── index.ts
+│   │   │   ├── types.ts
+│   │   │   ├── NiyahFirebaseAuthModule.ts
+│   │   │   └── NiyahFirestoreModule.ts
+│   │   └── ios/
+│   │       ├── NiyahFirebaseAuthModule.swift   # Firebase Auth bridge
+│   │       └── NiyahFirestoreModule.swift       # Firestore bridge
+│   └── niyah-screentime/       # Custom native Expo module for Screen Time API
 │       ├── expo-module.config.json
 │       ├── package.json
-│       ├── NiyahFirebase.podspec
+│       ├── NiyahScreenTime.podspec
 │       ├── index.ts
 │       ├── src/
 │       │   ├── index.ts
 │       │   ├── types.ts
-│       │   ├── NiyahFirebaseAuthModule.ts
-│       │   └── NiyahFirestoreModule.ts
+│       │   └── NiyahScreenTimeModule.ts
 │       └── ios/
-│           ├── NiyahFirebaseAuthModule.swift   # Firebase Auth bridge
-│           └── NiyahFirestoreModule.swift       # Firestore bridge
+│           ├── NiyahScreenTimeModule.swift      # Main module (auth, picker, shield)
+│           ├── AppPickerHostingController.swift  # SwiftUI FamilyActivityPicker wrapper
+│           └── NiyahDeviceActivityMonitor/       # App Extension (separate process)
+│               └── DeviceActivityMonitorExtension.swift
 ├── plugins/                    # Expo config plugins
 │   ├── withFollyCoroutinesFix.js
 │   ├── withGoogleServicesPlist.js
-│   └── withFirebaseStaticFrameworks.js
+│   ├── withFirebaseStaticFrameworks.js
+│   ├── withScreenTimeEntitlement.js    # FamilyControls + App Groups entitlements
+│   └── withDeviceActivityMonitor.js    # Injects extension target into Xcode project
 ├── scripts/
 │   ├── print-dev-url.js
 │   └── wsl_dev_setup.ps1
@@ -326,9 +342,23 @@ Custom Expo module bridging Firebase to JavaScript:
 
 Firebase is configured via `GoogleService-Info.plist` (iOS) injected by the `withGoogleServicesPlist` plugin.
 
-### Future: `modules/niyah-screentime/` (Not yet built)
+### `modules/niyah-screentime/` (Scaffolded, needs device testing)
 
-Will bridge iOS Screen Time API (FamilyControls, ManagedSettings, DeviceActivity) to detect and block app usage during sessions. This is the primary next technical milestone. See ROADMAP.md.
+Custom Expo module bridging iOS Screen Time API to JavaScript:
+
+- **NiyahScreenTimeModule** (Swift): FamilyControls authorization, FamilyActivityPicker (app selection), ManagedSettings shield (block/unblock apps). App selection persisted via App Groups shared UserDefaults.
+- **AppPickerHostingController** (Swift): SwiftUI wrapper for FamilyActivityPicker, presented modally from the Expo module.
+- **DeviceActivityMonitorExtension** (Swift): App Extension that runs in a separate process. Detects when user opens a blocked app and records violation timestamps to shared UserDefaults.
+- **JS wrapper**: `src/config/screentime.ts` provides typed convenience functions and event subscriptions.
+
+**Config plugins:**
+
+- `withScreenTimeEntitlement.js` -- Adds FamilyControls, App Groups (`group.com.niyah.app`), and Push Notifications entitlements.
+- `withDeviceActivityMonitor.js` -- Injects the DeviceActivityMonitor App Extension target into the Xcode project.
+
+**Requirements:** iOS 16+, physical device (no Simulator), FamilyControls entitlement enabled on App ID.
+
+**Status:** Code scaffolded. Needs first dev client build and physical device testing to validate.
 
 ## JITAI Module (`src/jitai/`)
 

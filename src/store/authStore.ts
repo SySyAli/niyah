@@ -14,6 +14,7 @@ import {
   type FirebaseUser,
 } from "../config/firebase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { REFERRAL_REPUTATION_BOOST } from "../constants/config";
 
 // Key for storing email for magic link verification
 const MAGIC_LINK_EMAIL_KEY = "@niyah/magic_link_email";
@@ -59,6 +60,7 @@ const createInitialReputation = (): UserReputation => ({
   totalOwedPaid: 0,
   totalOwedMissed: 0,
   lastUpdated: new Date(),
+  referralCount: 0,
 });
 
 // Calculate reputation level based on score
@@ -107,6 +109,7 @@ const buildUser = (
         totalOwedPaid: rep.totalOwedPaid || 0,
         totalOwedMissed: rep.totalOwedMissed || 0,
         lastUpdated: new Date(),
+        referralCount: rep.referralCount || 0,
       },
       venmoHandle: firestoreData.venmoHandle as string | undefined,
       phoneNumber: firestoreData.phone as string | undefined,
@@ -423,6 +426,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         newReputation.score = Math.round(50 + (successRate - 0.5) * 100);
         newReputation.score = Math.max(0, Math.min(100, newReputation.score));
       }
+
+      // Referral boost: permanently additive on top of the payment-based score.
+      // Re-applied every recalculation so the boost persists through payment events.
+      const referralBoost =
+        (newReputation.referralCount ?? 0) * REFERRAL_REPUTATION_BOOST;
+      newReputation.score = Math.min(100, newReputation.score + referralBoost);
 
       newReputation.level = getReputationLevel(newReputation.score);
       set({ user: { ...user, reputation: newReputation } });

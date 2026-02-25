@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Colors,
   Typography,
@@ -22,10 +23,13 @@ import {
 } from "../../src/constants/colors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
+import { usePartnerStore } from "../../src/store/partnerStore";
+import { PENDING_REFERRAL_KEY } from "../../src/constants/config";
 
 export default function ProfileSetupScreen() {
   const router = useRouter();
   const { firebaseUser, completeProfile, isLoading } = useAuthStore();
+  const { applyReferralBonus } = usePartnerStore();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -77,6 +81,13 @@ export default function ProfileSetupScreen() {
         lastName: lastName.trim(),
         phone: phone || undefined,
       });
+
+      // Apply referral bonus if this user was invited via a deep link
+      const referrerUid = await AsyncStorage.getItem(PENDING_REFERRAL_KEY);
+      if (referrerUid) {
+        applyReferralBonus(referrerUid);
+        await AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
+      }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 

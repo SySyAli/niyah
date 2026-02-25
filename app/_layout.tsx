@@ -4,9 +4,11 @@ import { StatusBar } from "expo-status-bar";
 import { View, Text, TextInput, StyleSheet, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Colors, BaseFontFamily } from "../src/constants/colors";
 import { useAuthStore } from "../src/store/authStore";
 import { isEmailSignInLink } from "../src/config/firebase";
+import { PENDING_REFERRAL_KEY } from "../src/constants/config";
 
 // Apply SF Pro Rounded globally as the default font family
 if (Platform.OS === "ios" && BaseFontFamily) {
@@ -24,31 +26,39 @@ if (Platform.OS === "ios" && BaseFontFamily) {
 export default function RootLayout() {
   const { completeEmailLink } = useAuthStore();
 
-  // Handle deep links for email magic link sign-in
+  // Handle deep links for email magic link sign-in and referral invites
   useEffect(() => {
-    // Handle link that opened the app
-    const handleInitialURL = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl && isEmailSignInLink(initialUrl)) {
+    const handleUrl = async (url: string) => {
+      if (isEmailSignInLink(url)) {
         try {
-          await completeEmailLink(initialUrl);
+          await completeEmailLink(url);
         } catch (error) {
           console.error("Error completing email link sign-in:", error);
+        }
+        return;
+      }
+
+      // niyah://invite?ref=<referrerUid>
+      const parsed = Linking.parse(url);
+      if (parsed.scheme === "niyah" && parsed.hostname === "invite") {
+        const referrerUid = parsed.queryParams?.ref;
+        if (referrerUid && typeof referrerUid === "string") {
+          await AsyncStorage.setItem(PENDING_REFERRAL_KEY, referrerUid);
         }
       }
     };
 
+    // Handle link that cold-started the app
+    const handleInitialURL = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) await handleUrl(initialUrl);
+    };
+
     handleInitialURL();
 
-    // Handle links while the app is open
-    const subscription = Linking.addEventListener("url", async (event) => {
-      if (isEmailSignInLink(event.url)) {
-        try {
-          await completeEmailLink(event.url);
-        } catch (error) {
-          console.error("Error completing email link sign-in:", error);
-        }
-      }
+    // Handle links while the app is already open
+    const subscription = Linking.addEventListener("url", (event) => {
+      handleUrl(event.url);
     });
 
     return () => {
@@ -74,6 +84,13 @@ export default function RootLayout() {
           options={{
             headerShown: false,
             presentation: "fullScreenModal",
+          }}
+        />
+        <Stack.Screen
+          name="invite"
+          options={{
+            headerShown: false,
+            animation: "slide_from_bottom",
           }}
         />
       </Stack>

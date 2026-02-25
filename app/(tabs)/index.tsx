@@ -1,4 +1,5 @@
 import React, { useRef, useMemo } from "react";
+import BlobsBackground from "../../src/components/BlobsBackground";
 import {
   View,
   Text,
@@ -407,6 +408,8 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Blurry blobs background */}
+      <BlobsBackground />
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}

@@ -114,6 +114,22 @@ export default function ProfileScreen() {
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
 
+          {/* Reputation Badge */}
+          <View style={styles.reputationBadge}>
+            <View
+              style={[
+                styles.reputationDot,
+                {
+                  backgroundColor: getReputationColor(reputation?.score || 50),
+                },
+              ]}
+            />
+            <Text style={styles.reputationText}>
+              {reputationInfo?.label || "Sapling"} - {reputation?.score || 50}
+              /100
+            </Text>
+          </View>
+
           <View style={styles.headerStatsRow}>
             <Pressable
               style={styles.headerStatItem}
@@ -136,22 +152,6 @@ export default function ProfileScreen() {
               <Text style={styles.headerStatValue}>{partners.length}</Text>
               <Text style={styles.headerStatLabel}>Partners</Text>
             </Pressable>
-          </View>
-
-          {/* Reputation Badge */}
-          <View style={styles.reputationBadge}>
-            <View
-              style={[
-                styles.reputationDot,
-                {
-                  backgroundColor: getReputationColor(reputation?.score || 50),
-                },
-              ]}
-            />
-            <Text style={styles.reputationText}>
-              {reputationInfo?.label || "Sapling"} - {reputation?.score || 50}
-              /100
-            </Text>
           </View>
         </View>
 
@@ -472,10 +472,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginTop: Spacing.md,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.md,
     paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
   },
   headerStatItem: {
     alignItems: "center",

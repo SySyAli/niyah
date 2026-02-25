@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,13 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Card, Button } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -37,229 +38,9 @@ const BLOCKED_APPS = [
   "Facebook",
 ];
 
-export default function ConfirmSessionScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
-  const { currentPartner } = usePartnerStore();
-  const { startGroupSession } = useGroupSessionStore();
-  const user = useAuthStore((state) => state.user);
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
-  const cadence = (params.cadence as CadenceId) || "daily";
-  const config = CADENCES[cadence];
-
-  const handleConfirm = () => {
-    if (currentPartner && user) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      startGroupSession(cadence, [
-        {
-          userId: user.id,
-          name: user.name,
-          venmoHandle: user.venmoHandle,
-          profileImage: user.profileImage,
-          reputation: user.reputation,
-        },
-        {
-          userId: currentPartner.oderId,
-          name: currentPartner.name,
-          venmoHandle: currentPartner.venmoHandle,
-          profileImage: currentPartner.profileImage,
-          reputation: currentPartner.reputation,
-        },
-      ]);
-      router.replace("/session/active");
-    } else if (!currentPartner) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      // No partner selected - go to partner selection
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      router.push("/session/partner" as any);
-    }
-  };
-
-  const getDurationText = () => {
-    if (DEMO_MODE) return `${config.demoDuration / 1000} seconds (demo)`;
-    switch (cadence) {
-      case "daily":
-        return "24 hours";
-      case "weekly":
-        return "7 days";
-      case "monthly":
-        return "30 days";
-      default:
-        return "";
-    }
-  };
-
-  const getReputationLabel = (level: string) => {
-    const levelInfo =
-      REPUTATION_LEVELS[level as keyof typeof REPUTATION_LEVELS];
-    return levelInfo?.label || level;
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={20}>
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-        </View>
-
-        {/* Title */}
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>Ready to Focus?</Text>
-          <Text style={styles.subtitle}>Review your duo session details</Text>
-        </View>
-
-        {/* Partner Card */}
-        {currentPartner ? (
-          <Card style={styles.partnerCard}>
-            <Text style={styles.partnerLabel}>Your Accountability Partner</Text>
-            <View style={styles.partnerInfo}>
-              <View style={styles.partnerAvatar}>
-                <Text style={styles.partnerInitial}>
-                  {currentPartner.name.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.partnerDetails}>
-                <Text style={styles.partnerName}>{currentPartner.name}</Text>
-                <View style={styles.reputationBadge}>
-                  <Text style={styles.reputationText}>
-                    {getReputationLabel(currentPartner.reputation.level)} (
-                    {currentPartner.reputation.score}/100)
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <Pressable
-              style={styles.changePartnerButton}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={() => router.push("/session/partner" as any)}
-            >
-              <Text style={styles.changePartnerText}>Change Partner</Text>
-            </Pressable>
-          </Card>
-        ) : (
-          <Card style={styles.noPartnerCard}>
-            <Text style={styles.noPartnerText}>No partner selected</Text>
-            <Button
-              title="Select Partner"
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={() => router.push("/session/partner" as any)}
-              variant="secondary"
-            />
-          </Card>
-        )}
-
-        {/* Session Details */}
-        <Card style={styles.detailsCard}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Session Type</Text>
-            <Text style={styles.detailValue}>{config.name}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Duration</Text>
-            <Text style={styles.detailValue}>{getDurationText()}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Your Stake</Text>
-            <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Partner's Stake</Text>
-            <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
-          </View>
-        </Card>
-
-        {/* How It Works */}
-        <Card style={styles.howItWorksCard}>
-          <Text style={styles.howItWorksTitle}>How Duo Sessions Work</Text>
-          <View style={styles.outcomeRow}>
-            <View style={styles.outcomeDot} />
-            <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>Both complete:</Text> You
-              both keep your stakes
-            </Text>
-          </View>
-          <View style={styles.outcomeRow}>
-            <View
-              style={[styles.outcomeDot, { backgroundColor: Colors.gain }]}
-            />
-            <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>You win:</Text> Partner pays
-              you {formatMoney(config.stake)} via Venmo
-            </Text>
-          </View>
-          <View style={styles.outcomeRow}>
-            <View
-              style={[styles.outcomeDot, { backgroundColor: Colors.loss }]}
-            />
-            <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>You lose:</Text> You pay
-              partner {formatMoney(config.stake)} via Venmo
-            </Text>
-          </View>
-          <View style={styles.outcomeRow}>
-            <View
-              style={[styles.outcomeDot, { backgroundColor: Colors.textMuted }]}
-            />
-            <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>Both fail:</Text> Both
-              stakes forfeited
-            </Text>
-          </View>
-        </Card>
-
-        {/* Warning */}
-        <Card style={styles.warningCard}>
-          <Text style={styles.warningTitle}>Important</Text>
-          <Text style={styles.warningText}>
-            Once you start, distracting apps will be blocked. If you surrender
-            early, you'll owe your partner {formatMoney(config.stake)}. Your
-            reputation score will be affected by payment reliability.
-          </Text>
-        </Card>
-
-        {/* Blocked Apps */}
-        <View style={styles.blockedSection}>
-          <Text style={styles.blockedTitle}>Apps that will be blocked</Text>
-          <View style={styles.appList}>
-            {BLOCKED_APPS.map((app) => (
-              <View key={app} style={styles.appBadge}>
-                <Text style={styles.appName}>{app}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={styles.blockedNote}>
-            Demo mode: Apps are not actually blocked
-          </Text>
-        </View>
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Button
-          title={
-            currentPartner ? "Start Duo Session" : "Select a Partner First"
-          }
-          onPress={handleConfirm}
-          size="large"
-          disabled={!currentPartner}
-        />
-        <Text style={styles.disclaimer}>
-          Your {formatMoney(config.stake)} stake will be deducted immediately
-        </Text>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -489,3 +270,227 @@ const styles = StyleSheet.create({
     fontSize: Typography.labelSmall,
   },
 });
+
+export default function ConfirmSessionScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const { currentPartner } = usePartnerStore();
+  const { startGroupSession } = useGroupSessionStore();
+  const user = useAuthStore((state) => state.user);
+
+  const cadence = (params.cadence as CadenceId) || "daily";
+  const config = CADENCES[cadence];
+
+  const handleConfirm = () => {
+    if (currentPartner && user) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      startGroupSession(cadence, [
+        {
+          userId: user.id,
+          name: user.name,
+          venmoHandle: user.venmoHandle,
+          profileImage: user.profileImage,
+          reputation: user.reputation,
+        },
+        {
+          userId: currentPartner.oderId,
+          name: currentPartner.name,
+          venmoHandle: currentPartner.venmoHandle,
+          profileImage: currentPartner.profileImage,
+          reputation: currentPartner.reputation,
+        },
+      ]);
+      router.replace("/session/active");
+    } else if (!currentPartner) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // No partner selected - go to partner selection
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.push("/session/partner" as any);
+    }
+  };
+
+  const getDurationText = () => {
+    if (DEMO_MODE) return `${config.demoDuration / 1000} seconds (demo)`;
+    switch (cadence) {
+      case "daily":
+        return "24 hours";
+      case "weekly":
+        return "7 days";
+      case "monthly":
+        return "30 days";
+      default:
+        return "";
+    }
+  };
+
+  const getReputationLabel = (level: string) => {
+    const levelInfo =
+      REPUTATION_LEVELS[level as keyof typeof REPUTATION_LEVELS];
+    return levelInfo?.label || level;
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} hitSlop={20}>
+            <Text style={styles.backText}>Back</Text>
+          </Pressable>
+        </View>
+
+        {/* Title */}
+        <View style={styles.titleSection}>
+          <Text style={styles.title}>Ready to Focus?</Text>
+          <Text style={styles.subtitle}>Review your duo session details</Text>
+        </View>
+
+        {/* Partner Card */}
+        {currentPartner ? (
+          <Card style={styles.partnerCard}>
+            <Text style={styles.partnerLabel}>Your Accountability Partner</Text>
+            <View style={styles.partnerInfo}>
+              <View style={styles.partnerAvatar}>
+                <Text style={styles.partnerInitial}>
+                  {currentPartner.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.partnerDetails}>
+                <Text style={styles.partnerName}>{currentPartner.name}</Text>
+                <View style={styles.reputationBadge}>
+                  <Text style={styles.reputationText}>
+                    {getReputationLabel(currentPartner.reputation.level)} (
+                    {currentPartner.reputation.score}/100)
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <Pressable
+              style={styles.changePartnerButton}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onPress={() => router.push("/session/partner" as any)}
+            >
+              <Text style={styles.changePartnerText}>Change Partner</Text>
+            </Pressable>
+          </Card>
+        ) : (
+          <Card style={styles.noPartnerCard}>
+            <Text style={styles.noPartnerText}>No partner selected</Text>
+            <Button
+              title="Select Partner"
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onPress={() => router.push("/session/partner" as any)}
+              variant="secondary"
+            />
+          </Card>
+        )}
+
+        {/* Session Details */}
+        <Card style={styles.detailsCard}>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Session Type</Text>
+            <Text style={styles.detailValue}>{config.name}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Duration</Text>
+            <Text style={styles.detailValue}>{getDurationText()}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Your Stake</Text>
+            <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Partner's Stake</Text>
+            <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
+          </View>
+        </Card>
+
+        {/* How It Works */}
+        <Card style={styles.howItWorksCard}>
+          <Text style={styles.howItWorksTitle}>How Duo Sessions Work</Text>
+          <View style={styles.outcomeRow}>
+            <View style={styles.outcomeDot} />
+            <Text style={styles.outcomeText}>
+              <Text style={styles.outcomeHighlight}>Both complete:</Text> You
+              both keep your stakes
+            </Text>
+          </View>
+          <View style={styles.outcomeRow}>
+            <View
+              style={[styles.outcomeDot, { backgroundColor: Colors.gain }]}
+            />
+            <Text style={styles.outcomeText}>
+              <Text style={styles.outcomeHighlight}>You win:</Text> Partner pays
+              you {formatMoney(config.stake)} via Venmo
+            </Text>
+          </View>
+          <View style={styles.outcomeRow}>
+            <View
+              style={[styles.outcomeDot, { backgroundColor: Colors.loss }]}
+            />
+            <Text style={styles.outcomeText}>
+              <Text style={styles.outcomeHighlight}>You lose:</Text> You pay
+              partner {formatMoney(config.stake)} via Venmo
+            </Text>
+          </View>
+          <View style={styles.outcomeRow}>
+            <View
+              style={[styles.outcomeDot, { backgroundColor: Colors.textMuted }]}
+            />
+            <Text style={styles.outcomeText}>
+              <Text style={styles.outcomeHighlight}>Both fail:</Text> Both
+              stakes forfeited
+            </Text>
+          </View>
+        </Card>
+
+        {/* Warning */}
+        <Card style={styles.warningCard}>
+          <Text style={styles.warningTitle}>Important</Text>
+          <Text style={styles.warningText}>
+            Once you start, distracting apps will be blocked. If you surrender
+            early, you'll owe your partner {formatMoney(config.stake)}. Your
+            reputation score will be affected by payment reliability.
+          </Text>
+        </Card>
+
+        {/* Blocked Apps */}
+        <View style={styles.blockedSection}>
+          <Text style={styles.blockedTitle}>Apps that will be blocked</Text>
+          <View style={styles.appList}>
+            {BLOCKED_APPS.map((app) => (
+              <View key={app} style={styles.appBadge}>
+                <Text style={styles.appName}>{app}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.blockedNote}>
+            Demo mode: Apps are not actually blocked
+          </Text>
+        </View>
+      </ScrollView>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Button
+          title={
+            currentPartner ? "Start Duo Session" : "Select a Partner First"
+          }
+          onPress={handleConfirm}
+          size="large"
+          disabled={!currentPartner}
+        />
+        <Text style={styles.disclaimer}>
+          Your {formatMoney(config.stake)} stake will be deducted immediately
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}

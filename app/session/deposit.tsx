@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,12 +11,13 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
 import { Button, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -35,6 +36,8 @@ const QuickAmountButton: React.FC<QuickAmountButtonProps> = ({
   onPress,
   isSelected,
 }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -80,6 +83,8 @@ const QuickAmountButton: React.FC<QuickAmountButtonProps> = ({
 };
 
 export default function DepositScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { deposit, balance } = useWalletStore();
   const [inputValue, setInputValue] = useState("");
@@ -227,7 +232,7 @@ export default function DepositScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,

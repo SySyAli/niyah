@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,13 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
 import { Card, Button } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -23,6 +24,8 @@ import { REPUTATION_LEVELS } from "../../src/constants/config";
 import { Partner } from "../../src/types";
 
 export default function PartnerSelectionScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { partners, currentPartner, selectPartner, sendInvite } =
     usePartnerStore();
@@ -244,7 +247,8 @@ export default function PartnerSelectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,

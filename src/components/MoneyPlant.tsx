@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
-import { Colors, Typography, Spacing, Font } from "../constants/colors";
+import { Typography, Spacing, Font } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 import { Partner } from "../types";
 
 interface MoneyPlantProps {
@@ -24,6 +25,7 @@ const CoinLeaf: React.FC<CoinLeafProps> = ({
   delay,
   side,
 }) => {
+  const Colors = useColors();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
@@ -53,10 +55,33 @@ const CoinLeaf: React.FC<CoinLeafProps> = ({
 
   const dollars = (amount / 100).toFixed(0);
 
+  const coinLeafStyle = {
+    position: "absolute" as const,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.warning,
+    borderWidth: 3,
+    borderColor: "#8B6914",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  };
+
+  const coinTextStyle = {
+    fontSize: Typography.labelSmall,
+    ...Font.semibold,
+    color: "#3A3228",
+  };
+
   return (
     <Animated.View
       style={[
-        styles.coinLeaf,
+        coinLeafStyle,
         {
           left: position.x,
           top: position.y,
@@ -64,7 +89,7 @@ const CoinLeaf: React.FC<CoinLeafProps> = ({
         },
       ]}
     >
-      <Text style={styles.coinText}>${dollars}</Text>
+      <Text style={coinTextStyle}>${dollars}</Text>
     </Animated.View>
   );
 };
@@ -75,6 +100,7 @@ const PartnerNode: React.FC<{
   position: { x: number; y: number };
   index: number;
 }> = ({ partner, position, index }) => {
+  const Colors = useColors();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -85,6 +111,35 @@ const PartnerNode: React.FC<{
       useNativeDriver: true,
     }).start();
   }, [fadeAnim, index]);
+
+  const partnerAvatarStyle = {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.backgroundCard,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  };
+
+  const partnerAvatarActiveStyle = {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryMuted,
+  };
+
+  const partnerInitialStyle = {
+    fontSize: Typography.labelMedium,
+    ...Font.medium,
+    color: Colors.text,
+  };
+
+  const partnerNameStyle = {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    textAlign: "center" as const,
+  };
 
   return (
     <Animated.View
@@ -99,15 +154,15 @@ const PartnerNode: React.FC<{
     >
       <View
         style={[
-          styles.partnerAvatar,
-          partner.isActive && styles.partnerAvatarActive,
+          partnerAvatarStyle,
+          partner.isActive && partnerAvatarActiveStyle,
         ]}
       >
-        <Text style={styles.partnerInitial}>
+        <Text style={partnerInitialStyle}>
           {partner.name.charAt(0).toUpperCase()}
         </Text>
       </View>
-      <Text style={styles.partnerName} numberOfLines={1}>
+      <Text style={partnerNameStyle} numberOfLines={1}>
         {partner.name.split(" ")[0]}
       </Text>
     </Animated.View>
@@ -120,6 +175,8 @@ export const MoneyPlant: React.FC<MoneyPlantProps> = ({
   growthStage,
   totalEarned,
 }) => {
+  const Colors = useColors();
+
   // Generate leaf positions based on growth stage
   const generateLeafPositions = () => {
     const leaves: {
@@ -177,7 +234,7 @@ export const MoneyPlant: React.FC<MoneyPlantProps> = ({
   return (
     <View style={styles.container}>
       {/* Tagline */}
-      <Text style={styles.tagline}>Money does grow on trees</Text>
+      <Text style={[styles.tagline, { color: Colors.primary }]}>Money does grow on trees</Text>
 
       {/* Plant Container */}
       <View style={styles.plantContainer}>
@@ -188,6 +245,7 @@ export const MoneyPlant: React.FC<MoneyPlantProps> = ({
             {
               height: getPlantHeight(),
               width: getStemWidth(),
+              backgroundColor: Colors.gain,
             },
           ]}
         />
@@ -223,33 +281,34 @@ export const MoneyPlant: React.FC<MoneyPlantProps> = ({
       {/* Stats */}
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{partners.length}</Text>
-          <Text style={styles.statLabel}>Partners</Text>
+          <Text style={[styles.statValue, { color: Colors.text }]}>{partners.length}</Text>
+          <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>Partners</Text>
         </View>
-        <View style={styles.statDivider} />
+        <View style={[styles.statDivider, { backgroundColor: Colors.border }]} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{totalLeaves}</Text>
-          <Text style={styles.statLabel}>Sessions</Text>
+          <Text style={[styles.statValue, { color: Colors.text }]}>{totalLeaves}</Text>
+          <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>Sessions</Text>
         </View>
-        <View style={styles.statDivider} />
+        <View style={[styles.statDivider, { backgroundColor: Colors.border }]} />
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: Colors.gain }]}>
             ${(totalEarned / 100).toFixed(0)}
           </Text>
-          <Text style={styles.statLabel}>Earned</Text>
+          <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>Earned</Text>
         </View>
       </View>
 
       {/* Growth Stage */}
       <View style={styles.growthIndicator}>
-        <Text style={styles.growthLabel}>Growth Stage {growthStage}/5</Text>
+        <Text style={[styles.growthLabel, { color: Colors.textSecondary }]}>Growth Stage {growthStage}/5</Text>
         <View style={styles.growthBar}>
           {[1, 2, 3, 4, 5].map((stage) => (
             <View
               key={stage}
               style={[
                 styles.growthDot,
-                stage <= growthStage && styles.growthDotActive,
+                { backgroundColor: Colors.border },
+                stage <= growthStage && { backgroundColor: Colors.gain },
               ]}
             />
           ))}
@@ -267,7 +326,6 @@ const styles = StyleSheet.create({
   tagline: {
     fontSize: Typography.titleSmall,
     ...Font.medium,
-    color: Colors.primary,
     marginBottom: Spacing.lg,
     fontStyle: "italic",
   },
@@ -279,7 +337,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   stem: {
-    backgroundColor: Colors.gain,
     borderRadius: 4,
     position: "absolute",
     bottom: 50,
@@ -305,56 +362,10 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
   },
-  coinLeaf: {
-    position: "absolute",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.warning,
-    borderWidth: 3,
-    borderColor: "#8B6914",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  coinText: {
-    fontSize: Typography.labelSmall,
-    ...Font.semibold,
-    color: "#3A3228",
-  },
   partnerNode: {
     position: "absolute",
     alignItems: "center",
     width: 60,
-  },
-  partnerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  partnerAvatarActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryMuted,
-  },
-  partnerInitial: {
-    fontSize: Typography.labelMedium,
-    ...Font.medium,
-    color: Colors.text,
-  },
-  partnerName: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-    marginTop: 2,
-    textAlign: "center",
   },
   statsRow: {
     flexDirection: "row",
@@ -369,17 +380,14 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: Typography.titleLarge,
     ...Font.semibold,
-    color: Colors.text,
   },
   statLabel: {
     fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: Colors.border,
   },
   growthIndicator: {
     alignItems: "center",
@@ -387,7 +395,6 @@ const styles = StyleSheet.create({
   },
   growthLabel: {
     fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
     marginBottom: Spacing.sm,
   },
   growthBar: {
@@ -398,9 +405,5 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: Colors.border,
-  },
-  growthDotActive: {
-    backgroundColor: Colors.gain,
   },
 });

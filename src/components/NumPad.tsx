@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,13 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   FontWeight,
   Font,
 } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const PAD_WIDTH = Math.min(SCREEN_WIDTH - 48, 360);
@@ -32,6 +32,7 @@ const NumPadKey: React.FC<NumPadKeyProps> = ({
   onPress,
   variant = "default",
 }) => {
+  const Colors = useColors();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -51,6 +52,34 @@ const NumPadKey: React.FC<NumPadKeyProps> = ({
 
   const isBackspace = value === "backspace";
   const isEmpty = value === "";
+
+  const styles = useMemo(() => StyleSheet.create({
+    key: {
+      width: KEY_SIZE,
+      height: KEY_SIZE * 0.65,
+      borderRadius: Radius.md,
+      backgroundColor: Colors.backgroundSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    keyPlaceholder: {
+      width: KEY_SIZE,
+      height: KEY_SIZE * 0.65,
+    },
+    keyText: {
+      fontSize: Typography.headlineMedium,
+      ...Font.medium,
+      color: Colors.text,
+    },
+    actionKeyText: {
+      color: Colors.textSecondary,
+    },
+    backspaceText: {
+      fontSize: Typography.bodyMedium,
+      ...Font.medium,
+      color: Colors.textSecondary,
+    },
+  }), [Colors]);
 
   if (isEmpty) {
     return <View style={styles.keyPlaceholder} />;
@@ -109,9 +138,9 @@ export const NumPad: React.FC<NumPadProps> = ({
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={containerStyles.container}>
       {keys.map((row, rowIndex) => (
-        <View key={rowIndex} style={styles.row}>
+        <View key={rowIndex} style={containerStyles.row}>
           {row.map((key, keyIndex) => (
             <NumPadKey
               key={`${rowIndex}-${keyIndex}`}
@@ -126,6 +155,19 @@ export const NumPad: React.FC<NumPadProps> = ({
   );
 };
 
+const containerStyles = StyleSheet.create({
+  container: {
+    width: PAD_WIDTH,
+    alignSelf: "center",
+    gap: Spacing.sm,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: Spacing.sm,
+  },
+});
+
 // Amount display with cursor animation
 interface AmountDisplayProps {
   amount: string;
@@ -138,6 +180,7 @@ export const AmountDisplay: React.FC<AmountDisplayProps> = ({
   label,
   placeholder = "$0",
 }) => {
+  const Colors = useColors();
   const cursorOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -161,6 +204,39 @@ export const AmountDisplay: React.FC<AmountDisplayProps> = ({
   const displayAmount = amount || placeholder;
   const isEmpty = !amount;
 
+  const styles = useMemo(() => StyleSheet.create({
+    amountContainer: {
+      alignItems: "center",
+      paddingVertical: Spacing.xl,
+    },
+    amountLabel: {
+      fontSize: Typography.labelLarge,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.sm,
+      ...Font.medium,
+    },
+    amountRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    amountText: {
+      fontSize: Typography.displayLarge,
+      ...Font.semibold,
+      color: Colors.text,
+      letterSpacing: -2,
+    },
+    placeholderText: {
+      color: Colors.textTertiary,
+    },
+    cursor: {
+      width: 3,
+      height: 50,
+      backgroundColor: Colors.primary,
+      marginLeft: 2,
+      borderRadius: 2,
+    },
+  }), [Colors]);
+
   return (
     <View style={styles.amountContainer}>
       {label && <Text style={styles.amountLabel}>{label}</Text>}
@@ -175,71 +251,3 @@ export const AmountDisplay: React.FC<AmountDisplayProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: PAD_WIDTH,
-    alignSelf: "center",
-    gap: Spacing.sm,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: Spacing.sm,
-  },
-  key: {
-    width: KEY_SIZE,
-    height: KEY_SIZE * 0.65,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.backgroundSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  keyPlaceholder: {
-    width: KEY_SIZE,
-    height: KEY_SIZE * 0.65,
-  },
-  keyText: {
-    fontSize: Typography.headlineMedium,
-    ...Font.medium,
-    color: Colors.text,
-  },
-  actionKeyText: {
-    color: Colors.textSecondary,
-  },
-  backspaceText: {
-    fontSize: Typography.bodyMedium,
-    ...Font.medium,
-    color: Colors.textSecondary,
-  },
-  amountContainer: {
-    alignItems: "center",
-    paddingVertical: Spacing.xl,
-  },
-  amountLabel: {
-    fontSize: Typography.labelLarge,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-    ...Font.medium,
-  },
-  amountRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  amountText: {
-    fontSize: Typography.displayLarge,
-    ...Font.semibold,
-    color: Colors.text,
-    letterSpacing: -2,
-  },
-  placeholderText: {
-    color: Colors.textTertiary,
-  },
-  cursor: {
-    width: 3,
-    height: 50,
-    backgroundColor: Colors.primary,
-    marginLeft: 2,
-    borderRadius: 2,
-  },
-});

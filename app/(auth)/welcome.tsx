@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -24,13 +24,14 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   FontWeight,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import {
   ContinuousScene,
   BlobsScene,
@@ -182,6 +183,8 @@ const AnimatedPageText: React.FC<{
   scrollX: SharedValue<number>;
   pageWidth: number;
 }> = ({ page, index, scrollX, pageWidth }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: index * pageWidth - scrollX.value }],
   }));
@@ -205,6 +208,8 @@ const AnimatedDot: React.FC<{
   scrollX: SharedValue<number>;
   pageWidth: number;
 }> = ({ index, scrollX, pageWidth }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const style = useAnimatedStyle(() => {
     const input = [
       (index - 1) * pageWidth,
@@ -233,6 +238,8 @@ const AnimatedDot: React.FC<{
 // --- Main Screen ---
 
 export default function WelcomeScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const scrollX = useSharedValue(0);
@@ -438,7 +445,8 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
   },

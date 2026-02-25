@@ -1,14 +1,14 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Card, Button, Timer } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
@@ -16,6 +16,146 @@ import { useCountdown } from "../../src/hooks/useCountdown";
 import { formatMoney } from "../../src/utils/format";
 
 export default function ActiveSessionScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  content: {
+    flex: 1,
+    padding: Spacing.lg,
+  },
+  header: {
+    alignItems: "center",
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.gainLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+    marginBottom: Spacing.md,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.gain,
+    marginRight: Spacing.sm,
+  },
+  statusText: {
+    fontSize: Typography.labelSmall,
+    ...Font.bold,
+    color: Colors.gain,
+    letterSpacing: 1,
+  },
+  title: {
+    fontSize: Typography.headlineMedium,
+    ...Font.bold,
+    color: Colors.text,
+  },
+  subtitle: {
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
+  },
+  timerSection: {
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  progressSection: {
+    marginBottom: Spacing.md,
+  },
+  progressContainer: {
+    width: "100%",
+    height: 6,
+    backgroundColor: Colors.backgroundTertiary,
+    borderRadius: Radius.full,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.full,
+  },
+  progressText: {
+    fontSize: Typography.labelSmall,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginTop: Spacing.sm,
+  },
+  payoutCard: {
+    alignItems: "center",
+    backgroundColor: Colors.gainLight,
+    borderWidth: 1,
+    borderColor: Colors.gain,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  payoutLabel: {
+    fontSize: Typography.labelMedium,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xs,
+  },
+  payoutAmount: {
+    fontSize: Typography.titleLarge,
+    ...Font.bold,
+    color: Colors.gain,
+  },
+  tipsSection: {
+    backgroundColor: Colors.backgroundCard,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  tipsTitle: {
+    fontSize: Typography.bodyMedium,
+    ...Font.semibold,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  tipsList: {
+    gap: 4,
+  },
+  tipRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    width: "100%",
+  },
+  tipBullet: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.textMuted,
+    marginRight: Spacing.sm,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: Typography.bodySmall,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+  },
+  footer: {
+    marginTop: "auto",
+    gap: Spacing.sm,
+  },
+  footerButtonsRow: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+  },
+  footerButton: {
+    flex: 1,
+  },
+  warningText: {
+    textAlign: "center",
+    color: Colors.textMuted,
+    fontSize: Typography.labelSmall,
+  },
+  }), [Colors]);
   const router = useRouter();
   const { activeGroupSession, completeGroupSession } = useGroupSessionStore();
   // Tracks intentional navigation away (complete or surrender) so the
@@ -194,143 +334,3 @@ export default function ActiveSessionScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    padding: Spacing.lg,
-  },
-  header: {
-    alignItems: "center",
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.gainLight,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    marginBottom: Spacing.md,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.gain,
-    marginRight: Spacing.sm,
-  },
-  statusText: {
-    fontSize: Typography.labelSmall,
-    ...Font.bold,
-    color: Colors.gain,
-    letterSpacing: 1,
-  },
-  title: {
-    fontSize: Typography.headlineMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  timerSection: {
-    alignItems: "center",
-    marginBottom: Spacing.md,
-  },
-  progressSection: {
-    marginBottom: Spacing.md,
-  },
-  progressContainer: {
-    width: "100%",
-    height: 6,
-    backgroundColor: Colors.backgroundTertiary,
-    borderRadius: Radius.full,
-    overflow: "hidden",
-  },
-  progressBar: {
-    height: "100%",
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-  },
-  progressText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    marginTop: Spacing.sm,
-  },
-  payoutCard: {
-    alignItems: "center",
-    backgroundColor: Colors.gainLight,
-    borderWidth: 1,
-    borderColor: Colors.gain,
-    paddingVertical: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  payoutLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  payoutAmount: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.gain,
-  },
-  tipsSection: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  tipsTitle: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  tipsList: {
-    gap: 4,
-  },
-  tipRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    width: "100%",
-  },
-  tipBullet: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.textMuted,
-    marginRight: Spacing.sm,
-  },
-  tipText: {
-    flex: 1,
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    lineHeight: 16,
-  },
-  footer: {
-    marginTop: "auto",
-    gap: Spacing.sm,
-  },
-  footerButtonsRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  footerButton: {
-    flex: 1,
-  },
-  warningText: {
-    textAlign: "center",
-    color: Colors.textMuted,
-    fontSize: Typography.labelSmall,
-  },
-});

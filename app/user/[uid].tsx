@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,13 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  Colors,
   Spacing,
   Typography,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
@@ -22,7 +23,7 @@ import { PublicProfile } from "../../src/types";
 
 // ─── Rep badge ────────────────────────────────────────────────────────────────
 
-const repColor = (level: string): string => {
+const repColor = (level: string, Colors: ThemeColors): string => {
   switch (level) {
     case "oak":
       return Colors.accentGold;
@@ -40,6 +41,8 @@ const repColor = (level: string): string => {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PublicProfileScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { uid } = useLocalSearchParams<{ uid: string }>();
   const router = useRouter();
   const { user } = useAuthStore();
@@ -174,19 +177,19 @@ export default function PublicProfileScreen() {
         <View
           style={[
             styles.repBadge,
-            { borderColor: repColor(profile.reputation.level) },
+            { borderColor: repColor(profile.reputation.level, Colors) },
           ]}
         >
           <View
             style={[
               styles.repDot,
-              { backgroundColor: repColor(profile.reputation.level) },
+              { backgroundColor: repColor(profile.reputation.level, Colors) },
             ]}
           />
           <Text
             style={[
               styles.repBadgeText,
-              { color: repColor(profile.reputation.level) },
+              { color: repColor(profile.reputation.level, Colors) },
             ]}
           >
             {profile.reputation.level.charAt(0).toUpperCase() +
@@ -259,7 +262,8 @@ export default function PublicProfileScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,

@@ -1,12 +1,12 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import {
-  Colors,
   Typography,
   Spacing,
   FontWeight,
   Font,
 } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 import { formatMoney } from "../utils/format";
 
 interface BalanceProps {
@@ -28,6 +28,7 @@ export const Balance: React.FC<BalanceProps> = ({
   animate = true,
   color = "default",
 }) => {
+  const Colors = useColors();
   const opacityAnim = useRef(new Animated.Value(animate ? 0 : 1)).current;
   const isPositive = amount >= 0;
 
@@ -66,6 +67,28 @@ export const Balance: React.FC<BalanceProps> = ({
       ? `+${formatMoney(amount, showCents)}`
       : formatMoney(amount, showCents);
 
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      alignItems: "flex-start",
+    },
+    label: {
+      fontSize: Typography.labelLarge,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.xs,
+      ...Font.medium,
+    },
+    amount: {
+      ...Font.bold,
+      fontVariant: ["tabular-nums"],
+      letterSpacing: -1,
+    },
+    compactAmount: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      fontVariant: ["tabular-nums"],
+    },
+  }), [Colors]);
+
   return (
     <View style={styles.container}>
       {label && (
@@ -99,12 +122,19 @@ export const CompactBalance: React.FC<CompactBalanceProps> = ({
   amount,
   showSign = false,
 }) => {
+  const Colors = useColors();
   const isPositive = amount >= 0;
   const color = isPositive ? Colors.gain : Colors.loss;
   const prefix = showSign ? (isPositive ? "+" : "-") : amount < 0 ? "-" : "";
 
+  const compactAmountStyle = {
+    fontSize: Typography.bodyMedium,
+    ...Font.semibold,
+    fontVariant: ["tabular-nums"] as ["tabular-nums"],
+  };
+
   return (
-    <Text style={[styles.compactAmount, { color }]}>
+    <Text style={[compactAmountStyle, { color }]}>
       {prefix}
       {formatMoney(Math.abs(amount))}
     </Text>
@@ -119,25 +149,3 @@ export const AnimatedDigit: React.FC<{
 }> = ({ digit, fontSize, color }) => (
   <Text style={{ fontSize, ...Font.bold, color }}>{digit}</Text>
 );
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "flex-start",
-  },
-  label: {
-    fontSize: Typography.labelLarge,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-    ...Font.medium,
-  },
-  amount: {
-    ...Font.bold,
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -1,
-  },
-  compactAmount: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    fontVariant: ["tabular-nums"],
-  },
-});

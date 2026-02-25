@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,17 +11,20 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   FontWeight,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 
 export default function CheckEmailScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
   const { sendEmailLink, isLoading } = useAuthStore();
@@ -135,7 +138,8 @@ export default function CheckEmailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,

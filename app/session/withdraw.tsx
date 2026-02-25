@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,18 +13,21 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
 import { Button, Card, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
 
 export default function WithdrawScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { withdraw, balance } = useWalletStore();
   const [inputValue, setInputValue] = useState("");
@@ -262,7 +265,8 @@ export default function WithdrawScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,

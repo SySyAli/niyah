@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, Text, TextInput, StyleSheet, Platform } from "react-native";
+import { View, Text, TextInput, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Colors, BaseFontFamily } from "../src/constants/colors";
+import { BaseFontFamily } from "../src/constants/colors";
+import { useColors } from "../src/hooks/useColors";
+import { useThemeStore } from "../src/store/themeStore";
 import { useAuthStore } from "../src/store/authStore";
 import { isEmailSignInLink } from "../src/config/firebase";
 import { PENDING_REFERRAL_KEY } from "../src/constants/config";
@@ -24,6 +26,8 @@ if (Platform.OS === "ios" && BaseFontFamily) {
 }
 
 export default function RootLayout() {
+  const Colors = useColors();
+  const theme = useThemeStore((s) => s.theme);
   const { completeEmailLink } = useAuthStore();
 
   // Handle deep links for email magic link sign-in and referral invites
@@ -64,8 +68,8 @@ export default function RootLayout() {
   }, [completeEmailLink]);
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <StatusBar style="light" />
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.background }}>
+      <StatusBar style={theme === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -102,9 +106,3 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-});

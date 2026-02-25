@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,13 +16,14 @@ import Svg, { Path } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import * as AppleAuthentication from "expo-apple-authentication";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   FontWeight,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { generateNonce, sha256 } from "../../src/config/firebase";
@@ -57,6 +58,8 @@ const GoogleIcon = () => (
 // ---------------------------------------------------------------------------
 
 export default function AuthEntryScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const {
     loginWithGoogle,
@@ -308,7 +311,8 @@ export default function AuthEntryScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,

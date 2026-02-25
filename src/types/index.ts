@@ -52,7 +52,7 @@ export interface UserReputation {
   totalOwedPaid: number; // Total amount user has paid when losing (cents)
   totalOwedMissed: number; // Total amount user failed to pay (cents)
   lastUpdated: Date;
-  referralCount: number; // Successful referrals; each adds a persistent score boost
+  referralCount?: number; // Successful referrals; each adds a persistent score boost
 }
 
 // Partner relationship

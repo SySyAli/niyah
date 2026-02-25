@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,12 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
 import { Card, Button } from "../../src/components";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
@@ -35,6 +35,7 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
   canAfford,
   onPress,
 }) => {
+  const Colors = useColors();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -52,6 +53,114 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    cadenceCard: {
+      padding: Spacing.lg,
+    },
+    cadenceCardDisabled: {
+      opacity: 0.6,
+    },
+    cadenceHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: Spacing.lg,
+    },
+    cadenceName: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    duoBadge: {
+      backgroundColor: Colors.primaryMuted,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.full,
+    },
+    duoBadgeText: {
+      color: Colors.primary,
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
+    },
+    cadenceDetails: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: Spacing.md,
+    },
+    cadenceColumn: {
+      flex: 1,
+    },
+    cadenceColumnRight: {
+      alignItems: "flex-end",
+    },
+    columnLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textTertiary,
+      marginBottom: Spacing.xs,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    stakeValue: {
+      fontSize: Typography.headlineSmall,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    arrowContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: Spacing.md,
+    },
+    arrowLine: {
+      width: 40,
+      height: 2,
+      backgroundColor: Colors.border,
+    },
+    arrowHead: {
+      width: 0,
+      height: 0,
+      borderTopWidth: 6,
+      borderBottomWidth: 6,
+      borderLeftWidth: 8,
+      borderTopColor: "transparent",
+      borderBottomColor: "transparent",
+      borderLeftColor: Colors.border,
+    },
+    outcomeHint: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      textAlign: "center",
+      marginTop: Spacing.md,
+      marginBottom: Spacing.md,
+      paddingTop: Spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    cadenceMeta: {
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+      paddingTop: Spacing.sm,
+    },
+    metaText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+    },
+    insufficientBanner: {
+      backgroundColor: Colors.lossLight,
+      marginTop: Spacing.sm,
+      marginHorizontal: -Spacing.lg,
+      marginBottom: -Spacing.lg,
+      padding: Spacing.sm,
+      borderBottomLeftRadius: Radius.lg,
+      borderBottomRightRadius: Radius.lg,
+    },
+    insufficientText: {
+      color: Colors.loss,
+      fontSize: Typography.labelSmall,
+      textAlign: "center",
+      ...Font.medium,
+    },
+  }), [Colors]);
 
   // stickK model: stake = stake (no ROI, just keep your stake on completion)
   // In duo mode, winner takes loser's stake
@@ -113,6 +222,7 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
 };
 
 export default function SessionTabScreen() {
+  const Colors = useColors();
   const router = useRouter();
   const { activeGroupSession } = useGroupSessionStore();
   const userId = useAuthStore((state) => state.user?.id);
@@ -121,6 +231,120 @@ export default function SessionTabScreen() {
   const activePartner = activeGroupSession?.participants.find(
     (p) => p.userId !== userId,
   );
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xxl,
+    },
+    content: {
+      flex: 1,
+      padding: Spacing.lg,
+    },
+    title: {
+      fontSize: Typography.headlineMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    subtitle: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+      marginBottom: Spacing.lg,
+    },
+    cadenceList: {
+      gap: Spacing.md,
+      marginBottom: Spacing.xl,
+    },
+    // Active session styles
+    activeHeader: {
+      marginBottom: Spacing.xl,
+    },
+    activeCard: {
+      alignItems: "center",
+      paddingVertical: Spacing.xxl,
+      marginBottom: Spacing.xl,
+    },
+    pulseIndicator: {
+      width: 48,
+      height: 48,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: Spacing.lg,
+    },
+    pulseOuter: {
+      position: "absolute",
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: Colors.primaryMuted,
+    },
+    pulseInner: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: Colors.primary,
+    },
+    activeTitle: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    activeSubtitle: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    activeFooter: {
+      marginTop: "auto",
+    },
+    // How it works
+    howItWorks: {
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+      padding: Spacing.lg,
+    },
+    howTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.md,
+    },
+    stepList: {
+      gap: Spacing.sm,
+    },
+    stepRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    stepNumber: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: Colors.backgroundTertiary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: Spacing.sm,
+    },
+    stepNumberText: {
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
+      color: Colors.textSecondary,
+    },
+    stepText: {
+      flex: 1,
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      lineHeight: 20,
+    },
+  }), [Colors]);
 
   if (activeGroupSession) {
     return (
@@ -204,227 +428,3 @@ export default function SessionTabScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
-  },
-  content: {
-    flex: 1,
-    padding: Spacing.lg,
-  },
-  title: {
-    fontSize: Typography.headlineMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.lg,
-  },
-  cadenceList: {
-    gap: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
-  cadenceCard: {
-    padding: Spacing.lg,
-  },
-  cadenceCardDisabled: {
-    opacity: 0.6,
-  },
-  cadenceHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.lg,
-  },
-  cadenceName: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  duoBadge: {
-    backgroundColor: Colors.primaryMuted,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
-  },
-  duoBadgeText: {
-    color: Colors.primary,
-    fontSize: Typography.labelSmall,
-    ...Font.semibold,
-  },
-  outcomeHint: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    marginTop: Spacing.md,
-    marginBottom: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  cadenceDetails: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.md,
-  },
-  cadenceColumn: {
-    flex: 1,
-  },
-  cadenceColumnRight: {
-    alignItems: "flex-end",
-  },
-  columnLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textTertiary,
-    marginBottom: Spacing.xs,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  stakeValue: {
-    fontSize: Typography.headlineSmall,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  earnValue: {
-    fontSize: Typography.headlineSmall,
-    ...Font.bold,
-    color: Colors.gain,
-  },
-  arrowContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Spacing.md,
-  },
-  arrowLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: Colors.border,
-  },
-  arrowHead: {
-    width: 0,
-    height: 0,
-    borderTopWidth: 6,
-    borderBottomWidth: 6,
-    borderLeftWidth: 8,
-    borderTopColor: "transparent",
-    borderBottomColor: "transparent",
-    borderLeftColor: Colors.border,
-  },
-  cadenceMeta: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingTop: Spacing.sm,
-  },
-  metaText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-  },
-  insufficientBanner: {
-    backgroundColor: Colors.lossLight,
-    marginTop: Spacing.sm,
-    marginHorizontal: -Spacing.lg,
-    marginBottom: -Spacing.lg,
-    padding: Spacing.sm,
-    borderBottomLeftRadius: Radius.lg,
-    borderBottomRightRadius: Radius.lg,
-  },
-  insufficientText: {
-    color: Colors.loss,
-    fontSize: Typography.labelSmall,
-    textAlign: "center",
-    ...Font.medium,
-  },
-  // Active session styles
-  activeHeader: {
-    marginBottom: Spacing.xl,
-  },
-  activeCard: {
-    alignItems: "center",
-    paddingVertical: Spacing.xxl,
-    marginBottom: Spacing.xl,
-  },
-  pulseIndicator: {
-    width: 48,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.lg,
-  },
-  pulseOuter: {
-    position: "absolute",
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.primaryMuted,
-  },
-  pulseInner: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: Colors.primary,
-  },
-  activeTitle: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  activeSubtitle: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  activeFooter: {
-    marginTop: "auto",
-  },
-  // How it works
-  howItWorks: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-  },
-  howTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  stepList: {
-    gap: Spacing.sm,
-  },
-  stepRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  stepNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.backgroundTertiary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: Spacing.sm,
-  },
-  stepNumberText: {
-    fontSize: Typography.labelSmall,
-    ...Font.semibold,
-    color: Colors.textSecondary,
-  },
-  stepText: {
-    flex: 1,
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-});

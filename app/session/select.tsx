@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,208 +10,22 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Card, Button } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../../src/store/walletStore";
 import { CADENCES, CadenceId, DEMO_MODE } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
 
-interface CadenceOptionProps {
-  cadenceKey: CadenceId;
-  config: (typeof CADENCES)[CadenceId];
-  isSelected: boolean;
-  canAfford: boolean;
-  onSelect: () => void;
-}
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
-const CadenceOption: React.FC<CadenceOptionProps> = ({
-  cadenceKey,
-  config,
-  isSelected,
-  canAfford,
-  onSelect,
-}) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
-  };
-
-  const handleSelect = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onSelect();
-  };
-
-  return (
-    <Pressable
-      onPress={canAfford ? handleSelect : undefined}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-    >
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <View
-          style={[
-            styles.optionCard,
-            isSelected && styles.optionSelected,
-            !canAfford && styles.optionDisabled,
-          ]}
-        >
-          <View style={styles.optionHeader}>
-            <Text style={styles.optionName}>{config.name}</Text>
-            {isSelected && (
-              <View style={styles.checkmark}>
-                <Text style={styles.checkmarkText}>Selected</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.optionDuration}>
-            {DEMO_MODE
-              ? `${config.demoDuration / 1000}s demo session`
-              : cadenceKey === "daily"
-                ? "24 hours"
-                : cadenceKey === "weekly"
-                  ? "7 days"
-                  : "30 days"}
-          </Text>
-          <View style={styles.optionPricing}>
-            <View style={styles.priceColumn}>
-              <Text style={styles.priceLabel}>Your Stake</Text>
-              <Text style={styles.stakeAmount}>
-                {formatMoney(config.stake)}
-              </Text>
-            </View>
-            <View style={styles.vsContainer}>
-              <Text style={styles.vsText}>vs</Text>
-            </View>
-            <View style={[styles.priceColumn, styles.priceColumnRight]}>
-              <Text style={styles.priceLabel}>Partner's Stake</Text>
-              <Text style={styles.stakeAmount}>
-                {formatMoney(config.stake)}
-              </Text>
-            </View>
-          </View>
-          {!canAfford && (
-            <Text style={styles.insufficientText}>Insufficient balance</Text>
-          )}
-        </View>
-      </Animated.View>
-    </Pressable>
-  );
-};
-
-export default function SelectCadenceScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
-  const balance = useWalletStore((state) => state.balance);
-  const [selectedCadence, setSelectedCadence] = useState<CadenceId>(
-    (params.cadence as CadenceId) || "daily",
-  );
-
-  const config = CADENCES[selectedCadence];
-  const canAfford = balance >= config.stake;
-
-  const handleContinue = () => {
-    if (canAfford) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      router.push(`/session/confirm?cadence=${selectedCadence}`);
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={20}>
-            <Text style={styles.backText}>Cancel</Text>
-          </Pressable>
-        </View>
-
-        <Text style={styles.title}>Choose Your Session</Text>
-        <Text style={styles.subtitle}>Higher stakes, higher rewards</Text>
-
-        {/* Options */}
-        <View style={styles.options}>
-          {(Object.keys(CADENCES) as CadenceId[]).map((key) => (
-            <CadenceOption
-              key={key}
-              cadenceKey={key}
-              config={CADENCES[key]}
-              isSelected={selectedCadence === key}
-              canAfford={balance >= CADENCES[key].stake}
-              onSelect={() => setSelectedCadence(key)}
-            />
-          ))}
-        </View>
-
-        {/* Summary */}
-        <Card style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Duo Session Summary</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Your stake</Text>
-            <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Partner's stake</Text>
-            <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.outcomeSection}>
-            <Text style={styles.outcomeTitle}>Possible Outcomes</Text>
-            <View style={styles.outcomeRow}>
-              <Text style={styles.outcomeLabel}>Both complete:</Text>
-              <Text style={styles.outcomeValue}>Both keep stakes</Text>
-            </View>
-            <View style={styles.outcomeRow}>
-              <Text style={styles.outcomeLabel}>You win:</Text>
-              <Text style={[styles.outcomeValue, { color: Colors.gain }]}>
-                Partner pays you {formatMoney(config.stake)}
-              </Text>
-            </View>
-            <View style={styles.outcomeRow}>
-              <Text style={styles.outcomeLabel}>You lose:</Text>
-              <Text style={[styles.outcomeValue, { color: Colors.loss }]}>
-                You pay partner {formatMoney(config.stake)}
-              </Text>
-            </View>
-          </View>
-        </Card>
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.balanceText}>
-          Available: {formatMoney(balance)}
-        </Text>
-        <Button
-          title={canAfford ? "Continue" : "Insufficient Balance"}
-          onPress={handleContinue}
-          disabled={!canAfford}
-          size="large"
-        />
-      </View>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -397,3 +211,196 @@ const styles = StyleSheet.create({
     fontSize: Typography.bodySmall,
   },
 });
+
+interface CadenceOptionProps {
+  cadenceKey: CadenceId;
+  config: (typeof CADENCES)[CadenceId];
+  isSelected: boolean;
+  canAfford: boolean;
+  onSelect: () => void;
+}
+
+const CadenceOption: React.FC<CadenceOptionProps> = ({
+  cadenceKey,
+  config,
+  isSelected,
+  canAfford,
+  onSelect,
+}) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
+  };
+
+  const handleSelect = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onSelect();
+  };
+
+  return (
+    <Pressable
+      onPress={canAfford ? handleSelect : undefined}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <View
+          style={[
+            styles.optionCard,
+            isSelected && styles.optionSelected,
+            !canAfford && styles.optionDisabled,
+          ]}
+        >
+          <View style={styles.optionHeader}>
+            <Text style={styles.optionName}>{config.name}</Text>
+            {isSelected && (
+              <View style={styles.checkmark}>
+                <Text style={styles.checkmarkText}>Selected</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.optionDuration}>
+            {DEMO_MODE
+              ? `${config.demoDuration / 1000}s demo session`
+              : cadenceKey === "daily"
+                ? "24 hours"
+                : cadenceKey === "weekly"
+                  ? "7 days"
+                  : "30 days"}
+          </Text>
+          <View style={styles.optionPricing}>
+            <View style={styles.priceColumn}>
+              <Text style={styles.priceLabel}>Your Stake</Text>
+              <Text style={styles.stakeAmount}>
+                {formatMoney(config.stake)}
+              </Text>
+            </View>
+            <View style={styles.vsContainer}>
+              <Text style={styles.vsText}>vs</Text>
+            </View>
+            <View style={[styles.priceColumn, styles.priceColumnRight]}>
+              <Text style={styles.priceLabel}>Partner's Stake</Text>
+              <Text style={styles.stakeAmount}>
+                {formatMoney(config.stake)}
+              </Text>
+            </View>
+          </View>
+          {!canAfford && (
+            <Text style={styles.insufficientText}>Insufficient balance</Text>
+          )}
+        </View>
+      </Animated.View>
+    </Pressable>
+  );
+};
+
+export default function SelectCadenceScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const balance = useWalletStore((state) => state.balance);
+  const [selectedCadence, setSelectedCadence] = useState<CadenceId>(
+    (params.cadence as CadenceId) || "daily",
+  );
+
+  const config = CADENCES[selectedCadence];
+  const canAfford = balance >= config.stake;
+
+  const handleContinue = () => {
+    if (canAfford) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      router.push(`/session/confirm?cadence=${selectedCadence}`);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} hitSlop={20}>
+            <Text style={styles.backText}>Cancel</Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.title}>Choose Your Session</Text>
+        <Text style={styles.subtitle}>Higher stakes, higher rewards</Text>
+
+        {/* Options */}
+        <View style={styles.options}>
+          {(Object.keys(CADENCES) as CadenceId[]).map((key) => (
+            <CadenceOption
+              key={key}
+              cadenceKey={key}
+              config={CADENCES[key]}
+              isSelected={selectedCadence === key}
+              canAfford={balance >= CADENCES[key].stake}
+              onSelect={() => setSelectedCadence(key)}
+            />
+          ))}
+        </View>
+
+        {/* Summary */}
+        <Card style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Duo Session Summary</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Your stake</Text>
+            <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Partner's stake</Text>
+            <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.outcomeSection}>
+            <Text style={styles.outcomeTitle}>Possible Outcomes</Text>
+            <View style={styles.outcomeRow}>
+              <Text style={styles.outcomeLabel}>Both complete:</Text>
+              <Text style={styles.outcomeValue}>Both keep stakes</Text>
+            </View>
+            <View style={styles.outcomeRow}>
+              <Text style={styles.outcomeLabel}>You win:</Text>
+              <Text style={[styles.outcomeValue, { color: Colors.gain }]}>
+                Partner pays you {formatMoney(config.stake)}
+              </Text>
+            </View>
+            <View style={styles.outcomeRow}>
+              <Text style={styles.outcomeLabel}>You lose:</Text>
+              <Text style={[styles.outcomeValue, { color: Colors.loss }]}>
+                You pay partner {formatMoney(config.stake)}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      </ScrollView>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.balanceText}>
+          Available: {formatMoney(balance)}
+        </Text>
+        <Button
+          title={canAfford ? "Continue" : "Insufficient Balance"}
+          onPress={handleContinue}
+          disabled={!canAfford}
+          size="large"
+        />
+      </View>
+    </SafeAreaView>
+  );
+}

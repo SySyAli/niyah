@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,26 +16,31 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import {
-  Colors,
   Spacing,
   Typography,
   Radius,
   Font,
+  type ThemeColors,
 } from "../src/constants/colors";
+import { useColors } from "../src/hooks/useColors";
 import { useAuthStore } from "../src/store/authStore";
 
 // ─── Back button ──────────────────────────────────────────────────────────────
 
-const BackButton: React.FC<{ onPress: () => void }> = ({ onPress }) => (
-  <Pressable
-    onPress={onPress}
-    style={styles.backBtn}
-    accessibilityRole="button"
-    accessibilityLabel="Go back"
-  >
-    <Text style={styles.backBtnText}>← Back</Text>
-  </Pressable>
-);
+const BackButton: React.FC<{ onPress: () => void }> = ({ onPress }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  return (
+    <Pressable
+      onPress={onPress}
+      style={styles.backBtn}
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
+    >
+      <Text style={styles.backBtnText}>← Back</Text>
+    </Pressable>
+  );
+};
 
 // ─── Share Button — Reanimated spring ─────────────────────────────────────────
 
@@ -43,6 +48,8 @@ const ShareButton: React.FC<{ onPress: () => void; shared: boolean }> = ({
   onPress,
   shared,
 }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -88,16 +95,22 @@ const ShareButton: React.FC<{ onPress: () => void; shared: boolean }> = ({
 const PerkRow: React.FC<{ emoji: string; text: string }> = ({
   emoji,
   text,
-}) => (
-  <View style={styles.perkRow}>
-    <Text style={styles.perkEmoji}>{emoji}</Text>
-    <Text style={styles.perkText}>{text}</Text>
-  </View>
-);
+}) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  return (
+    <View style={styles.perkRow}>
+      <Text style={styles.perkEmoji}>{emoji}</Text>
+      <Text style={styles.perkText}>{text}</Text>
+    </View>
+  );
+};
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function InviteScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { user } = useAuthStore();
   const uid = user?.id ?? "";
@@ -184,7 +197,8 @@ export default function InviteScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,

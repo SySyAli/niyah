@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,15 +8,18 @@ import {
   Pressable,
   Alert,
   TextInput,
+  Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
+import { useThemeStore } from "../../src/store/themeStore";
 import * as Haptics from "expo-haptics";
 import { Card, Balance } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -27,6 +30,8 @@ import { formatMoney, formatRelativeTime } from "../../src/utils/format";
 import { REPUTATION_LEVELS } from "../../src/constants/config";
 
 export default function ProfileScreen() {
+  const Colors = useColors();
+  const { theme, toggleTheme } = useThemeStore();
   const router = useRouter();
   const { user, logout, setVenmoHandle, setZelleHandle } = useAuthStore();
   const { balance, transactions, pendingWithdrawal } = useWalletStore();
@@ -60,6 +65,8 @@ export default function ProfileScreen() {
       },
     ]);
   };
+
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   const completionRate =
     user && user.totalSessions > 0
@@ -135,7 +142,7 @@ export default function ProfileScreen() {
               style={styles.headerStatItem}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(tabs)/friends?tab=following");
+                router.push({ pathname: "/(tabs)/friends", params: { tab: "following" } });
               }}
             >
               <Text style={styles.headerStatValue}>{following.length}</Text>
@@ -146,7 +153,7 @@ export default function ProfileScreen() {
               style={styles.headerStatItem}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(tabs)/friends?tab=partners");
+                router.push({ pathname: "/(tabs)/friends", params: { tab: "partners" } });
               }}
             >
               <Text style={styles.headerStatValue}>{partners.length}</Text>
@@ -410,6 +417,22 @@ export default function ProfileScreen() {
 
         {/* Settings */}
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          <Card style={styles.settingsCard} animate={false}>
+            <View style={styles.settingRow}>
+              <Text style={styles.settingLabel}>Light Mode</Text>
+              <Switch
+                value={theme === "light"}
+                onValueChange={toggleTheme}
+                trackColor={{ false: Colors.backgroundTertiary, true: Colors.primary }}
+                thumbColor={Colors.white}
+              />
+            </View>
+          </Card>
+        </View>
+
+        {/* Account */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           <Card style={styles.settingsCard} animate={false}>
             <Pressable onPress={handleLogout} style={styles.settingRow}>
@@ -428,7 +451,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -831,8 +854,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   settingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
+  },
+  settingLabel: {
+    fontSize: Typography.bodyMedium,
+    color: Colors.text,
   },
   settingLabelDestructive: {
     fontSize: Typography.bodyMedium,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -14,19 +14,22 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   FontWeight,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { PENDING_REFERRAL_KEY } from "../../src/constants/config";
 
 export default function ProfileSetupScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { firebaseUser, completeProfile, isLoading } = useAuthStore();
   const { applyReferralBonus } = usePartnerStore();
@@ -223,7 +226,8 @@ export default function ProfileSetupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,

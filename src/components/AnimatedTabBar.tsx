@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { View, Pressable, StyleSheet, Platform, Text } from "react-native";
 import { SymbolView } from "expo-symbols";
 import type { SFSymbol } from "sf-symbols-typescript";
@@ -16,12 +16,12 @@ import Animated, {
 } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
 import {
-  Colors,
   Typography,
   Spacing,
   FontWeight,
   Font,
 } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 import { useScrollContext } from "../context/ScrollContext";
 
 // ────────────────────────────────────────────────────────────────────
@@ -156,6 +156,7 @@ const TabItem: React.FC<TabItemProps> = ({
   onLongPress,
   minimized,
 }) => {
+  const Colors = useColors();
   const scale = useSharedValue(1);
   const pillOpacity = useSharedValue(focused ? 1 : 0);
 
@@ -191,6 +192,32 @@ const TabItem: React.FC<TabItemProps> = ({
   }));
 
   const color = focused ? Colors.primaryLight : Colors.textMuted;
+
+  const styles = useMemo(() => StyleSheet.create({
+    tabItem: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconContainer: {
+      width: PILL_WIDTH,
+      height: PILL_HEIGHT,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pill: {
+      position: "absolute",
+      width: PILL_WIDTH,
+      height: PILL_HEIGHT,
+      borderRadius: PILL_HEIGHT / 2,
+      backgroundColor: Colors.primaryMuted,
+    },
+    label: {
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
+      marginTop: 2,
+    },
+  }), [Colors]);
 
   return (
     <AnimatedPressable
@@ -232,6 +259,7 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
   navigation,
   accessory,
 }) => {
+  const Colors = useColors();
   const insets = useSafeAreaInsets();
   const { scrollY } = useScrollContext();
 
@@ -281,6 +309,29 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
       easing: Easing.out(Easing.cubic),
     });
   }, [state.index, activeIndex]);
+
+  const styles = useMemo(() => StyleSheet.create({
+    wrapper: {
+      position: "relative",
+    },
+    accessoryContainer: {
+      backgroundColor: Colors.backgroundCard,
+      borderTopColor: Colors.border,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+    },
+    tabBar: {
+      flexDirection: "row",
+      backgroundColor: Colors.backgroundElevated,
+      borderTopColor: Colors.border,
+      borderTopWidth: 1,
+      height: TAB_BAR_HEIGHT,
+      paddingTop: Spacing.sm,
+      alignItems: "flex-start",
+      justifyContent: "space-around",
+    },
+  }), [Colors]);
 
   return (
     <View style={styles.wrapper}>
@@ -341,53 +392,3 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
     </View>
   );
 };
-
-// ────────────────────────────────────────────────────────────────────
-// Styles
-// ────────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  wrapper: {
-    position: "relative",
-  },
-  accessoryContainer: {
-    backgroundColor: Colors.backgroundCard,
-    borderTopColor: Colors.border,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: Colors.backgroundElevated,
-    borderTopColor: Colors.border,
-    borderTopWidth: 1,
-    height: TAB_BAR_HEIGHT,
-    paddingTop: Spacing.sm,
-    alignItems: "flex-start",
-    justifyContent: "space-around",
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconContainer: {
-    width: PILL_WIDTH,
-    height: PILL_HEIGHT,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pill: {
-    position: "absolute",
-    width: PILL_WIDTH,
-    height: PILL_HEIGHT,
-    borderRadius: PILL_HEIGHT / 2,
-    backgroundColor: Colors.primaryMuted,
-  },
-  label: {
-    fontSize: Typography.labelSmall,
-    ...Font.semibold,
-    marginTop: 2,
-  },
-});

@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,12 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
 import { Card, Balance, Button, MoneyPlant } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -35,6 +35,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   onPress,
   variant = "primary",
 }) => {
+  const Colors = useColors();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -52,6 +53,28 @@ const ActionButton: React.FC<ActionButtonProps> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    actionButton: {
+      backgroundColor: Colors.primary,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.sm + 2,
+      borderRadius: Radius.full,
+    },
+    actionButtonSecondary: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    actionButtonText: {
+      color: Colors.background,
+      ...Font.semibold,
+      fontSize: Typography.bodySmall,
+    },
+    actionButtonTextSecondary: {
+      color: Colors.text,
+    },
+  }), [Colors]);
 
   return (
     <Pressable
@@ -85,14 +108,39 @@ interface StatCardProps {
   color?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ value, label, color }) => (
-  <View style={styles.statCard}>
-    <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
+const StatCard: React.FC<StatCardProps> = ({ value, label, color }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => StyleSheet.create({
+    statCard: {
+      width: "48%",
+      flexGrow: 1,
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      alignItems: "center",
+    },
+    statValue: {
+      fontSize: Typography.headlineSmall,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    statLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+  }), [Colors]);
+
+  return (
+    <View style={styles.statCard}>
+      <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+};
 
 export default function DashboardScreen() {
+  const Colors = useColors();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const balance = useWalletStore((state) => state.balance);
@@ -111,6 +159,238 @@ export default function DashboardScreen() {
     (s) => s.participants.find((p) => p.userId === user?.id)?.completed,
   ).length;
   const growthStage = Math.min(5, Math.floor(totalLeaves / 3) + 1);
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xxl,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: Spacing.lg,
+    },
+    greeting: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+    },
+    name: {
+      fontSize: Typography.headlineMedium,
+      ...Font.bold,
+      color: Colors.text,
+      marginTop: 2,
+    },
+    balanceCard: {
+      alignItems: "center",
+      paddingVertical: Spacing.xl,
+      marginBottom: Spacing.md,
+    },
+    balanceLabel: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.sm,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+    balanceChange: {
+      marginTop: Spacing.sm,
+    },
+    changeText: {
+      fontSize: Typography.bodySmall,
+      ...Font.medium,
+    },
+    changePositive: {
+      color: Colors.gain,
+    },
+    changeNegative: {
+      color: Colors.loss,
+    },
+    balanceActions: {
+      flexDirection: "row",
+      gap: Spacing.sm,
+      marginTop: Spacing.lg,
+    },
+    activeSessionCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.primaryMuted,
+      borderColor: Colors.primary,
+      borderWidth: 1,
+      marginBottom: Spacing.md,
+      overflow: "hidden",
+    },
+    activeSessionIndicator: {
+      width: 4,
+      height: "100%",
+      backgroundColor: Colors.primary,
+      position: "absolute",
+      left: 0,
+    },
+    activeSessionContent: {
+      flex: 1,
+      paddingLeft: Spacing.sm,
+    },
+    activeSessionLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.primary,
+      ...Font.bold,
+      letterSpacing: 1,
+    },
+    activeSessionText: {
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+      color: Colors.text,
+      marginTop: 2,
+    },
+    activeSessionPayout: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      marginTop: 2,
+    },
+    activeSessionArrow: {
+      fontSize: Typography.bodySmall,
+      ...Font.semibold,
+      color: Colors.primary,
+    },
+    ctaCard: {
+      alignItems: "center",
+      paddingVertical: Spacing.xl,
+      marginBottom: Spacing.md,
+    },
+    ctaTitle: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    ctaSubtitle: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+      marginBottom: Spacing.lg,
+      textAlign: "center",
+    },
+    plantSection: {
+      marginBottom: Spacing.lg,
+    },
+    plantCard: {
+      padding: Spacing.md,
+    },
+    inviteCard: {
+      backgroundColor: Colors.primaryMuted,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: Colors.primaryLight,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      marginBottom: Spacing.lg,
+    },
+    inviteCardContent: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    inviteCardTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    inviteCardSubtitle: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginTop: 2,
+    },
+    inviteBadge: {
+      backgroundColor: Colors.primary,
+      borderRadius: Radius.full,
+      paddingVertical: 4,
+      paddingHorizontal: Spacing.md,
+    },
+    inviteBadgeText: {
+      fontSize: Typography.labelLarge,
+      ...Font.bold,
+      color: Colors.white,
+    },
+    statsSection: {
+      marginBottom: Spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.md,
+    },
+    statsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: Spacing.sm,
+    },
+    recentSection: {
+      marginBottom: Spacing.lg,
+    },
+    activityCard: {
+      marginBottom: Spacing.sm,
+      padding: Spacing.md,
+    },
+    activityRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    activityInfo: {
+      flex: 1,
+    },
+    activityTitle: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    activityDate: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textTertiary,
+      marginTop: 2,
+    },
+    activityResult: {
+      alignItems: "flex-end",
+    },
+    activityEarned: {
+      fontSize: Typography.bodyMedium,
+      ...Font.bold,
+      color: Colors.gain,
+    },
+    activityLost: {
+      fontSize: Typography.bodyMedium,
+      ...Font.bold,
+      color: Colors.loss,
+    },
+    statusBadge: {
+      backgroundColor: Colors.gainLight,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      borderRadius: Radius.xs,
+      marginTop: 4,
+    },
+    statusBadgeFailed: {
+      backgroundColor: Colors.lossLight,
+    },
+    statusSuccess: {
+      fontSize: Typography.labelSmall,
+      color: Colors.gain,
+      ...Font.medium,
+    },
+    statusFailed: {
+      fontSize: Typography.labelSmall,
+      color: Colors.loss,
+      ...Font.medium,
+    },
+  }), [Colors]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -324,272 +604,3 @@ export default function DashboardScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.lg,
-  },
-  greeting: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-  },
-  name: {
-    fontSize: Typography.headlineMedium,
-    ...Font.bold,
-    color: Colors.text,
-    marginTop: 2,
-  },
-  balanceCard: {
-    alignItems: "center",
-    paddingVertical: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  balanceLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  balanceChange: {
-    marginTop: Spacing.sm,
-  },
-  changeText: {
-    fontSize: Typography.bodySmall,
-    ...Font.medium,
-  },
-  changePositive: {
-    color: Colors.gain,
-  },
-  changeNegative: {
-    color: Colors.loss,
-  },
-  balanceActions: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-    marginTop: Spacing.lg,
-  },
-  actionButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm + 2,
-    borderRadius: Radius.full,
-  },
-  actionButtonSecondary: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  actionButtonText: {
-    color: Colors.background,
-    ...Font.semibold,
-    fontSize: Typography.bodySmall,
-  },
-  actionButtonTextSecondary: {
-    color: Colors.text,
-  },
-  activeSessionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.primaryMuted,
-    borderColor: Colors.primary,
-    borderWidth: 1,
-    marginBottom: Spacing.md,
-    overflow: "hidden",
-  },
-  activeSessionIndicator: {
-    width: 4,
-    height: "100%",
-    backgroundColor: Colors.primary,
-    position: "absolute",
-    left: 0,
-  },
-  activeSessionContent: {
-    flex: 1,
-    paddingLeft: Spacing.sm,
-  },
-  activeSessionLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.primary,
-    ...Font.bold,
-    letterSpacing: 1,
-  },
-  activeSessionText: {
-    fontSize: Typography.bodyLarge,
-    ...Font.semibold,
-    color: Colors.text,
-    marginTop: 2,
-  },
-  activeSessionPayout: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  activeSessionArrow: {
-    fontSize: Typography.bodySmall,
-    ...Font.semibold,
-    color: Colors.primary,
-  },
-  ctaCard: {
-    alignItems: "center",
-    paddingVertical: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  ctaTitle: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  ctaSubtitle: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.lg,
-    textAlign: "center",
-  },
-  plantSection: {
-    marginBottom: Spacing.lg,
-  },
-  plantCard: {
-    padding: Spacing.md,
-  },
-  inviteCard: {
-    backgroundColor: Colors.primaryMuted,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.primaryLight,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  inviteCardContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  inviteCardTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  inviteCardSubtitle: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  inviteBadge: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-    paddingVertical: 4,
-    paddingHorizontal: Spacing.md,
-  },
-  inviteBadgeText: {
-    fontSize: Typography.labelLarge,
-    ...Font.bold,
-    color: Colors.white,
-  },
-  statsSection: {
-    marginBottom: Spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
-  },
-  statCard: {
-    width: "48%",
-    flexGrow: 1,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: Typography.headlineSmall,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  statLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  recentSection: {
-    marginBottom: Spacing.lg,
-  },
-  activityCard: {
-    marginBottom: Spacing.sm,
-    padding: Spacing.md,
-  },
-  activityRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  activityInfo: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  activityDate: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textTertiary,
-    marginTop: 2,
-  },
-  activityResult: {
-    alignItems: "flex-end",
-  },
-  activityEarned: {
-    fontSize: Typography.bodyMedium,
-    ...Font.bold,
-    color: Colors.gain,
-  },
-  activityLost: {
-    fontSize: Typography.bodyMedium,
-    ...Font.bold,
-    color: Colors.loss,
-  },
-  statusBadge: {
-    backgroundColor: Colors.gainLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radius.xs,
-    marginTop: 4,
-  },
-  statusBadgeFailed: {
-    backgroundColor: Colors.lossLight,
-  },
-  statusSuccess: {
-    fontSize: Typography.labelSmall,
-    color: Colors.gain,
-    ...Font.medium,
-  },
-  statusFailed: {
-    fontSize: Typography.labelSmall,
-    color: Colors.loss,
-    ...Font.medium,
-  },
-});

@@ -160,6 +160,12 @@ export default function ProfileScreen() {
               <Text style={styles.paymentValue}>{partners.length}</Text>
               <Text style={styles.paymentLabel}>Partners</Text>
             </View>
+            <View style={styles.paymentStat}>
+              <Text style={[styles.paymentValue, { color: Colors.primaryLight }]}>
+                {reputation?.referralCount || 0}
+              </Text>
+              <Text style={styles.paymentLabel}>Referred</Text>
+            </View>
           </View>
         </Card>
 

@@ -3,12 +3,7 @@ import { View, Text, StyleSheet, Animated } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-import {
-  Typography,
-  Spacing,
-  FontWeight,
-  Font,
-} from "../constants/colors";
+import { Typography, Spacing, FontWeight, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 import { formatTime } from "../utils/format";
 
@@ -75,51 +70,55 @@ export const Timer: React.FC<TimerProps> = ({
     return Colors.primary;
   };
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    ringContainer: {
-      position: "relative",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    svgContainer: {
-      position: "absolute",
-    },
-    timeContainer: {
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    simpleContainer: {
-      alignItems: "center",
-    },
-    label: {
-      fontSize: Typography.labelMedium,
-      color: Colors.textSecondary,
-      marginBottom: Spacing.xs,
-      ...Font.medium,
-      textTransform: "uppercase",
-      letterSpacing: 1,
-    },
-    time: {
-      ...Font.bold,
-      fontVariant: ["tabular-nums"],
-      letterSpacing: -1,
-    },
-    progressText: {
-      fontSize: Typography.labelSmall,
-      color: Colors.textMuted,
-      marginTop: Spacing.xs,
-    },
-    inlineTime: {
-      fontSize: Typography.bodyLarge,
-      ...Font.semibold,
-      color: Colors.text,
-      fontVariant: ["tabular-nums"],
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        ringContainer: {
+          position: "relative",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        svgContainer: {
+          position: "absolute",
+        },
+        timeContainer: {
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        simpleContainer: {
+          alignItems: "center",
+        },
+        label: {
+          fontSize: Typography.labelMedium,
+          color: Colors.textSecondary,
+          marginBottom: Spacing.xs,
+          ...Font.medium,
+          textTransform: "uppercase",
+          letterSpacing: 1,
+        },
+        time: {
+          ...Font.bold,
+          fontVariant: ["tabular-nums"],
+          letterSpacing: -1,
+        },
+        progressText: {
+          fontSize: Typography.labelSmall,
+          color: Colors.textMuted,
+          marginTop: Spacing.xs,
+        },
+        inlineTime: {
+          fontSize: Typography.bodyLarge,
+          ...Font.semibold,
+          color: Colors.text,
+          fontVariant: ["tabular-nums"],
+        },
+      }),
+    [Colors],
+  );
 
   return (
     <Animated.View style={[styles.container, { opacity: opacityAnim }]}>

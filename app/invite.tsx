@@ -199,149 +199,149 @@ export default function InviteScreen() {
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
 
-  // ── Back ──────────────────────────────────────────────────────────────────
-  backBtn: {
-    alignSelf: "flex-start",
-    marginBottom: Spacing.sm,
-  },
-  backBtnText: {
-    fontSize: Typography.bodyMedium,
-    ...Font.medium,
-    color: Colors.primaryLight,
-  },
+    // ── Back ──────────────────────────────────────────────────────────────────
+    backBtn: {
+      alignSelf: "flex-start",
+      marginBottom: Spacing.sm,
+    },
+    backBtnText: {
+      fontSize: Typography.bodyMedium,
+      ...Font.medium,
+      color: Colors.primaryLight,
+    },
 
-  // ── Header ────────────────────────────────────────────────────────────────
-  header: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
-  },
-  title: {
-    fontSize: Typography.headlineMedium,
-    ...Font.heavy,
-    color: Colors.text,
-    letterSpacing: -0.5,
-    marginBottom: Spacing.sm,
-  },
-  bonusBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: Colors.primaryMuted,
-    borderRadius: Radius.full,
-    paddingVertical: 4,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.primaryLight,
-  },
-  bonusBadgeText: {
-    fontSize: Typography.labelLarge,
-    ...Font.semibold,
-    color: Colors.primaryLight,
-  },
-  subtitle: {
-    fontSize: Typography.bodySmall,
-    ...Font.regular,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
+    // ── Header ────────────────────────────────────────────────────────────────
+    header: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.lg,
+      paddingBottom: Spacing.md,
+    },
+    title: {
+      fontSize: Typography.headlineMedium,
+      ...Font.heavy,
+      color: Colors.text,
+      letterSpacing: -0.5,
+      marginBottom: Spacing.sm,
+    },
+    bonusBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: Colors.primaryMuted,
+      borderRadius: Radius.full,
+      paddingVertical: 4,
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.sm,
+      borderWidth: 1,
+      borderColor: Colors.primaryLight,
+    },
+    bonusBadgeText: {
+      fontSize: Typography.labelLarge,
+      ...Font.semibold,
+      color: Colors.primaryLight,
+    },
+    subtitle: {
+      fontSize: Typography.bodySmall,
+      ...Font.regular,
+      color: Colors.textSecondary,
+      lineHeight: 18,
+    },
 
-  // ── Perks ─────────────────────────────────────────────────────────────────
-  perksCard: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  perkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  perkDivider: {
-    height: 1,
-    backgroundColor: Colors.borderLight,
-  },
-  perkEmoji: {
-    fontSize: 20,
-  },
-  perkText: {
-    flex: 1,
-    fontSize: Typography.bodySmall,
-    ...Font.regular,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-  },
+    // ── Perks ─────────────────────────────────────────────────────────────────
+    perksCard: {
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    perkRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.md,
+      paddingVertical: Spacing.sm,
+    },
+    perkDivider: {
+      height: 1,
+      backgroundColor: Colors.borderLight,
+    },
+    perkEmoji: {
+      fontSize: 20,
+    },
+    perkText: {
+      flex: 1,
+      fontSize: Typography.bodySmall,
+      ...Font.regular,
+      color: Colors.textSecondary,
+      lineHeight: 18,
+    },
 
-  // ── Link preview ──────────────────────────────────────────────────────────
-  linkCard: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.xl,
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  linkLabel: {
-    fontSize: Typography.labelSmall,
-    ...Font.medium,
-    color: Colors.textMuted,
-    marginBottom: 2,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  linkText: {
-    fontSize: Typography.bodySmall,
-    ...Font.regular,
-    color: Colors.primaryLight,
-    fontVariant: ["tabular-nums"],
-  },
+    // ── Link preview ──────────────────────────────────────────────────────────
+    linkCard: {
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.xl,
+      backgroundColor: Colors.backgroundSecondary,
+      borderRadius: Radius.md,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    linkLabel: {
+      fontSize: Typography.labelSmall,
+      ...Font.medium,
+      color: Colors.textMuted,
+      marginBottom: 2,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    linkText: {
+      fontSize: Typography.bodySmall,
+      ...Font.regular,
+      color: Colors.primaryLight,
+      fontVariant: ["tabular-nums"],
+    },
 
-  // ── Share button ──────────────────────────────────────────────────────────
-  shareContainer: {
-    paddingHorizontal: Spacing.lg,
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-  shareBtn: {
-    width: "100%",
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  shareBtnShared: {
-    backgroundColor: Colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: Colors.primaryLight,
-  },
-  shareBtnText: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.white,
-    letterSpacing: 0.2,
-  },
-  shareBtnTextShared: {
-    color: Colors.primaryLight,
-  },
-  shareHint: {
-    fontSize: Typography.labelSmall,
-    ...Font.regular,
-    color: Colors.textMuted,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-});
+    // ── Share button ──────────────────────────────────────────────────────────
+    shareContainer: {
+      paddingHorizontal: Spacing.lg,
+      alignItems: "center",
+      gap: Spacing.sm,
+    },
+    shareBtn: {
+      width: "100%",
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.full,
+      backgroundColor: Colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    shareBtnShared: {
+      backgroundColor: Colors.primaryMuted,
+      borderWidth: 1,
+      borderColor: Colors.primaryLight,
+    },
+    shareBtnText: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.white,
+      letterSpacing: 0.2,
+    },
+    shareBtnTextShared: {
+      color: Colors.primaryLight,
+    },
+    shareHint: {
+      fontSize: Typography.labelSmall,
+      ...Font.regular,
+      color: Colors.textMuted,
+      textAlign: "center",
+      lineHeight: 16,
+    },
+  });

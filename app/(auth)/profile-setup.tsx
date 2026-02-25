@@ -228,116 +228,116 @@ export default function ProfileSetupScreen() {
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  flex: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xxl,
-  },
-  header: {
-    marginBottom: Spacing.xxl,
-  },
-  title: {
-    fontSize: 36,
-    ...Font.heavy,
-    color: Colors.text,
-    letterSpacing: -0.5,
-    lineHeight: 42,
-  },
-  subtitle: {
-    fontSize: Typography.bodyLarge,
-    color: Colors.textSecondary,
-    marginTop: Spacing.sm,
-  },
-  errorContainer: {
-    backgroundColor: "rgba(220, 38, 38, 0.1)",
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.2)",
-  },
-  errorText: {
-    color: Colors.danger,
-    fontSize: Typography.bodySmall,
-    textAlign: "center",
-  },
-  form: {
-    gap: Spacing.lg,
-  },
-  inputGroup: {
-    gap: Spacing.sm,
-  },
-  labelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  label: {
-    fontSize: Typography.labelLarge,
-    ...Font.medium,
-    color: Colors.text,
-  },
-  optional: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-  },
-  input: {
-    height: 56,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.lg,
-    fontSize: 20,
-    ...Font.medium,
-    color: Colors.text,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  lockedInputContainer: {
-    position: "relative",
-  },
-  lockedInput: {
-    color: Colors.textMuted,
-    backgroundColor: Colors.backgroundSecondary,
-  },
-  lockIcon: {
-    position: "absolute",
-    right: Spacing.lg,
-    top: 0,
-    bottom: 0,
-    textAlignVertical: "center",
-    lineHeight: 56,
-    fontSize: 16,
-  },
-  phoneRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  prefixBox: {
-    height: 56,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  prefixText: {
-    fontSize: 20,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  phoneInput: {
-    flex: 1,
-  },
-  buttonContainer: {
-    marginTop: Spacing.xxl,
-  },
-});
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    flex: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.xl,
+      paddingBottom: Spacing.xxl,
+    },
+    header: {
+      marginBottom: Spacing.xxl,
+    },
+    title: {
+      fontSize: 36,
+      ...Font.heavy,
+      color: Colors.text,
+      letterSpacing: -0.5,
+      lineHeight: 42,
+    },
+    subtitle: {
+      fontSize: Typography.bodyLarge,
+      color: Colors.textSecondary,
+      marginTop: Spacing.sm,
+    },
+    errorContainer: {
+      backgroundColor: "rgba(220, 38, 38, 0.1)",
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+      borderWidth: 1,
+      borderColor: "rgba(220, 38, 38, 0.2)",
+    },
+    errorText: {
+      color: Colors.danger,
+      fontSize: Typography.bodySmall,
+      textAlign: "center",
+    },
+    form: {
+      gap: Spacing.lg,
+    },
+    inputGroup: {
+      gap: Spacing.sm,
+    },
+    labelRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    label: {
+      fontSize: Typography.labelLarge,
+      ...Font.medium,
+      color: Colors.text,
+    },
+    optional: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+    },
+    input: {
+      height: 56,
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+      paddingHorizontal: Spacing.lg,
+      fontSize: 20,
+      ...Font.medium,
+      color: Colors.text,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    lockedInputContainer: {
+      position: "relative",
+    },
+    lockedInput: {
+      color: Colors.textMuted,
+      backgroundColor: Colors.backgroundSecondary,
+    },
+    lockIcon: {
+      position: "absolute",
+      right: Spacing.lg,
+      top: 0,
+      bottom: 0,
+      textAlignVertical: "center",
+      lineHeight: 56,
+      fontSize: 16,
+    },
+    phoneRow: {
+      flexDirection: "row",
+      gap: Spacing.sm,
+    },
+    prefixBox: {
+      height: 56,
+      paddingHorizontal: Spacing.lg,
+      backgroundColor: Colors.backgroundSecondary,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    prefixText: {
+      fontSize: 20,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    phoneInput: {
+      flex: 1,
+    },
+    buttonContainer: {
+      marginTop: Spacing.xxl,
+    },
+  });

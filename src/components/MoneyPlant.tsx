@@ -234,7 +234,9 @@ export const MoneyPlant: React.FC<MoneyPlantProps> = ({
   return (
     <View style={styles.container}>
       {/* Tagline */}
-      <Text style={[styles.tagline, { color: Colors.primary }]}>Money does grow on trees</Text>
+      <Text style={[styles.tagline, { color: Colors.primary }]}>
+        Money does grow on trees
+      </Text>
 
       {/* Plant Container */}
       <View style={styles.plantContainer}>
@@ -281,26 +283,42 @@ export const MoneyPlant: React.FC<MoneyPlantProps> = ({
       {/* Stats */}
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: Colors.text }]}>{partners.length}</Text>
-          <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>Partners</Text>
+          <Text style={[styles.statValue, { color: Colors.text }]}>
+            {partners.length}
+          </Text>
+          <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>
+            Partners
+          </Text>
         </View>
-        <View style={[styles.statDivider, { backgroundColor: Colors.border }]} />
+        <View
+          style={[styles.statDivider, { backgroundColor: Colors.border }]}
+        />
         <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: Colors.text }]}>{totalLeaves}</Text>
-          <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>Sessions</Text>
+          <Text style={[styles.statValue, { color: Colors.text }]}>
+            {totalLeaves}
+          </Text>
+          <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>
+            Sessions
+          </Text>
         </View>
-        <View style={[styles.statDivider, { backgroundColor: Colors.border }]} />
+        <View
+          style={[styles.statDivider, { backgroundColor: Colors.border }]}
+        />
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: Colors.gain }]}>
             ${(totalEarned / 100).toFixed(0)}
           </Text>
-          <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>Earned</Text>
+          <Text style={[styles.statLabel, { color: Colors.textSecondary }]}>
+            Earned
+          </Text>
         </View>
       </View>
 
       {/* Growth Stage */}
       <View style={styles.growthIndicator}>
-        <Text style={[styles.growthLabel, { color: Colors.textSecondary }]}>Growth Stage {growthStage}/5</Text>
+        <Text style={[styles.growthLabel, { color: Colors.textSecondary }]}>
+          Growth Stage {growthStage}/5
+        </Text>
         <View style={styles.growthBar}>
           {[1, 2, 3, 4, 5].map((stage) => (
             <View

@@ -99,10 +99,7 @@ interface ConfettiProps {
   colors?: string[];
 }
 
-export const Confetti: React.FC<ConfettiProps> = ({
-  count = 50,
-  colors,
-}) => {
+export const Confetti: React.FC<ConfettiProps> = ({ count = 50, colors }) => {
   const Colors = useColors();
   const resolvedColors = colors ?? [
     Colors.primary,

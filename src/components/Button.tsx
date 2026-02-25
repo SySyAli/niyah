@@ -9,12 +9,7 @@ import {
   Animated,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import {
-  Radius,
-  Typography,
-  FontWeight,
-  Font,
-} from "../constants/colors";
+import { Radius, Typography, FontWeight, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 
 interface ButtonProps {
@@ -121,25 +116,29 @@ export const Button: React.FC<ButtonProps> = ({
     }
   };
 
-  const styles = useMemo(() => StyleSheet.create({
-    base: {
-      borderRadius: Radius.md,
-      alignItems: "center",
-      justifyContent: "center",
-      flexDirection: "row",
-    },
-    fullWidth: {
-      width: "100%",
-    },
-    outline: {
-      borderWidth: 1,
-      borderColor: Colors.border,
-    },
-    text: {
-      ...Font.semibold,
-      letterSpacing: 0.3,
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        base: {
+          borderRadius: Radius.md,
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "row",
+        },
+        fullWidth: {
+          width: "100%",
+        },
+        outline: {
+          borderWidth: 1,
+          borderColor: Colors.border,
+        },
+        text: {
+          ...Font.semibold,
+          letterSpacing: 0.3,
+        },
+      }),
+    [Colors],
+  );
 
   return (
     <Pressable

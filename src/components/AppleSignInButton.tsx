@@ -79,29 +79,33 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
     return null;
   }
 
-  const styles = useMemo(() => StyleSheet.create({
-    loadingContainer: {
-      height: 48,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    compactLoading: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: Colors.backgroundCard,
-    },
-    compactButton: {
-      width: 56,
-      height: 56,
-    },
-    fullButton: {
-      width: "100%",
-      height: 48,
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        loadingContainer: {
+          height: 48,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        compactLoading: {
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: Colors.backgroundCard,
+        },
+        compactButton: {
+          width: 56,
+          height: 56,
+        },
+        fullButton: {
+          width: "100%",
+          height: 48,
+        },
+      }),
+    [Colors],
+  );
 
   if (isLoading) {
     return (

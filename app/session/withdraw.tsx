@@ -267,153 +267,153 @@ export default function WithdrawScreen() {
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-  detailsContent: {
-    paddingTop: Spacing.lg,
-    gap: Spacing.lg,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: Spacing.md,
-  },
-  closeButton: {
-    width: 60,
-  },
-  closeText: {
-    color: Colors.textSecondary,
-    fontSize: Typography.bodyLarge,
-    ...Font.medium,
-  },
-  maxButton: {
-    width: 60,
-    alignItems: "flex-end",
-  },
-  maxText: {
-    color: Colors.primary,
-    fontSize: Typography.bodyLarge,
-    ...Font.semibold,
-  },
-  title: {
-    fontSize: Typography.titleLarge,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  balanceInfo: {
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-  },
-  balanceLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textTertiary,
-    marginBottom: Spacing.xs,
-  },
-  balanceAmount: {
-    fontSize: Typography.titleMedium,
-    ...Font.semibold,
-    color: Colors.gain,
-  },
-  errorText: {
-    textAlign: "center",
-    color: Colors.danger,
-    fontSize: Typography.bodySmall,
-    marginTop: -Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  numPadContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  footer: {
-    paddingVertical: Spacing.lg,
-  },
-  // Details step styles
-  summaryCard: {
-    alignItems: "center",
-    paddingVertical: Spacing.xl,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-  },
-  summaryLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  summaryAmount: {
-    fontSize: Typography.displaySmall,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  inputGroup: {
-    gap: Spacing.sm,
-  },
-  inputLabel: {
-    fontSize: Typography.labelLarge,
-    ...Font.medium,
-    color: Colors.text,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.md,
-  },
-  inputPrefix: {
-    fontSize: Typography.titleMedium,
-    color: Colors.textSecondary,
-    marginRight: Spacing.xs,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: Typography.titleMedium,
-    color: Colors.text,
-    paddingVertical: Spacing.md,
-  },
-  infoCard: {
-    gap: Spacing.sm,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: Spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  infoRowLast: {
-    borderBottomWidth: 0,
-    paddingTop: Spacing.sm,
-  },
-  infoLabel: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-  },
-  infoValue: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.text,
-  },
-  infoValueGreen: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.gain,
-    ...Font.medium,
-  },
-  infoValueBold: {
-    fontSize: Typography.titleMedium,
-    color: Colors.text,
-    ...Font.semibold,
-  },
-});
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: Spacing.lg,
+    },
+    scrollContent: {
+      flex: 1,
+    },
+    detailsContent: {
+      paddingTop: Spacing.lg,
+      gap: Spacing.lg,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: Spacing.md,
+    },
+    closeButton: {
+      width: 60,
+    },
+    closeText: {
+      color: Colors.textSecondary,
+      fontSize: Typography.bodyLarge,
+      ...Font.medium,
+    },
+    maxButton: {
+      width: 60,
+      alignItems: "flex-end",
+    },
+    maxText: {
+      color: Colors.primary,
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+    },
+    title: {
+      fontSize: Typography.titleLarge,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    balanceInfo: {
+      alignItems: "center",
+      paddingVertical: Spacing.md,
+    },
+    balanceLabel: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textTertiary,
+      marginBottom: Spacing.xs,
+    },
+    balanceAmount: {
+      fontSize: Typography.titleMedium,
+      ...Font.semibold,
+      color: Colors.gain,
+    },
+    errorText: {
+      textAlign: "center",
+      color: Colors.danger,
+      fontSize: Typography.bodySmall,
+      marginTop: -Spacing.md,
+      marginBottom: Spacing.sm,
+    },
+    numPadContainer: {
+      flex: 1,
+      justifyContent: "center",
+    },
+    footer: {
+      paddingVertical: Spacing.lg,
+    },
+    // Details step styles
+    summaryCard: {
+      alignItems: "center",
+      paddingVertical: Spacing.xl,
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+    },
+    summaryLabel: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.xs,
+    },
+    summaryAmount: {
+      fontSize: Typography.displaySmall,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    inputGroup: {
+      gap: Spacing.sm,
+    },
+    inputLabel: {
+      fontSize: Typography.labelLarge,
+      ...Font.medium,
+      color: Colors.text,
+    },
+    inputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.backgroundSecondary,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      paddingHorizontal: Spacing.md,
+    },
+    inputPrefix: {
+      fontSize: Typography.titleMedium,
+      color: Colors.textSecondary,
+      marginRight: Spacing.xs,
+    },
+    textInput: {
+      flex: 1,
+      fontSize: Typography.titleMedium,
+      color: Colors.text,
+      paddingVertical: Spacing.md,
+    },
+    infoCard: {
+      gap: Spacing.sm,
+    },
+    infoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: Spacing.xs,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+    },
+    infoRowLast: {
+      borderBottomWidth: 0,
+      paddingTop: Spacing.sm,
+    },
+    infoLabel: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+    },
+    infoValue: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.text,
+    },
+    infoValueGreen: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.gain,
+      ...Font.medium,
+    },
+    infoValueBold: {
+      fontSize: Typography.titleMedium,
+      color: Colors.text,
+      ...Font.semibold,
+    },
+  });

@@ -61,30 +61,34 @@ export const Card: React.FC<CardProps> = ({
     }
   };
 
-  const styles = useMemo(() => StyleSheet.create({
-    card: {
-      backgroundColor: Colors.backgroundCard,
-      borderRadius: Radius.lg,
-      padding: Spacing.lg,
-    },
-    elevated: {
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.4,
-      shadowRadius: 16,
-      elevation: 8,
-    },
-    outlined: {
-      backgroundColor: "transparent",
-      borderWidth: 1,
-      borderColor: Colors.border,
-    },
-    interactive: {
-      backgroundColor: Colors.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: Colors.border,
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        card: {
+          backgroundColor: Colors.backgroundCard,
+          borderRadius: Radius.lg,
+          padding: Spacing.lg,
+        },
+        elevated: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.4,
+          shadowRadius: 16,
+          elevation: 8,
+        },
+        outlined: {
+          backgroundColor: "transparent",
+          borderWidth: 1,
+          borderColor: Colors.border,
+        },
+        interactive: {
+          backgroundColor: Colors.backgroundSecondary,
+          borderWidth: 1,
+          borderColor: Colors.border,
+        },
+      }),
+    [Colors],
+  );
 
   const getVariantStyle = () => {
     switch (variant) {

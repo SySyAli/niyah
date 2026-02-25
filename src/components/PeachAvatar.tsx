@@ -35,7 +35,14 @@ export const PeachAvatar: React.FC<PeachAvatarProps> = ({
   const Colors = useColors();
 
   const inner = (
-    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       {/* Oval backdrop — sits behind the blob, larger and offset down-right */}
       <View
         style={{
@@ -53,7 +60,13 @@ export const PeachAvatar: React.FC<PeachAvatarProps> = ({
       {/* Peach blob */}
       <Svg width={size} height={size} viewBox="-2 -2 144 142" fill="none">
         <Defs>
-          <LinearGradient id="peachAvatarGrad" x1="0.25" y1="0" x2="0.75" y2="1">
+          <LinearGradient
+            id="peachAvatarGrad"
+            x1="0.25"
+            y1="0"
+            x2="0.75"
+            y2="1"
+          >
             <Stop offset="0" stopColor="#F0A090" stopOpacity={1} />
             <Stop offset="1" stopColor="#E07A5F" stopOpacity={1} />
           </LinearGradient>
@@ -61,7 +74,12 @@ export const PeachAvatar: React.FC<PeachAvatarProps> = ({
             <Path d={BODY_PATH} />
           </ClipPath>
         </Defs>
-        <Path d={BODY_PATH} fill="url(#peachAvatarGrad)" stroke="black" strokeWidth={3.08} />
+        <Path
+          d={BODY_PATH}
+          fill="url(#peachAvatarGrad)"
+          stroke="black"
+          strokeWidth={3.08}
+        />
         <G clipPath="url(#peachAvatarClip)">
           <Path d={BODY_PATH} fill="black" opacity={0.1} x={2} y={3} />
         </G>

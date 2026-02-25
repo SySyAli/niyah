@@ -313,133 +313,133 @@ export default function AuthEntryScreen() {
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
-  backButton: {
-    marginBottom: Spacing.lg,
-    width: 44,
-    height: 44,
-    justifyContent: "center",
-  },
-  backText: {
-    color: Colors.text,
-    fontSize: 24,
-  },
-  header: {
-    marginBottom: Spacing.xxl,
-  },
-  title: {
-    fontSize: 36,
-    ...Font.heavy,
-    color: Colors.text,
-    letterSpacing: -0.5,
-    lineHeight: 42,
-  },
-  subtitle: {
-    fontSize: Typography.bodyLarge,
-    color: Colors.textSecondary,
-    marginTop: Spacing.sm,
-    lineHeight: Typography.bodyLarge * 1.5,
-  },
-  errorContainer: {
-    backgroundColor: "rgba(220, 38, 38, 0.1)",
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.2)",
-  },
-  errorText: {
-    color: Colors.danger,
-    fontSize: Typography.bodySmall,
-    textAlign: "center",
-  },
-  socialSection: {
-    gap: Spacing.md,
-  },
-  socialButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    height: 56,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.md,
-  },
-  socialButtonPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.98 }],
-  },
-  socialButtonDisabled: {
-    opacity: 0.5,
-  },
-  socialButtonText: {
-    fontSize: Typography.bodyLarge,
-    ...Font.medium,
-    color: Colors.text,
-  },
-  appleButton: {
-    backgroundColor: "#FFFFFF",
-  },
-  appleIcon: {
-    fontSize: 20,
-    color: "#000",
-  },
-  appleButtonText: {
-    fontSize: Typography.bodyLarge,
-    ...Font.medium,
-    color: "#000",
-  },
-  orDivider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: Spacing.lg,
-  },
-  orLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.border,
-  },
-  orText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textMuted,
-    marginHorizontal: Spacing.lg,
-  },
-  emailSection: {
-    gap: Spacing.md,
-  },
-  emailInput: {
-    height: 56,
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.lg,
-    fontSize: Typography.bodyLarge,
-    color: Colors.text,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  footer: {
-    marginTop: "auto",
-    paddingBottom: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
-  footerText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    textAlign: "center",
-    lineHeight: Typography.labelSmall * 1.6,
-  },
-  footerLink: {
-    color: Colors.textSecondary,
-    textDecorationLine: "underline",
-  },
-});
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+    },
+    backButton: {
+      marginBottom: Spacing.lg,
+      width: 44,
+      height: 44,
+      justifyContent: "center",
+    },
+    backText: {
+      color: Colors.text,
+      fontSize: 24,
+    },
+    header: {
+      marginBottom: Spacing.xxl,
+    },
+    title: {
+      fontSize: 36,
+      ...Font.heavy,
+      color: Colors.text,
+      letterSpacing: -0.5,
+      lineHeight: 42,
+    },
+    subtitle: {
+      fontSize: Typography.bodyLarge,
+      color: Colors.textSecondary,
+      marginTop: Spacing.sm,
+      lineHeight: Typography.bodyLarge * 1.5,
+    },
+    errorContainer: {
+      backgroundColor: "rgba(220, 38, 38, 0.1)",
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      marginBottom: Spacing.md,
+      borderWidth: 1,
+      borderColor: "rgba(220, 38, 38, 0.2)",
+    },
+    errorText: {
+      color: Colors.danger,
+      fontSize: Typography.bodySmall,
+      textAlign: "center",
+    },
+    socialSection: {
+      gap: Spacing.md,
+    },
+    socialButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      height: 56,
+      borderRadius: Radius.lg,
+      backgroundColor: Colors.backgroundCard,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      gap: Spacing.md,
+    },
+    socialButtonPressed: {
+      opacity: 0.7,
+      transform: [{ scale: 0.98 }],
+    },
+    socialButtonDisabled: {
+      opacity: 0.5,
+    },
+    socialButtonText: {
+      fontSize: Typography.bodyLarge,
+      ...Font.medium,
+      color: Colors.text,
+    },
+    appleButton: {
+      backgroundColor: "#FFFFFF",
+    },
+    appleIcon: {
+      fontSize: 20,
+      color: "#000",
+    },
+    appleButtonText: {
+      fontSize: Typography.bodyLarge,
+      ...Font.medium,
+      color: "#000",
+    },
+    orDivider: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: Spacing.lg,
+    },
+    orLine: {
+      flex: 1,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: Colors.border,
+    },
+    orText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textMuted,
+      marginHorizontal: Spacing.lg,
+    },
+    emailSection: {
+      gap: Spacing.md,
+    },
+    emailInput: {
+      height: 56,
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+      paddingHorizontal: Spacing.lg,
+      fontSize: Typography.bodyLarge,
+      color: Colors.text,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    footer: {
+      marginTop: "auto",
+      paddingBottom: Spacing.lg,
+      paddingTop: Spacing.md,
+    },
+    footerText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+      textAlign: "center",
+      lineHeight: Typography.labelSmall * 1.6,
+    },
+    footerLink: {
+      color: Colors.textSecondary,
+      textDecorationLine: "underline",
+    },
+  });

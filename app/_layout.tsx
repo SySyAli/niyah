@@ -68,7 +68,9 @@ export default function RootLayout() {
   }, [completeEmailLink]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: Colors.background }}>
+    <GestureHandlerRootView
+      style={{ flex: 1, backgroundColor: Colors.background }}
+    >
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
@@ -105,4 +107,3 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
-

@@ -67,37 +67,41 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     }
   };
 
-  const styles = useMemo(() => StyleSheet.create({
-    loadingContainer: {
-      height: 48,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    compactButton: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: Colors.backgroundCard,
-      borderWidth: 1,
-      borderColor: Colors.border,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    fullButton: {
-      width: "100%",
-      height: 48,
-      borderRadius: Radius.md,
-      backgroundColor: Colors.backgroundCard,
-      borderWidth: 1,
-      borderColor: Colors.border,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    pressed: {
-      opacity: 0.7,
-      transform: [{ scale: 0.95 }],
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        loadingContainer: {
+          height: 48,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        compactButton: {
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: Colors.backgroundCard,
+          borderWidth: 1,
+          borderColor: Colors.border,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        fullButton: {
+          width: "100%",
+          height: 48,
+          borderRadius: Radius.md,
+          backgroundColor: Colors.backgroundCard,
+          borderWidth: 1,
+          borderColor: Colors.border,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        pressed: {
+          opacity: 0.7,
+          transform: [{ scale: 0.95 }],
+        },
+      }),
+    [Colors],
+  );
 
   if (isLoading) {
     return (

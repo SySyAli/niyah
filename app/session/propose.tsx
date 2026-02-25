@@ -353,7 +353,8 @@ export default function ProposeSessionScreen() {
     return list;
   }, [partners, following, profiles, user?.id]);
 
-  const effectiveStake = stake ?? (customStake ? parseInt(customStake) * 100 : null);
+  const effectiveStake =
+    stake ?? (customStake ? parseInt(customStake) * 100 : null);
   const effectiveDuration = duration
     ? DURATIONS.find((d) => d.value === duration)?.label
     : customDuration.trim() || null;
@@ -413,7 +414,8 @@ export default function ProposeSessionScreen() {
             .
           </Text>
           <Text style={styles.successDetail}>
-            Once everyone accepts, the {formatMoney(effectiveStake!)} stake locks in.
+            Once everyone accepts, the {formatMoney(effectiveStake!)} stake
+            locks in.
           </Text>
           <Button
             title="Back to Home"
@@ -458,7 +460,9 @@ export default function ProposeSessionScreen() {
                   setCustomStake("");
                 }}
               >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                <Text
+                  style={[styles.chipText, selected && styles.chipTextSelected]}
+                >
                   {formatMoney(s)}
                 </Text>
               </Pressable>
@@ -494,7 +498,9 @@ export default function ProposeSessionScreen() {
                   setCustomDuration("");
                 }}
               >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                <Text
+                  style={[styles.chipText, selected && styles.chipTextSelected]}
+                >
                   {d.label}
                 </Text>
               </Pressable>
@@ -502,7 +508,10 @@ export default function ProposeSessionScreen() {
           })}
         </View>
         <TextInput
-          style={[styles.customInput, durationFocused && styles.customInputActive]}
+          style={[
+            styles.customInput,
+            durationFocused && styles.customInputActive,
+          ]}
           placeholder="Custom duration (e.g. 90 mins)"
           placeholderTextColor={Colors.textMuted}
           value={customDuration}
@@ -531,8 +540,15 @@ export default function ProposeSessionScreen() {
                   style={[styles.personRow, !isLast && styles.personRowBorder]}
                   onPress={() => togglePerson(person.id)}
                 >
-                  <View style={[styles.avatar, selected && styles.avatarSelected]}>
-                    <Text style={[styles.avatarText, selected && styles.avatarTextSelected]}>
+                  <View
+                    style={[styles.avatar, selected && styles.avatarSelected]}
+                  >
+                    <Text
+                      style={[
+                        styles.avatarText,
+                        selected && styles.avatarTextSelected,
+                      ]}
+                    >
                       {person.name.charAt(0).toUpperCase()}
                     </Text>
                   </View>
@@ -540,7 +556,12 @@ export default function ProposeSessionScreen() {
                     <Text style={styles.personName}>{person.name}</Text>
                     <Text style={styles.personTag}>{person.tag}</Text>
                   </View>
-                  <View style={[styles.checkCircle, selected && styles.checkCircleSelected]}>
+                  <View
+                    style={[
+                      styles.checkCircle,
+                      selected && styles.checkCircleSelected,
+                    ]}
+                  >
                     {selected && <Text style={styles.checkMark}>✓</Text>}
                   </View>
                 </Pressable>
@@ -555,14 +576,24 @@ export default function ProposeSessionScreen() {
           {DAYS.map((d) => (
             <Pressable
               key={d.value}
-              style={[styles.chip, selectedDay === d.value && !customDay && styles.chipSelected]}
+              style={[
+                styles.chip,
+                selectedDay === d.value && !customDay && styles.chipSelected,
+              ]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setSelectedDay(d.value);
                 setCustomDay("");
               }}
             >
-              <Text style={[styles.chipText, selectedDay === d.value && !customDay && styles.chipTextSelected]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  selectedDay === d.value &&
+                    !customDay &&
+                    styles.chipTextSelected,
+                ]}
+              >
                 {d.label}
               </Text>
             </Pressable>
@@ -589,17 +620,30 @@ export default function ProposeSessionScreen() {
             return (
               <Pressable
                 key={t.value}
-                style={[styles.scheduleChip, selected && styles.scheduleChipSelected]}
+                style={[
+                  styles.scheduleChip,
+                  selected && styles.scheduleChipSelected,
+                ]}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setSelectedTime(t.value);
                   setCustomTime("");
                 }}
               >
-                <Text style={[styles.scheduleChipLabel, selected && styles.scheduleChipLabelSelected]}>
+                <Text
+                  style={[
+                    styles.scheduleChipLabel,
+                    selected && styles.scheduleChipLabelSelected,
+                  ]}
+                >
                   {t.label}
                 </Text>
-                <Text style={[styles.scheduleChipSub, selected && styles.scheduleChipSubSelected]}>
+                <Text
+                  style={[
+                    styles.scheduleChipSub,
+                    selected && styles.scheduleChipSubSelected,
+                  ]}
+                >
                   {t.sub}
                 </Text>
               </Pressable>
@@ -625,7 +669,9 @@ export default function ProposeSessionScreen() {
             <Text style={styles.summaryTitle}>Challenge Summary</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Stake per person</Text>
-              <Text style={styles.summaryValue}>{formatMoney(effectiveStake!)}</Text>
+              <Text style={styles.summaryValue}>
+                {formatMoney(effectiveStake!)}
+              </Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Duration</Text>
@@ -634,7 +680,8 @@ export default function ProposeSessionScreen() {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Inviting</Text>
               <Text style={styles.summaryValue}>
-                {selectedPeople.length} {selectedPeople.length === 1 ? "person" : "people"}
+                {selectedPeople.length}{" "}
+                {selectedPeople.length === 1 ? "person" : "people"}
               </Text>
             </View>
             <View style={styles.summaryRow}>

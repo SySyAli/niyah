@@ -10,14 +10,18 @@ export default function Index() {
     useAuthStore();
   const [ready, setReady] = useState(false);
 
-  const styles = useMemo(() => StyleSheet.create({
-    loading: {
-      flex: 1,
-      backgroundColor: Colors.background,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        loading: {
+          flex: 1,
+          backgroundColor: Colors.background,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+      }),
+    [Colors],
+  );
 
   useEffect(() => {
     const unsubscribe = initialize();

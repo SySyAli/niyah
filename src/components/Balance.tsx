@@ -1,11 +1,6 @@
 import React, { useRef, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
-import {
-  Typography,
-  Spacing,
-  FontWeight,
-  Font,
-} from "../constants/colors";
+import { Typography, Spacing, FontWeight, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 import { formatMoney } from "../utils/format";
 
@@ -67,27 +62,31 @@ export const Balance: React.FC<BalanceProps> = ({
       ? `+${formatMoney(amount, showCents)}`
       : formatMoney(amount, showCents);
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      alignItems: "flex-start",
-    },
-    label: {
-      fontSize: Typography.labelLarge,
-      color: Colors.textSecondary,
-      marginBottom: Spacing.xs,
-      ...Font.medium,
-    },
-    amount: {
-      ...Font.bold,
-      fontVariant: ["tabular-nums"],
-      letterSpacing: -1,
-    },
-    compactAmount: {
-      fontSize: Typography.bodyMedium,
-      ...Font.semibold,
-      fontVariant: ["tabular-nums"],
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          alignItems: "flex-start",
+        },
+        label: {
+          fontSize: Typography.labelLarge,
+          color: Colors.textSecondary,
+          marginBottom: Spacing.xs,
+          ...Font.medium,
+        },
+        amount: {
+          ...Font.bold,
+          fontVariant: ["tabular-nums"],
+          letterSpacing: -1,
+        },
+        compactAmount: {
+          fontSize: Typography.bodyMedium,
+          ...Font.semibold,
+          fontVariant: ["tabular-nums"],
+        },
+      }),
+    [Colors],
+  );
 
   return (
     <View style={styles.container}>

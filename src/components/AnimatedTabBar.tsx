@@ -15,12 +15,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
-import {
-  Typography,
-  Spacing,
-  FontWeight,
-  Font,
-} from "../constants/colors";
+import { Typography, Spacing, FontWeight, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 import { useScrollContext } from "../context/ScrollContext";
 
@@ -193,31 +188,35 @@ const TabItem: React.FC<TabItemProps> = ({
 
   const color = focused ? Colors.primaryLight : Colors.textMuted;
 
-  const styles = useMemo(() => StyleSheet.create({
-    tabItem: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    iconContainer: {
-      width: PILL_WIDTH,
-      height: PILL_HEIGHT,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    pill: {
-      position: "absolute",
-      width: PILL_WIDTH,
-      height: PILL_HEIGHT,
-      borderRadius: PILL_HEIGHT / 2,
-      backgroundColor: Colors.primaryMuted,
-    },
-    label: {
-      fontSize: Typography.labelSmall,
-      ...Font.semibold,
-      marginTop: 2,
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        tabItem: {
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        iconContainer: {
+          width: PILL_WIDTH,
+          height: PILL_HEIGHT,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        pill: {
+          position: "absolute",
+          width: PILL_WIDTH,
+          height: PILL_HEIGHT,
+          borderRadius: PILL_HEIGHT / 2,
+          backgroundColor: Colors.primaryMuted,
+        },
+        label: {
+          fontSize: Typography.labelSmall,
+          ...Font.semibold,
+          marginTop: 2,
+        },
+      }),
+    [Colors],
+  );
 
   return (
     <AnimatedPressable
@@ -310,28 +309,32 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
     });
   }, [state.index, activeIndex]);
 
-  const styles = useMemo(() => StyleSheet.create({
-    wrapper: {
-      position: "relative",
-    },
-    accessoryContainer: {
-      backgroundColor: Colors.backgroundCard,
-      borderTopColor: Colors.border,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.sm,
-    },
-    tabBar: {
-      flexDirection: "row",
-      backgroundColor: Colors.backgroundElevated,
-      borderTopColor: Colors.border,
-      borderTopWidth: 1,
-      height: TAB_BAR_HEIGHT,
-      paddingTop: Spacing.sm,
-      alignItems: "flex-start",
-      justifyContent: "space-around",
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        wrapper: {
+          position: "relative",
+        },
+        accessoryContainer: {
+          backgroundColor: Colors.backgroundCard,
+          borderTopColor: Colors.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          paddingHorizontal: Spacing.md,
+          paddingVertical: Spacing.sm,
+        },
+        tabBar: {
+          flexDirection: "row",
+          backgroundColor: Colors.backgroundElevated,
+          borderTopColor: Colors.border,
+          borderTopWidth: 1,
+          height: TAB_BAR_HEIGHT,
+          paddingTop: Spacing.sm,
+          alignItems: "flex-start",
+          justifyContent: "space-around",
+        },
+      }),
+    [Colors],
+  );
 
   return (
     <View style={styles.wrapper}>

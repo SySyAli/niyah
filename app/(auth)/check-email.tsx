@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import {
   View,
   Text,
@@ -140,90 +146,90 @@ export default function CheckEmailScreen() {
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-  },
-  backButton: {
-    marginBottom: Spacing.xl,
-    width: 44,
-    height: 44,
-    justifyContent: "center",
-  },
-  backText: {
-    color: Colors.text,
-    fontSize: 24,
-  },
-  body: {
-    flex: 1,
-    alignItems: "center",
-    paddingTop: Spacing.xxl,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.xl,
-  },
-  mailIcon: {
-    fontSize: 36,
-  },
-  title: {
-    fontSize: 32,
-    ...Font.heavy,
-    color: Colors.text,
-    textAlign: "center",
-    letterSpacing: -0.5,
-    lineHeight: 38,
-  },
-  subtitle: {
-    fontSize: Typography.bodyLarge,
-    color: Colors.textSecondary,
-    marginTop: Spacing.lg,
-    textAlign: "center",
-  },
-  email: {
-    fontSize: Typography.bodyLarge,
-    ...Font.bold,
-    color: Colors.primary,
-    marginTop: Spacing.xs,
-    textAlign: "center",
-  },
-  instructions: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textMuted,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.xxl,
-    textAlign: "center",
-    lineHeight: Typography.bodySmall * 1.6,
-  },
-  resendButton: {
-    marginTop: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
-  resendText: {
-    color: Colors.primary,
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-  },
-  resendDisabled: {
-    color: Colors.textMuted,
-    ...Font.regular,
-  },
-  differentButton: {
-    marginTop: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  differentText: {
-    color: Colors.textSecondary,
-    fontSize: Typography.bodySmall,
-  },
-});
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+    },
+    backButton: {
+      marginBottom: Spacing.xl,
+      width: 44,
+      height: 44,
+      justifyContent: "center",
+    },
+    backText: {
+      color: Colors.text,
+      fontSize: 24,
+    },
+    body: {
+      flex: 1,
+      alignItems: "center",
+      paddingTop: Spacing.xxl,
+    },
+    iconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: Colors.primaryMuted,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: Spacing.xl,
+    },
+    mailIcon: {
+      fontSize: 36,
+    },
+    title: {
+      fontSize: 32,
+      ...Font.heavy,
+      color: Colors.text,
+      textAlign: "center",
+      letterSpacing: -0.5,
+      lineHeight: 38,
+    },
+    subtitle: {
+      fontSize: Typography.bodyLarge,
+      color: Colors.textSecondary,
+      marginTop: Spacing.lg,
+      textAlign: "center",
+    },
+    email: {
+      fontSize: Typography.bodyLarge,
+      ...Font.bold,
+      color: Colors.primary,
+      marginTop: Spacing.xs,
+      textAlign: "center",
+    },
+    instructions: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textMuted,
+      marginTop: Spacing.md,
+      marginBottom: Spacing.xxl,
+      textAlign: "center",
+      lineHeight: Typography.bodySmall * 1.6,
+    },
+    resendButton: {
+      marginTop: Spacing.lg,
+      paddingVertical: Spacing.sm,
+    },
+    resendText: {
+      color: Colors.primary,
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+    },
+    resendDisabled: {
+      color: Colors.textMuted,
+      ...Font.regular,
+    },
+    differentButton: {
+      marginTop: Spacing.md,
+      paddingVertical: Spacing.sm,
+    },
+    differentText: {
+      color: Colors.textSecondary,
+      fontSize: Typography.bodySmall,
+    },
+  });

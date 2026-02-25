@@ -122,30 +122,34 @@ const AnimatedCell: React.FC<{
     return Colors.border;
   };
 
-  const styles = useMemo(() => StyleSheet.create({
-    cell: {
-      width: CELL_SIZE,
-      height: CELL_SIZE + 8,
-      borderRadius: Radius.md,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    digit: {
-      fontSize: Typography.headlineSmall,
-      ...Font.bold,
-      color: Colors.text,
-      textAlign: "center",
-    },
-    digitError: {
-      color: Colors.danger,
-    },
-    cursor: {
-      width: 2,
-      height: 24,
-      backgroundColor: Colors.primary,
-      borderRadius: 1,
-    },
-  }), [Colors]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        cell: {
+          width: CELL_SIZE,
+          height: CELL_SIZE + 8,
+          borderRadius: Radius.md,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        digit: {
+          fontSize: Typography.headlineSmall,
+          ...Font.bold,
+          color: Colors.text,
+          textAlign: "center",
+        },
+        digitError: {
+          color: Colors.danger,
+        },
+        cursor: {
+          width: 2,
+          height: 24,
+          backgroundColor: Colors.primary,
+          borderRadius: 1,
+        },
+      }),
+    [Colors],
+  );
 
   return (
     <Animated.View

@@ -27,197 +27,198 @@ import { formatMoney } from "../../src/utils/format";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    padding: Spacing.lg,
-  },
-  header: {
-    marginBottom: Spacing.md,
-  },
-  backText: {
-    color: Colors.primary,
-    fontSize: Typography.bodyLarge,
-    ...Font.medium,
-  },
-  titleSection: {
-    alignItems: "center",
-    marginBottom: Spacing.xl,
-  },
-  title: {
-    fontSize: Typography.headlineMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  // Warning card
-  warningCard: {
-    alignItems: "center",
-    backgroundColor: Colors.lossLight,
-    borderWidth: 1,
-    borderColor: Colors.loss,
-    paddingVertical: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  warningLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  lossAmount: {
-    fontSize: Typography.displaySmall,
-    ...Font.bold,
-    color: Colors.loss,
-    marginBottom: Spacing.sm,
-  },
-  warningNote: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    textAlign: "center",
-  },
-  partnerInfo: {
-    alignItems: "center",
-    marginTop: Spacing.sm,
-  },
-  partnerVenmo: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    color: Colors.primary,
-    marginTop: Spacing.xs,
-  },
-  // Payment card (after surrender)
-  paymentCard: {
-    alignItems: "center",
-    backgroundColor: Colors.lossLight,
-    borderWidth: 1,
-    borderColor: Colors.loss,
-    paddingVertical: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  paymentLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  paymentAmount: {
-    fontSize: Typography.displayMedium,
-    ...Font.bold,
-    color: Colors.loss,
-    marginBottom: Spacing.xs,
-  },
-  paymentTo: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  venmoHandle: {
-    fontSize: Typography.bodyLarge,
-    ...Font.semibold,
-    color: Colors.primary,
-  },
-  // Reputation cards
-  reputationCard: {
-    backgroundColor: Colors.warningLight,
-    borderWidth: 1,
-    borderColor: Colors.warning,
-    marginBottom: Spacing.md,
-  },
-  reputationWarning: {
-    backgroundColor: Colors.backgroundCard,
-    marginBottom: Spacing.lg,
-  },
-  reputationTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  reputationText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-  // Skip payment
-  skipButton: {
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-  },
-  skipText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-  },
-  // Alternative suggestions
-  alternativeCard: {
-    marginBottom: Spacing.lg,
-  },
-  alternativeTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  alternativeText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.md,
-  },
-  suggestions: {
-    gap: Spacing.xs,
-  },
-  suggestionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  suggestionBullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-    marginRight: Spacing.sm,
-  },
-  suggestionText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.text,
-  },
-  confirmSection: {
-    marginBottom: Spacing.lg,
-  },
-  confirmLabel: {
-    fontSize: Typography.labelMedium,
-    ...Font.medium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-    textAlign: "center",
-  },
-  confirmInput: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: Typography.titleMedium,
-    color: Colors.text,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    textAlign: "center",
-    letterSpacing: 4,
-    ...Font.semibold,
-  },
-  confirmInputValid: {
-    borderColor: Colors.loss,
-    backgroundColor: Colors.lossLight,
-  },
-  footer: {
-    marginTop: "auto",
-    gap: Spacing.sm,
-  },
-});
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    content: {
+      flex: 1,
+      padding: Spacing.lg,
+    },
+    header: {
+      marginBottom: Spacing.md,
+    },
+    backText: {
+      color: Colors.primary,
+      fontSize: Typography.bodyLarge,
+      ...Font.medium,
+    },
+    titleSection: {
+      alignItems: "center",
+      marginBottom: Spacing.xl,
+    },
+    title: {
+      fontSize: Typography.headlineMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    subtitle: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    // Warning card
+    warningCard: {
+      alignItems: "center",
+      backgroundColor: Colors.lossLight,
+      borderWidth: 1,
+      borderColor: Colors.loss,
+      paddingVertical: Spacing.xl,
+      marginBottom: Spacing.md,
+    },
+    warningLabel: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.xs,
+    },
+    lossAmount: {
+      fontSize: Typography.displaySmall,
+      ...Font.bold,
+      color: Colors.loss,
+      marginBottom: Spacing.sm,
+    },
+    warningNote: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+      textAlign: "center",
+    },
+    partnerInfo: {
+      alignItems: "center",
+      marginTop: Spacing.sm,
+    },
+    partnerVenmo: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.primary,
+      marginTop: Spacing.xs,
+    },
+    // Payment card (after surrender)
+    paymentCard: {
+      alignItems: "center",
+      backgroundColor: Colors.lossLight,
+      borderWidth: 1,
+      borderColor: Colors.loss,
+      paddingVertical: Spacing.xl,
+      marginBottom: Spacing.md,
+    },
+    paymentLabel: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.xs,
+    },
+    paymentAmount: {
+      fontSize: Typography.displayMedium,
+      ...Font.bold,
+      color: Colors.loss,
+      marginBottom: Spacing.xs,
+    },
+    paymentTo: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.text,
+      marginBottom: Spacing.sm,
+    },
+    venmoHandle: {
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+      color: Colors.primary,
+    },
+    // Reputation cards
+    reputationCard: {
+      backgroundColor: Colors.warningLight,
+      borderWidth: 1,
+      borderColor: Colors.warning,
+      marginBottom: Spacing.md,
+    },
+    reputationWarning: {
+      backgroundColor: Colors.backgroundCard,
+      marginBottom: Spacing.lg,
+    },
+    reputationTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.sm,
+    },
+    reputationText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      lineHeight: 20,
+    },
+    // Skip payment
+    skipButton: {
+      alignItems: "center",
+      paddingVertical: Spacing.md,
+    },
+    skipText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+    },
+    // Alternative suggestions
+    alternativeCard: {
+      marginBottom: Spacing.lg,
+    },
+    alternativeTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.xs,
+    },
+    alternativeText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.md,
+    },
+    suggestions: {
+      gap: Spacing.xs,
+    },
+    suggestionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    suggestionBullet: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: Colors.primary,
+      marginRight: Spacing.sm,
+    },
+    suggestionText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.text,
+    },
+    confirmSection: {
+      marginBottom: Spacing.lg,
+    },
+    confirmLabel: {
+      fontSize: Typography.labelMedium,
+      ...Font.medium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.sm,
+      textAlign: "center",
+    },
+    confirmInput: {
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      fontSize: Typography.titleMedium,
+      color: Colors.text,
+      borderWidth: 2,
+      borderColor: Colors.border,
+      textAlign: "center",
+      letterSpacing: 4,
+      ...Font.semibold,
+    },
+    confirmInputValid: {
+      borderColor: Colors.loss,
+      backgroundColor: Colors.lossLight,
+    },
+    footer: {
+      marginTop: "auto",
+      gap: Spacing.sm,
+    },
+  });
 
 export default function SurrenderScreen() {
   const Colors = useColors();

@@ -310,6 +310,108 @@ export const awardReferralToUser = async (referrerUid: string): Promise<void> =>
   }
 };
 
+// ---------------------------------------------------------------------------
+// Social / follows helpers
+// ---------------------------------------------------------------------------
+
+interface FollowsDoc extends Record<string, unknown> {
+  following: string[];
+  followers: string[];
+}
+
+/**
+ * Fetch the follows document for a user.
+ * Returns { following: [], followers: [] } if the document doesn't exist yet.
+ */
+export const getFollowsDoc = async (uid: string): Promise<FollowsDoc> => {
+  const doc = await NiyahFirestore.getDoc("userFollows", uid);
+  if (!doc) return { following: [], followers: [] };
+  return {
+    following: (doc.following as string[]) ?? [],
+    followers: (doc.followers as string[]) ?? [],
+  };
+};
+
+/**
+ * Follow targetUid from myUid.
+ * Fetches both docs, pushes UIDs, writes back (non-atomic, fine for demo).
+ */
+export const followUser = async (
+  myUid: string,
+  targetUid: string,
+): Promise<void> => {
+  const [myDoc, targetDoc] = await Promise.all([
+    getFollowsDoc(myUid),
+    getFollowsDoc(targetUid),
+  ]);
+
+  if (!myDoc.following.includes(targetUid)) {
+    myDoc.following = [...myDoc.following, targetUid];
+  }
+  if (!targetDoc.followers.includes(myUid)) {
+    targetDoc.followers = [...targetDoc.followers, myUid];
+  }
+
+  await Promise.all([
+    NiyahFirestore.setDoc("userFollows", myUid, myDoc, true),
+    NiyahFirestore.setDoc("userFollows", targetUid, targetDoc, true),
+  ]);
+};
+
+/**
+ * Unfollow targetUid from myUid.
+ */
+export const unfollowUser = async (
+  myUid: string,
+  targetUid: string,
+): Promise<void> => {
+  const [myDoc, targetDoc] = await Promise.all([
+    getFollowsDoc(myUid),
+    getFollowsDoc(targetUid),
+  ]);
+
+  myDoc.following = myDoc.following.filter((uid) => uid !== targetUid);
+  targetDoc.followers = targetDoc.followers.filter((uid) => uid !== myUid);
+
+  await Promise.all([
+    NiyahFirestore.setDoc("userFollows", myUid, myDoc, true),
+    NiyahFirestore.setDoc("userFollows", targetUid, targetDoc, true),
+  ]);
+};
+
+/**
+ * Fetch a user's public profile data mapped to the PublicProfile shape.
+ */
+export const getPublicProfile = async (
+  uid: string,
+): Promise<{
+  uid: string;
+  name: string;
+  reputation: { score: number; level: string; referralCount: number };
+  currentStreak: number;
+  totalSessions: number;
+  completedSessions: number;
+} | null> => {
+  const doc = await fetchUserProfile(uid);
+  if (!doc) return null;
+
+  const rep = (doc.reputation as Record<string, unknown>) ?? {};
+  const stats = (doc.stats as Record<string, number>) ?? {};
+
+  return {
+    uid,
+    name: (doc.name as string) || "",
+    reputation: {
+      score: (rep.score as number) ?? 50,
+      level: (rep.level as string) ?? "sapling",
+      referralCount: (rep.referralCount as number) ?? 0,
+    },
+    currentStreak: stats.currentStreak ?? 0,
+    totalSessions: stats.totalSessions ?? 0,
+    completedSessions: stats.completedSessions ?? 0,
+  };
+};
+
 // Re-export for convenience
 export { statusCodes };
 export type { FirebaseUser };

@@ -56,6 +56,14 @@ const TABS: TabConfig[] = [
     ionIconDefault: "timer-outline",
   },
   {
+    key: "friends",
+    label: "Friends",
+    sfSymbolFocused: "person.2.fill",
+    sfSymbolDefault: "person.2",
+    ionIconFocused: "people",
+    ionIconDefault: "people-outline",
+  },
+  {
     key: "profile",
     label: "Profile",
     sfSymbolFocused: "person.fill",

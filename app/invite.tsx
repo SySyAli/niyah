@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -66,9 +67,15 @@ const ShareButton: React.FC<{ onPress: () => void; shared: boolean }> = ({
       accessibilityLabel="Share invite link"
     >
       <Animated.View
-        style={[styles.shareBtn, shared && styles.shareBtnShared, animatedStyle]}
+        style={[
+          styles.shareBtn,
+          shared && styles.shareBtnShared,
+          animatedStyle,
+        ]}
       >
-        <Text style={[styles.shareBtnText, shared && styles.shareBtnTextShared]}>
+        <Text
+          style={[styles.shareBtnText, shared && styles.shareBtnTextShared]}
+        >
           {shared ? "Link Shared ✓" : "Share Invite Link"}
         </Text>
       </Animated.View>
@@ -78,7 +85,10 @@ const ShareButton: React.FC<{ onPress: () => void; shared: boolean }> = ({
 
 // ─── Perk Row ─────────────────────────────────────────────────────────────────
 
-const PerkRow: React.FC<{ emoji: string; text: string }> = ({ emoji, text }) => (
+const PerkRow: React.FC<{ emoji: string; text: string }> = ({
+  emoji,
+  text,
+}) => (
   <View style={styles.perkRow}>
     <Text style={styles.perkEmoji}>{emoji}</Text>
     <Text style={styles.perkText}>{text}</Text>
@@ -94,7 +104,9 @@ export default function InviteScreen() {
 
   const [shared, setShared] = useState(false);
 
-  const inviteLink = `niyah://invite?ref=${uid}`;
+  const inviteLink = Linking.createURL("/", {
+    queryParams: uid ? { ref: uid } : undefined,
+  });
   const message =
     `I'm using NIYAH to stay focused by putting real money on the line. ` +
     `Join me and we can keep each other accountable!\n\n${inviteLink}`;
@@ -122,7 +134,9 @@ export default function InviteScreen() {
         <BackButton onPress={() => router.back()} />
         <Text style={styles.title}>Invite Friends</Text>
         <View style={styles.bonusBadge}>
-          <Text style={styles.bonusBadgeText}>+10 social credit per referral</Text>
+          <Text style={styles.bonusBadgeText}>
+            +10 social credit per referral
+          </Text>
         </View>
         <Text style={styles.subtitle}>
           Share your personal link. When a friend signs up and completes their
@@ -132,11 +146,20 @@ export default function InviteScreen() {
 
       {/* ── Perks ───────────────────────────────────────────────────────── */}
       <View style={styles.perksCard}>
-        <PerkRow emoji="🌱" text="Your friend starts with a social credit boost" />
+        <PerkRow
+          emoji="🌱"
+          text="Your friend starts with a social credit boost"
+        />
         <View style={styles.perkDivider} />
-        <PerkRow emoji="🤝" text="They're automatically added to your partner list" />
+        <PerkRow
+          emoji="🤝"
+          text="They're automatically added to your partner list"
+        />
         <View style={styles.perkDivider} />
-        <PerkRow emoji="⭐" text="You earn +10 social credit for each referral" />
+        <PerkRow
+          emoji="⭐"
+          text="You earn +10 social credit for each referral"
+        />
       </View>
 
       {/* ── Invite link preview ─────────────────────────────────────────── */}

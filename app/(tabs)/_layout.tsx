@@ -14,6 +14,7 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="index" options={{ title: "Home" }} />
         <Tabs.Screen name="session" options={{ title: "Focus" }} />
+        <Tabs.Screen name="friends" options={{ title: "Friends" }} />
         <Tabs.Screen name="profile" options={{ title: "Profile" }} />
       </Tabs>
     </ScrollProvider>

@@ -38,13 +38,10 @@ export default function RootLayout() {
         return;
       }
 
-      // niyah://invite?ref=<referrerUid>
       const parsed = Linking.parse(url);
-      if (parsed.scheme === "niyah" && parsed.hostname === "invite") {
-        const referrerUid = parsed.queryParams?.ref;
-        if (referrerUid && typeof referrerUid === "string") {
-          await AsyncStorage.setItem(PENDING_REFERRAL_KEY, referrerUid);
-        }
+      const referrerUid = parsed.queryParams?.ref;
+      if (referrerUid && typeof referrerUid === "string") {
+        await AsyncStorage.setItem(PENDING_REFERRAL_KEY, referrerUid);
       }
     };
 
@@ -91,6 +88,13 @@ export default function RootLayout() {
           options={{
             headerShown: false,
             animation: "slide_from_bottom",
+          }}
+        />
+        <Stack.Screen
+          name="user/[uid]"
+          options={{
+            headerShown: false,
+            animation: "slide_from_right",
           }}
         />
       </Stack>

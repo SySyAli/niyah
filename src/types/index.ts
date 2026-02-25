@@ -1,5 +1,14 @@
 export type CadenceType = "daily" | "weekly" | "monthly";
 
+export interface PublicProfile {
+  uid: string;
+  name: string;
+  reputation: { score: number; level: string; referralCount: number };
+  currentStreak: number;
+  totalSessions: number;
+  completedSessions: number;
+}
+
 export type SessionStatus = "active" | "completed" | "surrendered";
 
 // Reputation levels based on payment reliability

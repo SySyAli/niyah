@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,17 +10,208 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Card, Button } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../../src/store/walletStore";
 import { CADENCES, CadenceId, DEMO_MODE } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xl,
+    },
+    header: {
+      marginBottom: Spacing.md,
+    },
+    backText: {
+      color: Colors.textSecondary,
+      fontSize: Typography.bodyLarge,
+      ...Font.medium,
+    },
+    title: {
+      fontSize: Typography.headlineMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    subtitle: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+      marginBottom: Spacing.lg,
+    },
+    options: {
+      gap: Spacing.md,
+      marginBottom: Spacing.xl,
+    },
+    optionCard: {
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+      padding: Spacing.lg,
+      borderWidth: 2,
+      borderColor: "transparent",
+    },
+    optionSelected: {
+      borderColor: Colors.primary,
+      backgroundColor: Colors.primaryMuted,
+    },
+    optionDisabled: {
+      opacity: 0.5,
+    },
+    optionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: Spacing.xs,
+    },
+    optionName: {
+      fontSize: Typography.titleMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    checkmark: {
+      backgroundColor: Colors.primary,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      borderRadius: Radius.xs,
+    },
+    checkmarkText: {
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
+      color: Colors.background,
+    },
+    optionDuration: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textTertiary,
+      marginBottom: Spacing.md,
+    },
+    optionPricing: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    priceColumn: {
+      flex: 1,
+    },
+    priceColumnRight: {
+      alignItems: "flex-end",
+    },
+    priceLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textTertiary,
+      marginBottom: Spacing.xs,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    stakeAmount: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    earnAmount: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.gain,
+    },
+    vsContainer: {
+      paddingHorizontal: Spacing.lg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    vsText: {
+      fontSize: Typography.labelMedium,
+      ...Font.semibold,
+      color: Colors.textMuted,
+    },
+    insufficientText: {
+      color: Colors.loss,
+      fontSize: Typography.labelSmall,
+      marginTop: Spacing.sm,
+      textAlign: "center",
+    },
+    summaryCard: {
+      padding: Spacing.lg,
+    },
+    summaryTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.md,
+    },
+    summaryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: Spacing.sm,
+    },
+    summaryLabel: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+    },
+    summaryValue: {
+      fontSize: Typography.bodySmall,
+      ...Font.medium,
+      color: Colors.text,
+    },
+    bonusValue: {
+      color: Colors.primary,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: Colors.border,
+      marginVertical: Spacing.md,
+    },
+    outcomeSection: {
+      marginTop: Spacing.sm,
+    },
+    outcomeTitle: {
+      fontSize: Typography.labelMedium,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.sm,
+    },
+    outcomeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: Spacing.xs,
+    },
+    outcomeLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+    },
+    outcomeValue: {
+      fontSize: Typography.labelSmall,
+      ...Font.medium,
+      color: Colors.text,
+    },
+    footer: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xl,
+      gap: Spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    balanceText: {
+      textAlign: "center",
+      color: Colors.textSecondary,
+      fontSize: Typography.bodySmall,
+    },
+  });
 
 interface CadenceOptionProps {
   cadenceKey: CadenceId;
@@ -37,6 +228,8 @@ const CadenceOption: React.FC<CadenceOptionProps> = ({
   canAfford,
   onSelect,
 }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -113,6 +306,8 @@ const CadenceOption: React.FC<CadenceOptionProps> = ({
 };
 
 export default function SelectCadenceScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const params = useLocalSearchParams();
   const balance = useWalletStore((state) => state.balance);
@@ -210,190 +405,3 @@ export default function SelectCadenceScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
-  header: {
-    marginBottom: Spacing.md,
-  },
-  backText: {
-    color: Colors.textSecondary,
-    fontSize: Typography.bodyLarge,
-    ...Font.medium,
-  },
-  title: {
-    fontSize: Typography.headlineMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.lg,
-  },
-  options: {
-    gap: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
-  optionCard: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  optionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryMuted,
-  },
-  optionDisabled: {
-    opacity: 0.5,
-  },
-  optionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.xs,
-  },
-  optionName: {
-    fontSize: Typography.titleMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  checkmark: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radius.xs,
-  },
-  checkmarkText: {
-    fontSize: Typography.labelSmall,
-    ...Font.semibold,
-    color: Colors.background,
-  },
-  optionDuration: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textTertiary,
-    marginBottom: Spacing.md,
-  },
-  optionPricing: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  priceColumn: {
-    flex: 1,
-  },
-  priceColumnRight: {
-    alignItems: "flex-end",
-  },
-  priceLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textTertiary,
-    marginBottom: Spacing.xs,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  stakeAmount: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  earnAmount: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.gain,
-  },
-  vsContainer: {
-    paddingHorizontal: Spacing.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  vsText: {
-    fontSize: Typography.labelMedium,
-    ...Font.semibold,
-    color: Colors.textMuted,
-  },
-  insufficientText: {
-    color: Colors.loss,
-    fontSize: Typography.labelSmall,
-    marginTop: Spacing.sm,
-    textAlign: "center",
-  },
-  summaryCard: {
-    padding: Spacing.lg,
-  },
-  summaryTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: Spacing.sm,
-  },
-  summaryLabel: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-  },
-  summaryValue: {
-    fontSize: Typography.bodySmall,
-    ...Font.medium,
-    color: Colors.text,
-  },
-  bonusValue: {
-    color: Colors.primary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: Spacing.md,
-  },
-  outcomeSection: {
-    marginTop: Spacing.sm,
-  },
-  outcomeTitle: {
-    fontSize: Typography.labelMedium,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  outcomeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: Spacing.xs,
-  },
-  outcomeLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-  },
-  outcomeValue: {
-    fontSize: Typography.labelSmall,
-    ...Font.medium,
-    color: Colors.text,
-  },
-  footer: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    gap: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  balanceText: {
-    textAlign: "center",
-    color: Colors.textSecondary,
-    fontSize: Typography.bodySmall,
-  },
-});

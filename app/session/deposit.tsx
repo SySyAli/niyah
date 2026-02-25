@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,12 +11,13 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
 import { Button, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -35,6 +36,8 @@ const QuickAmountButton: React.FC<QuickAmountButtonProps> = ({
   onPress,
   isSelected,
 }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -80,6 +83,8 @@ const QuickAmountButton: React.FC<QuickAmountButtonProps> = ({
 };
 
 export default function DepositScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { deposit, balance } = useWalletStore();
   const [inputValue, setInputValue] = useState("");
@@ -227,88 +232,89 @@ export default function DepositScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.lg,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: Spacing.md,
-  },
-  closeButton: {
-    width: 60,
-  },
-  closeText: {
-    color: Colors.textSecondary,
-    fontSize: Typography.bodyLarge,
-    ...Font.medium,
-  },
-  title: {
-    fontSize: Typography.titleLarge,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  balanceInfo: {
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-  },
-  balanceLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textTertiary,
-    marginBottom: Spacing.xs,
-  },
-  balanceAmount: {
-    fontSize: Typography.titleMedium,
-    ...Font.semibold,
-    color: Colors.textSecondary,
-  },
-  quickAmountsContainer: {
-    marginBottom: Spacing.lg,
-  },
-  quickAmounts: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
-  },
-  quickAmount: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  quickAmountSelected: {
-    backgroundColor: Colors.primaryMuted,
-    borderColor: Colors.primary,
-  },
-  quickAmountText: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  quickAmountTextSelected: {
-    color: Colors.primary,
-  },
-  numPadContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  footer: {
-    paddingVertical: Spacing.lg,
-    gap: Spacing.md,
-  },
-  disclaimer: {
-    textAlign: "center",
-    color: Colors.textMuted,
-    fontSize: Typography.labelSmall,
-  },
-});
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: Spacing.lg,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: Spacing.md,
+    },
+    closeButton: {
+      width: 60,
+    },
+    closeText: {
+      color: Colors.textSecondary,
+      fontSize: Typography.bodyLarge,
+      ...Font.medium,
+    },
+    title: {
+      fontSize: Typography.titleLarge,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    balanceInfo: {
+      alignItems: "center",
+      paddingVertical: Spacing.md,
+    },
+    balanceLabel: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textTertiary,
+      marginBottom: Spacing.xs,
+    },
+    balanceAmount: {
+      fontSize: Typography.titleMedium,
+      ...Font.semibold,
+      color: Colors.textSecondary,
+    },
+    quickAmountsContainer: {
+      marginBottom: Spacing.lg,
+    },
+    quickAmounts: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: Spacing.sm,
+      paddingHorizontal: Spacing.sm,
+    },
+    quickAmount: {
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.lg,
+      borderRadius: Radius.full,
+      backgroundColor: Colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    quickAmountSelected: {
+      backgroundColor: Colors.primaryMuted,
+      borderColor: Colors.primary,
+    },
+    quickAmountText: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    quickAmountTextSelected: {
+      color: Colors.primary,
+    },
+    numPadContainer: {
+      flex: 1,
+      justifyContent: "center",
+    },
+    footer: {
+      paddingVertical: Spacing.lg,
+      gap: Spacing.md,
+    },
+    disclaimer: {
+      textAlign: "center",
+      color: Colors.textMuted,
+      fontSize: Typography.labelSmall,
+    },
+  });

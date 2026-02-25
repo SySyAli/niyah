@@ -142,9 +142,11 @@ describe("formatTime", () => {
       expect(formatTime(-100000)).toBe("00:00");
     });
 
-    it("should handle decimal milliseconds by flooring", () => {
-      expect(formatTime(1500)).toBe("00:01");
-      expect(formatTime(1999)).toBe("00:01");
+    it("should handle decimal milliseconds by ceiling (countdown-safe)", () => {
+      expect(formatTime(1500)).toBe("00:02");
+      expect(formatTime(1999)).toBe("00:02");
+      expect(formatTime(1000)).toBe("00:01");
+      expect(formatTime(1001)).toBe("00:02");
     });
 
     it("should pad single digits with zero", () => {

@@ -113,13 +113,14 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
     );
 
     // 3. Attach payouts to participants.
-    const finalParticipants: SessionParticipant[] =
-      participantsWithResults.map((p) => ({
+    const finalParticipants: SessionParticipant[] = participantsWithResults.map(
+      (p) => ({
         ...p,
         payout:
           payouts.find((pay) => pay.userId === p.userId)?.payout ??
           p.stakeAmount,
-      }));
+      }),
+    );
 
     // 4. Build transfers from algorithm output.
     const drafts = calculateTransfers(finalParticipants, payouts);

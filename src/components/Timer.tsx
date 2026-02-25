@@ -1,15 +1,10 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-import {
-  Colors,
-  Typography,
-  Spacing,
-  FontWeight,
-  Font,
-} from "../constants/colors";
+import { Typography, Spacing, FontWeight, Font } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 import { formatTime } from "../utils/format";
 
 interface TimerProps {
@@ -27,6 +22,7 @@ export const Timer: React.FC<TimerProps> = ({
   showLabel = true,
   showProgress = true,
 }) => {
+  const Colors = useColors();
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const isLow = timeRemaining < 60000; // Less than 1 minute
   const isCritical = timeRemaining < 10000; // Less than 10 seconds
@@ -73,6 +69,56 @@ export const Timer: React.FC<TimerProps> = ({
     if (isLow) return Colors.warning;
     return Colors.primary;
   };
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        ringContainer: {
+          position: "relative",
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        svgContainer: {
+          position: "absolute",
+        },
+        timeContainer: {
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        simpleContainer: {
+          alignItems: "center",
+        },
+        label: {
+          fontSize: Typography.labelMedium,
+          color: Colors.textSecondary,
+          marginBottom: Spacing.xs,
+          ...Font.medium,
+          textTransform: "uppercase",
+          letterSpacing: 1,
+        },
+        time: {
+          ...Font.bold,
+          fontVariant: ["tabular-nums"],
+          letterSpacing: -1,
+        },
+        progressText: {
+          fontSize: Typography.labelSmall,
+          color: Colors.textMuted,
+          marginTop: Spacing.xs,
+        },
+        inlineTime: {
+          fontSize: Typography.bodyLarge,
+          ...Font.semibold,
+          color: Colors.text,
+          fontVariant: ["tabular-nums"],
+        },
+      }),
+    [Colors],
+  );
 
   return (
     <Animated.View style={[styles.container, { opacity: opacityAnim }]}>
@@ -154,57 +200,19 @@ interface InlineTimerProps {
 }
 
 export const InlineTimer: React.FC<InlineTimerProps> = ({ timeRemaining }) => {
+  const Colors = useColors();
   const isLow = timeRemaining < 60000;
 
+  const inlineTimeStyle = {
+    fontSize: Typography.bodyLarge,
+    ...Font.semibold,
+    color: Colors.text,
+    fontVariant: ["tabular-nums"] as ["tabular-nums"],
+  };
+
   return (
-    <Text style={[styles.inlineTime, isLow && { color: Colors.warning }]}>
+    <Text style={[inlineTimeStyle, isLow && { color: Colors.warning }]}>
       {formatTime(timeRemaining)}
     </Text>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ringContainer: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  svgContainer: {
-    position: "absolute",
-  },
-  timeContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  simpleContainer: {
-    alignItems: "center",
-  },
-  label: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-    ...Font.medium,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  time: {
-    ...Font.bold,
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -1,
-  },
-  progressText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
-  },
-  inlineTime: {
-    fontSize: Typography.bodyLarge,
-    ...Font.semibold,
-    color: Colors.text,
-    fontVariant: ["tabular-nums"],
-  },
-});

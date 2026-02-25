@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,12 +11,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Card, Button } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
@@ -24,21 +25,229 @@ import { useAuthStore } from "../../src/store/authStore";
 import { GroupSession } from "../../src/types";
 import { formatMoney } from "../../src/utils/format";
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    content: {
+      flex: 1,
+      padding: Spacing.lg,
+    },
+    header: {
+      marginBottom: Spacing.md,
+    },
+    backText: {
+      color: Colors.primary,
+      fontSize: Typography.bodyLarge,
+      ...Font.medium,
+    },
+    titleSection: {
+      alignItems: "center",
+      marginBottom: Spacing.xl,
+    },
+    title: {
+      fontSize: Typography.headlineMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    subtitle: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    // Warning card
+    warningCard: {
+      alignItems: "center",
+      backgroundColor: Colors.lossLight,
+      borderWidth: 1,
+      borderColor: Colors.loss,
+      paddingVertical: Spacing.xl,
+      marginBottom: Spacing.md,
+    },
+    warningLabel: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.xs,
+    },
+    lossAmount: {
+      fontSize: Typography.displaySmall,
+      ...Font.bold,
+      color: Colors.loss,
+      marginBottom: Spacing.sm,
+    },
+    warningNote: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+      textAlign: "center",
+    },
+    partnerInfo: {
+      alignItems: "center",
+      marginTop: Spacing.sm,
+    },
+    partnerVenmo: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.primary,
+      marginTop: Spacing.xs,
+    },
+    // Payment card (after surrender)
+    paymentCard: {
+      alignItems: "center",
+      backgroundColor: Colors.lossLight,
+      borderWidth: 1,
+      borderColor: Colors.loss,
+      paddingVertical: Spacing.xl,
+      marginBottom: Spacing.md,
+    },
+    paymentLabel: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.xs,
+    },
+    paymentAmount: {
+      fontSize: Typography.displayMedium,
+      ...Font.bold,
+      color: Colors.loss,
+      marginBottom: Spacing.xs,
+    },
+    paymentTo: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.text,
+      marginBottom: Spacing.sm,
+    },
+    venmoHandle: {
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+      color: Colors.primary,
+    },
+    // Reputation cards
+    reputationCard: {
+      backgroundColor: Colors.warningLight,
+      borderWidth: 1,
+      borderColor: Colors.warning,
+      marginBottom: Spacing.md,
+    },
+    reputationWarning: {
+      backgroundColor: Colors.backgroundCard,
+      marginBottom: Spacing.lg,
+    },
+    reputationTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.sm,
+    },
+    reputationText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      lineHeight: 20,
+    },
+    // Skip payment
+    skipButton: {
+      alignItems: "center",
+      paddingVertical: Spacing.md,
+    },
+    skipText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+    },
+    // Alternative suggestions
+    alternativeCard: {
+      marginBottom: Spacing.lg,
+    },
+    alternativeTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.xs,
+    },
+    alternativeText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.md,
+    },
+    suggestions: {
+      gap: Spacing.xs,
+    },
+    suggestionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    suggestionBullet: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: Colors.primary,
+      marginRight: Spacing.sm,
+    },
+    suggestionText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.text,
+    },
+    confirmSection: {
+      marginBottom: Spacing.lg,
+    },
+    confirmLabel: {
+      fontSize: Typography.labelMedium,
+      ...Font.medium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.sm,
+      textAlign: "center",
+    },
+    confirmInput: {
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      fontSize: Typography.titleMedium,
+      color: Colors.text,
+      borderWidth: 2,
+      borderColor: Colors.border,
+      textAlign: "center",
+      letterSpacing: 4,
+      ...Font.semibold,
+    },
+    confirmInputValid: {
+      borderColor: Colors.loss,
+      backgroundColor: Colors.lossLight,
+    },
+    footer: {
+      marginTop: "auto",
+      gap: Spacing.sm,
+    },
+  });
+
 export default function SurrenderScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
-  const { activeGroupSession, completeGroupSession, getVenmoPayLink, markTransferPaid } =
-    useGroupSessionStore();
+  const {
+    activeGroupSession,
+    completeGroupSession,
+    getVenmoPayLink,
+    markTransferPaid,
+  } = useGroupSessionStore();
   const userId = useAuthStore((state) => state.user?.id);
   const [confirmText, setConfirmText] = useState("");
   const [showPayment, setShowPayment] = useState(false);
-  const [completedSession, setCompletedSession] = useState<GroupSession | null>(null);
+  const [completedSession, setCompletedSession] = useState<GroupSession | null>(
+    null,
+  );
 
   const canSurrender = confirmText.toLowerCase() === "quit";
 
   // Derived from completedSession (available after surrender)
-  const settledPartner = completedSession?.participants.find((p) => p.userId !== userId);
-  const outboundTransfer = completedSession?.transfers.find((t) => t.fromUserId === userId);
-  const amountOwed = outboundTransfer?.amount ?? completedSession?.stakePerParticipant ?? 0;
+  const settledPartner = completedSession?.participants.find(
+    (p) => p.userId !== userId,
+  );
+  const outboundTransfer = completedSession?.transfers.find(
+    (t) => t.fromUserId === userId,
+  );
+  const amountOwed =
+    outboundTransfer?.amount ?? completedSession?.stakePerParticipant ?? 0;
 
   const handleSurrender = () => {
     if (canSurrender && activeGroupSession) {
@@ -54,7 +263,9 @@ export default function SurrenderScreen() {
   };
 
   // Derived from activeGroupSession (available before surrender)
-  const activePartner = activeGroupSession?.participants.find((p) => p.userId !== userId);
+  const activePartner = activeGroupSession?.participants.find(
+    (p) => p.userId !== userId,
+  );
 
   const handlePayVenmo = async (): Promise<void> => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -130,12 +341,8 @@ export default function SurrenderScreen() {
 
           <Card style={styles.paymentCard}>
             <Text style={styles.paymentLabel}>You owe</Text>
-            <Text style={styles.paymentAmount}>
-              {formatMoney(amountOwed)}
-            </Text>
-            <Text style={styles.paymentTo}>
-              to {settledPartner?.name}
-            </Text>
+            <Text style={styles.paymentAmount}>{formatMoney(amountOwed)}</Text>
+            <Text style={styles.paymentTo}>to {settledPartner?.name}</Text>
             {settledPartner?.venmoHandle && (
               <Text style={styles.venmoHandle}>
                 {settledPartner.venmoHandle}
@@ -279,195 +486,3 @@ export default function SurrenderScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    padding: Spacing.lg,
-  },
-  header: {
-    marginBottom: Spacing.md,
-  },
-  backText: {
-    color: Colors.primary,
-    fontSize: Typography.bodyLarge,
-    ...Font.medium,
-  },
-  titleSection: {
-    alignItems: "center",
-    marginBottom: Spacing.xl,
-  },
-  title: {
-    fontSize: Typography.headlineMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  // Warning card
-  warningCard: {
-    alignItems: "center",
-    backgroundColor: Colors.lossLight,
-    borderWidth: 1,
-    borderColor: Colors.loss,
-    paddingVertical: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  warningLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  lossAmount: {
-    fontSize: Typography.displaySmall,
-    ...Font.bold,
-    color: Colors.loss,
-    marginBottom: Spacing.sm,
-  },
-  warningNote: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    textAlign: "center",
-  },
-  partnerInfo: {
-    alignItems: "center",
-    marginTop: Spacing.sm,
-  },
-  partnerVenmo: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    color: Colors.primary,
-    marginTop: Spacing.xs,
-  },
-  // Payment card (after surrender)
-  paymentCard: {
-    alignItems: "center",
-    backgroundColor: Colors.lossLight,
-    borderWidth: 1,
-    borderColor: Colors.loss,
-    paddingVertical: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  paymentLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  paymentAmount: {
-    fontSize: Typography.displayMedium,
-    ...Font.bold,
-    color: Colors.loss,
-    marginBottom: Spacing.xs,
-  },
-  paymentTo: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  venmoHandle: {
-    fontSize: Typography.bodyLarge,
-    ...Font.semibold,
-    color: Colors.primary,
-  },
-  // Reputation cards
-  reputationCard: {
-    backgroundColor: Colors.warningLight,
-    borderWidth: 1,
-    borderColor: Colors.warning,
-    marginBottom: Spacing.md,
-  },
-  reputationWarning: {
-    backgroundColor: Colors.backgroundCard,
-    marginBottom: Spacing.lg,
-  },
-  reputationTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  reputationText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-  // Skip payment
-  skipButton: {
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-  },
-  skipText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-  },
-  // Alternative suggestions
-  alternativeCard: {
-    marginBottom: Spacing.lg,
-  },
-  alternativeTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  alternativeText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.md,
-  },
-  suggestions: {
-    gap: Spacing.xs,
-  },
-  suggestionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  suggestionBullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.primary,
-    marginRight: Spacing.sm,
-  },
-  suggestionText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.text,
-  },
-  confirmSection: {
-    marginBottom: Spacing.lg,
-  },
-  confirmLabel: {
-    fontSize: Typography.labelMedium,
-    ...Font.medium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-    textAlign: "center",
-  },
-  confirmInput: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: Typography.titleMedium,
-    color: Colors.text,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    textAlign: "center",
-    letterSpacing: 4,
-    ...Font.semibold,
-  },
-  confirmInputValid: {
-    borderColor: Colors.loss,
-    backgroundColor: Colors.lossLight,
-  },
-  footer: {
-    marginTop: "auto",
-    gap: Spacing.sm,
-  },
-});

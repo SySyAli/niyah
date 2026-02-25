@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,15 +8,18 @@ import {
   Pressable,
   Alert,
   TextInput,
+  Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
+import { useThemeStore } from "../../src/store/themeStore";
 import * as Haptics from "expo-haptics";
 import { Card, Balance } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -25,8 +28,18 @@ import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
 import { formatMoney, formatRelativeTime } from "../../src/utils/format";
 import { REPUTATION_LEVELS } from "../../src/constants/config";
+import {
+  isScreenTimeAvailable,
+  requestScreenTimeAuth,
+  getScreenTimeAuthStatus,
+  presentAppPicker,
+  getSavedAppSelection,
+} from "../../src/config/screentime";
+import type { AuthorizationStatus } from "../../modules/niyah-screentime";
 
 export default function ProfileScreen() {
+  const Colors = useColors();
+  const { theme, toggleTheme } = useThemeStore();
   const router = useRouter();
   const { user, logout, setVenmoHandle, setZelleHandle } = useAuthStore();
   const { balance, transactions, pendingWithdrawal } = useWalletStore();
@@ -36,11 +49,28 @@ export default function ProfileScreen() {
   const [venmoInput, setVenmoInput] = useState(user?.venmoHandle || "");
   const [zelleInput, setZelleInput] = useState(user?.zelleHandle || "");
 
+  // Screen Time state
+  const [screenTimeAuth, setScreenTimeAuth] =
+    useState<AuthorizationStatus>("notDetermined");
+  const [appSelectionCount, setAppSelectionCount] = useState(0);
+
+  const refreshScreenTimeStatus = useCallback(() => {
+    if (!isScreenTimeAvailable) return;
+    try {
+      setScreenTimeAuth(getScreenTimeAuthStatus());
+      const selection = getSavedAppSelection();
+      setAppSelectionCount(selection?.appCount ?? 0);
+    } catch {
+      // Native module not loaded (simulator, etc.)
+    }
+  }, []);
+
   useEffect(() => {
     if (user?.id) {
       loadMyFollows(user.id).catch(() => {});
     }
-  }, [user?.id, loadMyFollows]);
+    refreshScreenTimeStatus();
+  }, [user?.id, loadMyFollows, refreshScreenTimeStatus]);
 
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -60,6 +90,8 @@ export default function ProfileScreen() {
       },
     ]);
   };
+
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   const completionRate =
     user && user.totalSessions > 0
@@ -135,7 +167,10 @@ export default function ProfileScreen() {
               style={styles.headerStatItem}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(tabs)/friends?tab=following");
+                router.push({
+                  pathname: "/(tabs)/friends",
+                  params: { tab: "following" },
+                });
               }}
             >
               <Text style={styles.headerStatValue}>{following.length}</Text>
@@ -146,7 +181,10 @@ export default function ProfileScreen() {
               style={styles.headerStatItem}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/(tabs)/friends?tab=partners");
+                router.push({
+                  pathname: "/(tabs)/friends",
+                  params: { tab: "partners" },
+                });
               }}
             >
               <Text style={styles.headerStatValue}>{partners.length}</Text>
@@ -218,7 +256,7 @@ export default function ProfileScreen() {
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push("/invite");
+            router.push("/invite" as never);
           }}
           style={styles.inviteCard}
         >
@@ -234,6 +272,74 @@ export default function ProfileScreen() {
             </View>
           </View>
         </Pressable>
+
+        {/* Screen Time Setup */}
+        {isScreenTimeAvailable && (
+          <Card style={styles.screenTimeCard}>
+            <Text style={styles.screenTimeTitle}>Screen Time</Text>
+            <Text style={styles.screenTimeDescription}>
+              {screenTimeAuth === "approved"
+                ? appSelectionCount > 0
+                  ? `${appSelectionCount} app${appSelectionCount !== 1 ? "s" : ""} will be blocked during sessions`
+                  : "Select which apps to block during sessions"
+                : "Allow NIYAH to block distracting apps during sessions"}
+            </Text>
+
+            {screenTimeAuth !== "approved" ? (
+              <Pressable
+                style={styles.screenTimeButton}
+                onPress={async () => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  try {
+                    const status = await requestScreenTimeAuth();
+                    setScreenTimeAuth(status);
+                    if (status === "denied") {
+                      Alert.alert(
+                        "Permission Denied",
+                        "You can enable Screen Time access in Settings > NIYAH > Screen Time.",
+                      );
+                    }
+                  } catch (error) {
+                    Alert.alert(
+                      "Error",
+                      "Could not request Screen Time permission. Make sure you're on a physical device with iOS 16+.",
+                    );
+                  }
+                }}
+              >
+                <Text style={styles.screenTimeButtonText}>
+                  Enable Screen Time
+                </Text>
+              </Pressable>
+            ) : (
+              <View style={styles.screenTimeActions}>
+                <Pressable
+                  style={styles.screenTimeButton}
+                  onPress={async () => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    try {
+                      const selection = await presentAppPicker();
+                      setAppSelectionCount(selection.appCount);
+                    } catch (error) {
+                      // User cancelled the picker — that's fine
+                    }
+                  }}
+                >
+                  <Text style={styles.screenTimeButtonText}>
+                    {appSelectionCount > 0 ? "Change Apps" : "Select Apps"}
+                  </Text>
+                </Pressable>
+
+                {appSelectionCount > 0 && (
+                  <View style={styles.screenTimeStatusBadge}>
+                    <View style={styles.screenTimeStatusDot} />
+                    <Text style={styles.screenTimeStatusText}>Ready</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </Card>
+        )}
 
         {/* Payment Handles */}
         <Card style={styles.paymentHandlesCard}>
@@ -410,6 +516,25 @@ export default function ProfileScreen() {
 
         {/* Settings */}
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Settings</Text>
+          <Card style={styles.settingsCard} animate={false}>
+            <View style={styles.settingRow}>
+              <Text style={styles.settingLabel}>Light Mode</Text>
+              <Switch
+                value={theme === "light"}
+                onValueChange={toggleTheme}
+                trackColor={{
+                  false: Colors.backgroundTertiary,
+                  true: Colors.primary,
+                }}
+                thumbColor={Colors.white}
+              />
+            </View>
+          </Card>
+        </View>
+
+        {/* Account */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           <Card style={styles.settingsCard} animate={false}>
             <Pressable onPress={handleLogout} style={styles.settingRow}>
@@ -428,427 +553,489 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: Spacing.xl,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.backgroundTertiary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.md,
-  },
-  avatarText: {
-    fontSize: Typography.displaySmall,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  name: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  email: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  headerStatsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: Spacing.md,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-  },
-  headerStatItem: {
-    alignItems: "center",
-    minWidth: 88,
-  },
-  headerStatValue: {
-    fontSize: Typography.titleMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  headerStatLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  headerStatDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: Colors.border,
-    marginHorizontal: Spacing.md,
-  },
-  // Reputation badge in header
-  reputationBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.backgroundCard,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    marginTop: Spacing.md,
-  },
-  reputationDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: Spacing.sm,
-  },
-  reputationText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    ...Font.medium,
-  },
-  // Reputation card
-  reputationCard: {
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  reputationHeader: {
-    marginBottom: Spacing.md,
-  },
-  reputationTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  reputationDescription: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  progressBarContainer: {
-    marginBottom: Spacing.md,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: Colors.border,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  progressLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: Spacing.xs,
-  },
-  progressLabel: {
-    fontSize: 10,
-    color: Colors.textMuted,
-  },
-  paymentStats: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  paymentStat: {
-    alignItems: "center",
-  },
-  paymentValue: {
-    fontSize: Typography.titleMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  paymentLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  // Invite card
-  inviteCard: {
-    backgroundColor: Colors.primaryMuted,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.primaryLight,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  inviteCardContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  inviteCardTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  inviteCardSubtitle: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  inviteBadge: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-    paddingVertical: 4,
-    paddingHorizontal: Spacing.md,
-  },
-  inviteBadgeText: {
-    fontSize: Typography.labelLarge,
-    ...Font.bold,
-    color: Colors.white,
-  },
-  // Payment methods
-  paymentHandlesCard: {
-    marginBottom: Spacing.md,
-  },
-  paymentHandlesHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.sm,
-  },
-  paymentHandleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: Spacing.sm,
-    gap: Spacing.md,
-  },
-  paymentHandleLabel: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    ...Font.medium,
-  },
-  paymentHandleDivider: {
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-  venmoTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  venmoHandleText: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.primary,
-    ...Font.semibold,
-  },
-  venmoPlaceholder: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textMuted,
-  },
-  venmoEditText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-  },
-  venmoNote: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    marginTop: Spacing.sm,
-  },
-  modalInputGroup: {
-    marginBottom: Spacing.md,
-  },
-  modalInputLabel: {
-    fontSize: Typography.labelMedium,
-    ...Font.medium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  modalInput: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: Typography.bodyMedium,
-    color: Colors.text,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
-  },
-  modalCancelButton: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  modalCancelText: {
-    fontSize: Typography.labelMedium,
-    ...Font.medium,
-    color: Colors.textSecondary,
-  },
-  modalSaveButton: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-  },
-  modalSaveText: {
-    fontSize: Typography.labelMedium,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  balanceCard: {
-    marginBottom: Spacing.md,
-  },
-  balanceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  balanceLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  withdrawButton: {
-    backgroundColor: Colors.backgroundTertiary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
-  },
-  withdrawButtonText: {
-    fontSize: Typography.bodySmall,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  pendingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  pendingLabel: {
-    fontSize: Typography.bodySmall,
-    color: Colors.warning,
-  },
-  pendingAmount: {
-    fontSize: Typography.bodySmall,
-    ...Font.semibold,
-    color: Colors.warning,
-  },
-  statsRow: {
-    flexDirection: "row",
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
-  miniStatCard: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: Colors.border,
-  },
-  miniStatValue: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  miniStatLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  section: {
-    marginBottom: Spacing.xl,
-  },
-  sectionTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  emptyCard: {
-    alignItems: "center",
-    paddingVertical: Spacing.xl,
-  },
-  emptyText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textMuted,
-  },
-  transactionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionDesc: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.text,
-  },
-  transactionDate: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  transactionAmount: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    fontVariant: ["tabular-nums"],
-  },
-  amountPositive: {
-    color: Colors.gain,
-  },
-  amountNegative: {
-    color: Colors.loss,
-  },
-  settingsCard: {
-    padding: 0,
-    overflow: "hidden",
-  },
-  settingRow: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-  },
-  settingLabelDestructive: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.danger,
-  },
-  footer: {
-    alignItems: "center",
-    paddingVertical: Spacing.lg,
-  },
-  footerText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-  },
-  footerSubtext: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
-  },
-});
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xxl,
+    },
+    header: {
+      alignItems: "center",
+      marginBottom: Spacing.xl,
+    },
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: Colors.backgroundTertiary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: Spacing.md,
+    },
+    avatarText: {
+      fontSize: Typography.displaySmall,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    name: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    email: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    headerStatsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: Spacing.md,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+    },
+    headerStatItem: {
+      alignItems: "center",
+      minWidth: 88,
+    },
+    headerStatValue: {
+      fontSize: Typography.titleMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    headerStatLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginTop: 2,
+    },
+    headerStatDivider: {
+      width: 1,
+      height: 28,
+      backgroundColor: Colors.border,
+      marginHorizontal: Spacing.md,
+    },
+    // Reputation badge in header
+    reputationBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.backgroundCard,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: Radius.full,
+      marginTop: Spacing.md,
+    },
+    reputationDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: Spacing.sm,
+    },
+    reputationText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      ...Font.medium,
+    },
+    // Reputation card
+    reputationCard: {
+      marginBottom: Spacing.md,
+      backgroundColor: Colors.primaryMuted,
+      borderWidth: 1,
+      borderColor: Colors.primary,
+    },
+    reputationHeader: {
+      marginBottom: Spacing.md,
+    },
+    reputationTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    reputationDescription: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    progressBarContainer: {
+      marginBottom: Spacing.md,
+    },
+    progressBar: {
+      height: 8,
+      backgroundColor: Colors.border,
+      borderRadius: 4,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: 4,
+    },
+    progressLabels: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: Spacing.xs,
+    },
+    progressLabel: {
+      fontSize: 10,
+      color: Colors.textMuted,
+    },
+    paymentStats: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      paddingTop: Spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    paymentStat: {
+      alignItems: "center",
+    },
+    paymentValue: {
+      fontSize: Typography.titleMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    paymentLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    // Invite card
+    inviteCard: {
+      backgroundColor: Colors.primaryMuted,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: Colors.primaryLight,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+    },
+    inviteCardContent: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    inviteCardTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    inviteCardSubtitle: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginTop: 2,
+    },
+    inviteBadge: {
+      backgroundColor: Colors.primary,
+      borderRadius: Radius.full,
+      paddingVertical: 4,
+      paddingHorizontal: Spacing.md,
+    },
+    inviteBadgeText: {
+      fontSize: Typography.labelLarge,
+      ...Font.bold,
+      color: Colors.white,
+    },
+    // Screen Time
+    screenTimeCard: {
+      marginBottom: Spacing.md,
+      backgroundColor: Colors.backgroundCard,
+    },
+    screenTimeTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.xs,
+    },
+    screenTimeDescription: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.md,
+      lineHeight: 20,
+    },
+    screenTimeButton: {
+      backgroundColor: Colors.primary,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.lg,
+      borderRadius: Radius.md,
+      alignSelf: "flex-start",
+    },
+    screenTimeButtonText: {
+      fontSize: Typography.labelMedium,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    screenTimeActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.md,
+    },
+    screenTimeStatusBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.gainLight,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.full,
+    },
+    screenTimeStatusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: Colors.gain,
+      marginRight: Spacing.xs,
+    },
+    screenTimeStatusText: {
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
+      color: Colors.gain,
+    },
+    // Payment methods
+    paymentHandlesCard: {
+      marginBottom: Spacing.md,
+    },
+    paymentHandlesHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: Spacing.sm,
+    },
+    paymentHandleRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: Spacing.sm,
+      gap: Spacing.md,
+    },
+    paymentHandleLabel: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      ...Font.medium,
+    },
+    paymentHandleDivider: {
+      height: 1,
+      backgroundColor: Colors.border,
+    },
+    venmoTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    venmoHandleText: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.primary,
+      ...Font.semibold,
+    },
+    venmoPlaceholder: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textMuted,
+    },
+    venmoEditText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+    },
+    venmoNote: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+      marginTop: Spacing.sm,
+    },
+    modalInputGroup: {
+      marginBottom: Spacing.md,
+    },
+    modalInputLabel: {
+      fontSize: Typography.labelMedium,
+      ...Font.medium,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.xs,
+    },
+    modalInput: {
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      fontSize: Typography.bodyMedium,
+      color: Colors.text,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    modalActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: Spacing.sm,
+      marginTop: Spacing.sm,
+    },
+    modalCancelButton: {
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.md,
+      backgroundColor: Colors.backgroundCard,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    modalCancelText: {
+      fontSize: Typography.labelMedium,
+      ...Font.medium,
+      color: Colors.textSecondary,
+    },
+    modalSaveButton: {
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.md,
+      backgroundColor: Colors.primary,
+    },
+    modalSaveText: {
+      fontSize: Typography.labelMedium,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    balanceCard: {
+      marginBottom: Spacing.md,
+    },
+    balanceRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    balanceLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginBottom: Spacing.xs,
+    },
+    withdrawButton: {
+      backgroundColor: Colors.backgroundTertiary,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderRadius: Radius.md,
+    },
+    withdrawButtonText: {
+      fontSize: Typography.bodySmall,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    pendingRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: Spacing.md,
+      paddingTop: Spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    pendingLabel: {
+      fontSize: Typography.bodySmall,
+      color: Colors.warning,
+    },
+    pendingAmount: {
+      fontSize: Typography.bodySmall,
+      ...Font.semibold,
+      color: Colors.warning,
+    },
+    statsRow: {
+      flexDirection: "row",
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      marginBottom: Spacing.xl,
+    },
+    miniStatCard: {
+      flex: 1,
+      alignItems: "center",
+    },
+    statDivider: {
+      width: 1,
+      backgroundColor: Colors.border,
+    },
+    miniStatValue: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    miniStatLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    section: {
+      marginBottom: Spacing.xl,
+    },
+    sectionTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.md,
+    },
+    emptyCard: {
+      alignItems: "center",
+      paddingVertical: Spacing.xl,
+    },
+    emptyText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textMuted,
+    },
+    transactionRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: Spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+    },
+    transactionInfo: {
+      flex: 1,
+    },
+    transactionDesc: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.text,
+    },
+    transactionDate: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+      marginTop: 2,
+    },
+    transactionAmount: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      fontVariant: ["tabular-nums"],
+    },
+    amountPositive: {
+      color: Colors.gain,
+    },
+    amountNegative: {
+      color: Colors.loss,
+    },
+    settingsCard: {
+      padding: 0,
+      overflow: "hidden",
+    },
+    settingRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.lg,
+    },
+    settingLabel: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.text,
+    },
+    settingLabelDestructive: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.danger,
+    },
+    footer: {
+      alignItems: "center",
+      paddingVertical: Spacing.lg,
+    },
+    footerText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+    },
+    footerSubtext: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+      marginTop: Spacing.xs,
+    },
+  });

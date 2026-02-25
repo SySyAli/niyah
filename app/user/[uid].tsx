@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,13 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  Colors,
   Spacing,
   Typography,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
@@ -22,7 +23,7 @@ import { PublicProfile } from "../../src/types";
 
 // ─── Rep badge ────────────────────────────────────────────────────────────────
 
-const repColor = (level: string): string => {
+const repColor = (level: string, Colors: ThemeColors): string => {
   switch (level) {
     case "oak":
       return Colors.accentGold;
@@ -40,6 +41,8 @@ const repColor = (level: string): string => {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PublicProfileScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { uid } = useLocalSearchParams<{ uid: string }>();
   const router = useRouter();
   const { user } = useAuthStore();
@@ -174,19 +177,19 @@ export default function PublicProfileScreen() {
         <View
           style={[
             styles.repBadge,
-            { borderColor: repColor(profile.reputation.level) },
+            { borderColor: repColor(profile.reputation.level, Colors) },
           ]}
         >
           <View
             style={[
               styles.repDot,
-              { backgroundColor: repColor(profile.reputation.level) },
+              { backgroundColor: repColor(profile.reputation.level, Colors) },
             ]}
           />
           <Text
             style={[
               styles.repBadgeText,
-              { color: repColor(profile.reputation.level) },
+              { color: repColor(profile.reputation.level, Colors) },
             ]}
           >
             {profile.reputation.level.charAt(0).toUpperCase() +
@@ -259,158 +262,159 @@ export default function PublicProfileScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  backRow: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-  },
-  backText: {
-    fontSize: Typography.bodyMedium,
-    ...Font.medium,
-    color: Colors.primaryLight,
-  },
-  content: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-  },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.primaryMuted,
-    borderWidth: 2,
-    borderColor: Colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.md,
-  },
-  avatarInitial: {
-    fontSize: Typography.headlineLarge,
-    ...Font.bold,
-    color: Colors.primaryLight,
-  },
-  name: {
-    fontSize: Typography.headlineSmall,
-    ...Font.heavy,
-    color: Colors.text,
-    letterSpacing: -0.3,
-    marginBottom: Spacing.sm,
-  },
-  repBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 5,
-    marginBottom: Spacing.md,
-  },
-  repDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  repBadgeText: {
-    fontSize: Typography.labelLarge,
-    ...Font.semibold,
-  },
-  progressTrack: {
-    width: "100%",
-    height: 6,
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: Radius.full,
-    marginBottom: Spacing.xl,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.full,
-  },
-  statsRow: {
-    flexDirection: "row",
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    width: "100%",
-    marginBottom: Spacing.xl,
-    paddingVertical: Spacing.md,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  statValue: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  statLabel: {
-    fontSize: Typography.labelSmall,
-    ...Font.regular,
-    color: Colors.textMuted,
-    textAlign: "center",
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: Colors.border,
-  },
-  followBtn: {
-    width: "100%",
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.md,
-    minHeight: 50,
-  },
-  followingBtn: {
-    backgroundColor: "transparent",
-    borderWidth: 1.5,
-    borderColor: Colors.primaryLight,
-  },
-  followBtnText: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.white,
-  },
-  followingBtnText: {
-    color: Colors.primaryLight,
-  },
-  sessionBtn: {
-    width: "100%",
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.backgroundSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sessionBtnText: {
-    fontSize: Typography.titleSmall,
-    ...Font.medium,
-    color: Colors.textSecondary,
-  },
-  errorText: {
-    fontSize: Typography.bodyMedium,
-    ...Font.regular,
-    color: Colors.textMuted,
-  },
-});
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    backRow: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.sm,
+    },
+    backText: {
+      fontSize: Typography.bodyMedium,
+      ...Font.medium,
+      color: Colors.primaryLight,
+    },
+    content: {
+      flex: 1,
+      alignItems: "center",
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.lg,
+    },
+    avatarCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: Colors.primaryMuted,
+      borderWidth: 2,
+      borderColor: Colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: Spacing.md,
+    },
+    avatarInitial: {
+      fontSize: Typography.headlineLarge,
+      ...Font.bold,
+      color: Colors.primaryLight,
+    },
+    name: {
+      fontSize: Typography.headlineSmall,
+      ...Font.heavy,
+      color: Colors.text,
+      letterSpacing: -0.3,
+      marginBottom: Spacing.sm,
+    },
+    repBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      borderWidth: 1,
+      borderRadius: Radius.full,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 5,
+      marginBottom: Spacing.md,
+    },
+    repDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    repBadgeText: {
+      fontSize: Typography.labelLarge,
+      ...Font.semibold,
+    },
+    progressTrack: {
+      width: "100%",
+      height: 6,
+      backgroundColor: Colors.backgroundSecondary,
+      borderRadius: Radius.full,
+      marginBottom: Spacing.xl,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      backgroundColor: Colors.primaryLight,
+      borderRadius: Radius.full,
+    },
+    statsRow: {
+      flexDirection: "row",
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      width: "100%",
+      marginBottom: Spacing.xl,
+      paddingVertical: Spacing.md,
+    },
+    statItem: {
+      flex: 1,
+      alignItems: "center",
+      gap: 4,
+    },
+    statValue: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    statLabel: {
+      fontSize: Typography.labelSmall,
+      ...Font.regular,
+      color: Colors.textMuted,
+      textAlign: "center",
+    },
+    statDivider: {
+      width: 1,
+      backgroundColor: Colors.border,
+    },
+    followBtn: {
+      width: "100%",
+      paddingVertical: Spacing.md,
+      borderRadius: Radius.full,
+      backgroundColor: Colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: Spacing.md,
+      minHeight: 50,
+    },
+    followingBtn: {
+      backgroundColor: "transparent",
+      borderWidth: 1.5,
+      borderColor: Colors.primaryLight,
+    },
+    followBtnText: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.white,
+    },
+    followingBtnText: {
+      color: Colors.primaryLight,
+    },
+    sessionBtn: {
+      width: "100%",
+      paddingVertical: Spacing.md,
+      borderRadius: Radius.full,
+      backgroundColor: Colors.backgroundSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    sessionBtnText: {
+      fontSize: Typography.titleSmall,
+      ...Font.medium,
+      color: Colors.textSecondary,
+    },
+    errorText: {
+      fontSize: Typography.bodyMedium,
+      ...Font.regular,
+      color: Colors.textMuted,
+    },
+  });

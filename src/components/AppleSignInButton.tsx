@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Alert,
@@ -9,7 +9,8 @@ import {
 import * as AppleAuthentication from "expo-apple-authentication";
 import { useAuthStore } from "../store/authStore";
 import { generateNonce, sha256 } from "../config/firebase";
-import { Colors, Radius } from "../constants/colors";
+import { Radius } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 
 interface AppleSignInButtonProps {
   onSuccess?: () => void;
@@ -23,6 +24,7 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
   onError,
   compact = false,
 }) => {
+  const Colors = useColors();
   const [isLoading, setIsLoading] = useState(false);
   const loginWithApple = useAuthStore((state) => state.loginWithApple);
 
@@ -77,6 +79,34 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
     return null;
   }
 
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        loadingContainer: {
+          height: 48,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        compactLoading: {
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: Colors.backgroundCard,
+        },
+        compactButton: {
+          width: 56,
+          height: 56,
+        },
+        fullButton: {
+          width: "100%",
+          height: 48,
+        },
+      }),
+    [Colors],
+  );
+
   if (isLoading) {
     return (
       <View style={compact ? styles.compactLoading : styles.loadingContainer}>
@@ -107,29 +137,5 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
     />
   );
 };
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    height: 48,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  compactLoading: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: Colors.backgroundCard,
-  },
-  compactButton: {
-    width: 56,
-    height: 56,
-  },
-  fullButton: {
-    width: "100%",
-    height: 48,
-  },
-});
 
 export default AppleSignInButton;

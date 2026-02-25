@@ -11,6 +11,7 @@ export default function SessionLayout() {
       }}
     >
       <Stack.Screen name="select" />
+      <Stack.Screen name="propose" />
       <Stack.Screen name="confirm" />
       <Stack.Screen name="active" options={{ gestureEnabled: false }} />
       <Stack.Screen name="surrender" options={{ presentation: "modal" }} />

@@ -1,14 +1,15 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import { View, Text, StyleSheet, Animated, Linking, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Card, Button, Confetti } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
@@ -16,7 +17,254 @@ import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { formatMoney } from "../../src/utils/format";
 import type { SessionTransfer } from "../../src/types";
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.sm,
+      paddingBottom: Spacing.md,
+    },
+    // Header
+    header: {
+      alignItems: "center",
+      marginTop: 0,
+      marginBottom: Spacing.md,
+    },
+    checkCircle: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: Colors.gainLight,
+      borderWidth: 2,
+      borderColor: Colors.gain,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: Spacing.sm,
+    },
+    checkmark: {
+      fontSize: 30,
+      color: Colors.gain,
+    },
+    title: {
+      fontSize: Typography.headlineSmall,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    subtitle: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      marginTop: 2,
+    },
+    // Section title (shared)
+    sectionTitle: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.sm,
+    },
+    // Results card
+    resultsCard: {
+      marginBottom: Spacing.sm,
+      paddingVertical: Spacing.sm,
+    },
+    participantRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 6,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    participantLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.sm,
+      flex: 1,
+    },
+    participantName: {
+      fontSize: Typography.bodySmall,
+      ...Font.medium,
+      color: Colors.text,
+    },
+    statusBadge: {
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      borderRadius: Radius.full,
+    },
+    badgeCompleted: {
+      backgroundColor: Colors.gainLight,
+    },
+    badgeFailed: {
+      backgroundColor: Colors.lossLight,
+    },
+    statusBadgeText: {
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
+    },
+    badgeTextCompleted: {
+      color: Colors.gain,
+    },
+    badgeTextFailed: {
+      color: Colors.loss,
+    },
+    payoutValue: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+    },
+    payoutGain: {
+      color: Colors.gain,
+    },
+    payoutNeutral: {
+      color: Colors.textMuted,
+    },
+    // Payments section
+    paymentsSection: {
+      marginBottom: Spacing.sm,
+    },
+    noPaymentsCard: {
+      alignItems: "center",
+      paddingVertical: Spacing.md,
+      backgroundColor: Colors.backgroundCard,
+    },
+    noPaymentsText: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.xs,
+    },
+    noPaymentsSubtext: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      textAlign: "center",
+    },
+    // Transfer cards
+    transferCard: {
+      marginBottom: Spacing.xs,
+      paddingVertical: Spacing.sm,
+    },
+    transferCardOverdue: {
+      borderWidth: 1,
+      borderColor: Colors.loss,
+      backgroundColor: Colors.lossLight,
+    },
+    transferCardSettled: {
+      borderWidth: 1,
+      borderColor: Colors.gain,
+      backgroundColor: Colors.gainLight,
+    },
+    transferCardDisputed: {
+      borderWidth: 1,
+      borderColor: Colors.warning,
+      backgroundColor: Colors.warningLight,
+    },
+    transferRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: Spacing.xs,
+    },
+    transferDirection: {
+      fontSize: Typography.bodySmall,
+      ...Font.medium,
+      color: Colors.text,
+      flex: 1,
+    },
+    transferAmount: {
+      fontSize: Typography.bodyMedium,
+      ...Font.bold,
+    },
+    amountOwed: {
+      color: Colors.loss,
+    },
+    amountIncoming: {
+      color: Colors.gain,
+    },
+    venmoHandle: {
+      fontSize: Typography.labelSmall,
+      color: Colors.primary,
+      ...Font.medium,
+      marginBottom: Spacing.xs,
+    },
+    transferAction: {
+      marginTop: 2,
+    },
+    awaitingText: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textSecondary,
+      ...Font.medium,
+    },
+    overdueText: {
+      fontSize: Typography.labelMedium,
+      color: Colors.loss,
+      ...Font.semibold,
+    },
+    settledText: {
+      fontSize: Typography.labelMedium,
+      color: Colors.gain,
+      ...Font.semibold,
+    },
+    disputedText: {
+      fontSize: Typography.labelMedium,
+      color: Colors.warning,
+      ...Font.semibold,
+    },
+    // Stats
+    statsGrid: {
+      flexDirection: "row",
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      marginBottom: Spacing.sm,
+    },
+    statCard: {
+      flex: 1,
+      alignItems: "center",
+    },
+    statDivider: {
+      width: 1,
+      backgroundColor: Colors.border,
+      marginHorizontal: Spacing.md,
+    },
+    statValue: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    statLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+    },
+    // Motivation
+    motivationCard: {
+      backgroundColor: Colors.primaryMuted,
+      borderWidth: 1,
+      borderColor: Colors.primary,
+      marginBottom: Spacing.sm,
+      paddingVertical: Spacing.sm,
+    },
+    motivationText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.text,
+      textAlign: "center",
+      lineHeight: 18,
+    },
+    footer: {
+      marginTop: "auto",
+      gap: Spacing.sm,
+    },
+  });
+
 export default function CompleteScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const {
@@ -308,245 +556,3 @@ export default function CompleteScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.md,
-  },
-  // Header
-  header: {
-    alignItems: "center",
-    marginTop: 0,
-    marginBottom: Spacing.md,
-  },
-  checkCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.gainLight,
-    borderWidth: 2,
-    borderColor: Colors.gain,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.sm,
-  },
-  checkmark: {
-    fontSize: 30,
-    color: Colors.gain,
-  },
-  title: {
-    fontSize: Typography.headlineSmall,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  // Section title (shared)
-  sectionTitle: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  // Results card
-  resultsCard: {
-    marginBottom: Spacing.sm,
-    paddingVertical: Spacing.sm,
-  },
-  participantRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  participantLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    flex: 1,
-  },
-  participantName: {
-    fontSize: Typography.bodySmall,
-    ...Font.medium,
-    color: Colors.text,
-  },
-  statusBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
-  },
-  badgeCompleted: {
-    backgroundColor: Colors.gainLight,
-  },
-  badgeFailed: {
-    backgroundColor: Colors.lossLight,
-  },
-  statusBadgeText: {
-    fontSize: Typography.labelSmall,
-    ...Font.semibold,
-  },
-  badgeTextCompleted: {
-    color: Colors.gain,
-  },
-  badgeTextFailed: {
-    color: Colors.loss,
-  },
-  payoutValue: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-  },
-  payoutGain: {
-    color: Colors.gain,
-  },
-  payoutNeutral: {
-    color: Colors.textMuted,
-  },
-  // Payments section
-  paymentsSection: {
-    marginBottom: Spacing.sm,
-  },
-  noPaymentsCard: {
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.backgroundCard,
-  },
-  noPaymentsText: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  noPaymentsSubtext: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    textAlign: "center",
-  },
-  // Transfer cards
-  transferCard: {
-    marginBottom: Spacing.xs,
-    paddingVertical: Spacing.sm,
-  },
-  transferCardOverdue: {
-    borderWidth: 1,
-    borderColor: Colors.loss,
-    backgroundColor: Colors.lossLight,
-  },
-  transferCardSettled: {
-    borderWidth: 1,
-    borderColor: Colors.gain,
-    backgroundColor: Colors.gainLight,
-  },
-  transferCardDisputed: {
-    borderWidth: 1,
-    borderColor: Colors.warning,
-    backgroundColor: Colors.warningLight,
-  },
-  transferRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.xs,
-  },
-  transferDirection: {
-    fontSize: Typography.bodySmall,
-    ...Font.medium,
-    color: Colors.text,
-    flex: 1,
-  },
-  transferAmount: {
-    fontSize: Typography.bodyMedium,
-    ...Font.bold,
-  },
-  amountOwed: {
-    color: Colors.loss,
-  },
-  amountIncoming: {
-    color: Colors.gain,
-  },
-  venmoHandle: {
-    fontSize: Typography.labelSmall,
-    color: Colors.primary,
-    ...Font.medium,
-    marginBottom: Spacing.xs,
-  },
-  transferAction: {
-    marginTop: 2,
-  },
-  awaitingText: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    ...Font.medium,
-  },
-  overdueText: {
-    fontSize: Typography.labelMedium,
-    color: Colors.loss,
-    ...Font.semibold,
-  },
-  settledText: {
-    fontSize: Typography.labelMedium,
-    color: Colors.gain,
-    ...Font.semibold,
-  },
-  disputedText: {
-    fontSize: Typography.labelMedium,
-    color: Colors.warning,
-    ...Font.semibold,
-  },
-  // Stats
-  statsGrid: {
-    flexDirection: "row",
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  statCard: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: Colors.border,
-    marginHorizontal: Spacing.md,
-  },
-  statValue: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  statLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  // Motivation
-  motivationCard: {
-    backgroundColor: Colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    marginBottom: Spacing.sm,
-    paddingVertical: Spacing.sm,
-  },
-  motivationText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.text,
-    textAlign: "center",
-    lineHeight: 18,
-  },
-  footer: {
-    marginTop: "auto",
-    gap: Spacing.sm,
-  },
-});

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { View, StyleSheet, Animated, Dimensions } from "react-native";
-import { Colors } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -99,9 +99,9 @@ interface ConfettiProps {
   colors?: string[];
 }
 
-export const Confetti: React.FC<ConfettiProps> = ({
-  count = 50,
-  colors = [
+export const Confetti: React.FC<ConfettiProps> = ({ count = 50, colors }) => {
+  const Colors = useColors();
+  const resolvedColors = colors ?? [
     Colors.primary,
     Colors.primaryLight,
     Colors.accentGold, // Dark goldenrod
@@ -109,13 +109,13 @@ export const Confetti: React.FC<ConfettiProps> = ({
     "#2A6F97", // Deep teal-blue
     Colors.accent, // Deep plum
     "#8B6914", // Dark amber
-  ],
-}) => {
+  ];
+
   const pieces = Array.from({ length: count }, (_, i) => ({
     id: i,
     delay: Math.random() * 500,
     startX: Math.random() * SCREEN_WIDTH,
-    color: colors[Math.floor(Math.random() * colors.length)],
+    color: resolvedColors[Math.floor(Math.random() * resolvedColors.length)],
   }));
 
   return (

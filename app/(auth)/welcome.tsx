@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -24,13 +24,14 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   FontWeight,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import {
   ContinuousScene,
   BlobsScene,
@@ -182,6 +183,8 @@ const AnimatedPageText: React.FC<{
   scrollX: SharedValue<number>;
   pageWidth: number;
 }> = ({ page, index, scrollX, pageWidth }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: index * pageWidth - scrollX.value }],
   }));
@@ -205,6 +208,8 @@ const AnimatedDot: React.FC<{
   scrollX: SharedValue<number>;
   pageWidth: number;
 }> = ({ index, scrollX, pageWidth }) => {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const style = useAnimatedStyle(() => {
     const input = [
       (index - 1) * pageWidth,
@@ -233,6 +238,8 @@ const AnimatedDot: React.FC<{
 // --- Main Screen ---
 
 export default function WelcomeScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { width, height } = useWindowDimensions();
   const scrollX = useSharedValue(0);
@@ -438,101 +445,102 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  mainArea: {
-    flex: 1,
-  },
-  textArea: {
-    paddingTop: Spacing.xl,
-    height: 220,
-    zIndex: 2,
-  },
-  textBlock: {
-    position: "absolute",
-    top: Spacing.xl,
-    left: 0,
-    paddingHorizontal: Spacing.lg,
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 41,
-    ...Font.heavy,
-    color: Colors.text,
-    letterSpacing: -0.5,
-    lineHeight: 41 * 1.1,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.text,
-    marginTop: Spacing.sm,
-    lineHeight: 16 * 1.5,
-    textAlign: "center",
-  },
-  hint: {
-    fontSize: Typography.bodySmall,
-    ...Font.bold,
-    color: Colors.text,
-    marginTop: Spacing.xs,
-    letterSpacing: 0.3,
-    textAlign: "center",
-  },
-  logoContainer: {
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  sceneArea: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1,
-  },
-  blobsBackground: {
-    position: "absolute",
-    backgroundColor: "#608976",
-    borderRadius: 70,
-  },
-  blobsOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bottomSection: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
-    gap: Spacing.md,
-    zIndex: 10,
-  },
-  dotsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 6,
-  },
-  dot: {
-    height: 6,
-    borderRadius: 3,
-  },
-  getStartedButton: {
-    height: 52,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  getStartedButtonText: {
-    fontSize: Typography.bodyLarge,
-    ...Font.semibold,
-    color: "#000000",
-  },
-  authButtonPressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.97 }],
-  },
-});
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    safeArea: {
+      flex: 1,
+    },
+    mainArea: {
+      flex: 1,
+    },
+    textArea: {
+      paddingTop: Spacing.xl,
+      height: 220,
+      zIndex: 2,
+    },
+    textBlock: {
+      position: "absolute",
+      top: Spacing.xl,
+      left: 0,
+      paddingHorizontal: Spacing.lg,
+      alignItems: "center",
+    },
+    title: {
+      fontSize: 41,
+      ...Font.heavy,
+      color: Colors.text,
+      letterSpacing: -0.5,
+      lineHeight: 41 * 1.1,
+      textAlign: "center",
+    },
+    subtitle: {
+      fontSize: 16,
+      color: Colors.text,
+      marginTop: Spacing.sm,
+      lineHeight: 16 * 1.5,
+      textAlign: "center",
+    },
+    hint: {
+      fontSize: Typography.bodySmall,
+      ...Font.bold,
+      color: Colors.text,
+      marginTop: Spacing.xs,
+      letterSpacing: 0.3,
+      textAlign: "center",
+    },
+    logoContainer: {
+      marginTop: Spacing.sm,
+      marginBottom: Spacing.xs,
+    },
+    sceneArea: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1,
+    },
+    blobsBackground: {
+      position: "absolute",
+      backgroundColor: "#608976",
+      borderRadius: 70,
+    },
+    blobsOverlay: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    bottomSection: {
+      paddingHorizontal: Spacing.lg,
+      paddingBottom: Spacing.md,
+      gap: Spacing.md,
+      zIndex: 10,
+    },
+    dotsContainer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 6,
+    },
+    dot: {
+      height: 6,
+      borderRadius: 3,
+    },
+    getStartedButton: {
+      height: 52,
+      borderRadius: Radius.full,
+      backgroundColor: Colors.white,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    getStartedButtonText: {
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+      color: "#000000",
+    },
+    authButtonPressed: {
+      opacity: 0.75,
+      transform: [{ scale: 0.97 }],
+    },
+  });

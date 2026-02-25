@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from "react";
+import React, { useRef, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   TextInput,
@@ -19,13 +19,13 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import {
-  Colors,
   Spacing,
   Radius,
   Typography,
   FontWeight,
   Font,
 } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 
 interface OTPInputProps {
   value: string;
@@ -44,6 +44,7 @@ const AnimatedCell: React.FC<{
   isActive: boolean;
   error: boolean;
 }> = ({ index, digit, isFocused, isActive, error }) => {
+  const Colors = useColors();
   const scale = useSharedValue(1);
   const cursorOpacity = useSharedValue(0);
   const shakeX = useSharedValue(0);
@@ -121,6 +122,35 @@ const AnimatedCell: React.FC<{
     return Colors.border;
   };
 
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        cell: {
+          width: CELL_SIZE,
+          height: CELL_SIZE + 8,
+          borderRadius: Radius.md,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        digit: {
+          fontSize: Typography.headlineSmall,
+          ...Font.bold,
+          color: Colors.text,
+          textAlign: "center",
+        },
+        digitError: {
+          color: Colors.danger,
+        },
+        cursor: {
+          width: 2,
+          height: 24,
+          backgroundColor: Colors.primary,
+          borderRadius: 1,
+        },
+      }),
+    [Colors],
+  );
+
   return (
     <Animated.View
       entering={FadeIn.delay(index * 50).duration(300)}
@@ -188,8 +218,8 @@ export const OTPInput: React.FC<OTPInputProps> = ({
   const activeIndex = digits.length < length ? digits.length : -1;
 
   return (
-    <Pressable onPress={handlePress} style={styles.container}>
-      <View style={styles.cellsRow}>
+    <Pressable onPress={handlePress} style={staticStyles.container}>
+      <View style={staticStyles.cellsRow}>
         {Array.from({ length }, (_, index) => (
           <AnimatedCell
             key={index}
@@ -205,7 +235,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
       {/* Hidden TextInput that captures keyboard input */}
       <TextInput
         ref={inputRef}
-        style={styles.hiddenInput}
+        style={staticStyles.hiddenInput}
         value={value}
         onChangeText={handleChange}
         keyboardType="number-pad"
@@ -219,7 +249,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const staticStyles = StyleSheet.create({
   container: {
     alignItems: "center",
   },
@@ -227,28 +257,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: CELL_GAP,
     justifyContent: "center",
-  },
-  cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE + 8,
-    borderRadius: Radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  digit: {
-    fontSize: Typography.headlineSmall,
-    ...Font.bold,
-    color: Colors.text,
-    textAlign: "center",
-  },
-  digitError: {
-    color: Colors.danger,
-  },
-  cursor: {
-    width: 2,
-    height: 24,
-    backgroundColor: Colors.primary,
-    borderRadius: 1,
   },
   hiddenInput: {
     position: "absolute",

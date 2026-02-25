@@ -3,11 +3,17 @@ import { useGroupSessionStore } from "../../../store/groupSessionStore";
 import { useWalletStore } from "../../../store/walletStore";
 import { useAuthStore } from "../../../store/authStore";
 import { CADENCES, INITIAL_BALANCE } from "../../../constants/config";
-import type { GroupSession, SessionTransfer, UserReputation } from "../../../types";
+import type {
+  GroupSession,
+  SessionTransfer,
+  UserReputation,
+} from "../../../types";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
-const makeReputation = (overrides: Partial<UserReputation> = {}): UserReputation => ({
+const makeReputation = (
+  overrides: Partial<UserReputation> = {},
+): UserReputation => ({
   score: 50,
   level: "sapling",
   paymentsCompleted: 0,
@@ -15,11 +21,22 @@ const makeReputation = (overrides: Partial<UserReputation> = {}): UserReputation
   totalOwedPaid: 0,
   totalOwedMissed: 0,
   lastUpdated: new Date(),
+  referralCount: 0,
   ...overrides,
 });
 
-const P_A = { userId: "user-a", name: "Alice", venmoHandle: "@alice", reputation: makeReputation() };
-const P_B = { userId: "user-b", name: "Bob", venmoHandle: "@bob", reputation: makeReputation() };
+const P_A = {
+  userId: "user-a",
+  name: "Alice",
+  venmoHandle: "@alice",
+  reputation: makeReputation(),
+};
+const P_B = {
+  userId: "user-b",
+  name: "Bob",
+  venmoHandle: "@bob",
+  reputation: makeReputation(),
+};
 const P_C = { userId: "user-c", name: "Charlie", reputation: makeReputation() };
 
 const resetStores = () => {
@@ -110,20 +127,27 @@ describe("groupSessionStore", () => {
 
     it("sets stakeAmount on every participant from cadence config", () => {
       useGroupSessionStore.getState().startGroupSession("weekly", [P_A, P_B]);
-      const { participants } = useGroupSessionStore.getState().activeGroupSession!;
-      participants.forEach((p) => expect(p.stakeAmount).toBe(CADENCES.weekly.stake));
+      const { participants } =
+        useGroupSessionStore.getState().activeGroupSession!;
+      participants.forEach((p) =>
+        expect(p.stakeAmount).toBe(CADENCES.weekly.stake),
+      );
     });
 
     it("computes poolTotal as stake × participant count", () => {
-      useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B, P_C]);
-      expect(useGroupSessionStore.getState().activeGroupSession!.poolTotal).toBe(
-        CADENCES.daily.stake * 3,
-      );
+      useGroupSessionStore
+        .getState()
+        .startGroupSession("daily", [P_A, P_B, P_C]);
+      expect(
+        useGroupSessionStore.getState().activeGroupSession!.poolTotal,
+      ).toBe(CADENCES.daily.stake * 3);
     });
 
     it("deducts stake from wallet (current user only)", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      expect(useWalletStore.getState().balance).toBe(INITIAL_BALANCE - CADENCES.daily.stake);
+      expect(useWalletStore.getState().balance).toBe(
+        INITIAL_BALANCE - CADENCES.daily.stake,
+      );
     });
 
     it("adds a stake transaction to wallet history", () => {
@@ -133,8 +157,12 @@ describe("groupSessionStore", () => {
     });
 
     it("includes all participants with correct userIds", () => {
-      useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B, P_C]);
-      const ids = useGroupSessionStore.getState().activeGroupSession!.participants.map((p) => p.userId);
+      useGroupSessionStore
+        .getState()
+        .startGroupSession("daily", [P_A, P_B, P_C]);
+      const ids = useGroupSessionStore
+        .getState()
+        .activeGroupSession!.participants.map((p) => p.userId);
       expect(ids).toContain("user-a");
       expect(ids).toContain("user-b");
       expect(ids).toContain("user-c");
@@ -159,7 +187,9 @@ describe("groupSessionStore", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
 
     it("returns undefined when no active session", () => {
-      expect(useGroupSessionStore.getState().completeGroupSession([])).toBeUndefined();
+      expect(
+        useGroupSessionStore.getState().completeGroupSession([]),
+      ).toBeUndefined();
     });
 
     it("clears activeGroupSession and moves to history", () => {
@@ -170,27 +200,36 @@ describe("groupSessionStore", () => {
       ]);
 
       expect(useGroupSessionStore.getState().activeGroupSession).toBeNull();
-      expect(useGroupSessionStore.getState().groupSessionHistory).toHaveLength(1);
+      expect(useGroupSessionStore.getState().groupSessionHistory).toHaveLength(
+        1,
+      );
     });
 
     it("prepends to history (most recent first)", () => {
       start();
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: true }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
       const firstId = useGroupSessionStore.getState().groupSessionHistory[0].id;
 
       start();
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: true }]);
-      const newestId = useGroupSessionStore.getState().groupSessionHistory[0].id;
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
+      const newestId =
+        useGroupSessionStore.getState().groupSessionHistory[0].id;
 
       expect(newestId).not.toBe(firstId);
-      expect(useGroupSessionStore.getState().groupSessionHistory).toHaveLength(2);
+      expect(useGroupSessionStore.getState().groupSessionHistory).toHaveLength(
+        2,
+      );
     });
 
     it("returns the completed session", () => {
       start();
-      const result = useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: true },
-      ]);
+      const result = useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
       expect(result).toBeDefined();
       expect(result!.status).toBe("completed");
     });
@@ -201,7 +240,9 @@ describe("groupSessionStore", () => {
         { userId: "user-a", completed: true },
         { userId: "user-b", completed: false },
       ]);
-      expect(useGroupSessionStore.getState().groupSessionHistory[0].status).toBe("completed");
+      expect(
+        useGroupSessionStore.getState().groupSessionHistory[0].status,
+      ).toBe("completed");
     });
 
     it("status is 'surrendered' when current user failed", () => {
@@ -210,7 +251,9 @@ describe("groupSessionStore", () => {
         { userId: "user-a", completed: false },
         { userId: "user-b", completed: true },
       ]);
-      expect(useGroupSessionStore.getState().groupSessionHistory[0].status).toBe("surrendered");
+      expect(
+        useGroupSessionStore.getState().groupSessionHistory[0].status,
+      ).toBe("surrendered");
     });
 
     it("sets completed flags on participants from results", () => {
@@ -219,9 +262,14 @@ describe("groupSessionStore", () => {
         { userId: "user-a", completed: true },
         { userId: "user-b", completed: false },
       ]);
-      const { participants } = useGroupSessionStore.getState().groupSessionHistory[0];
-      expect(participants.find((p) => p.userId === "user-a")?.completed).toBe(true);
-      expect(participants.find((p) => p.userId === "user-b")?.completed).toBe(false);
+      const { participants } =
+        useGroupSessionStore.getState().groupSessionHistory[0];
+      expect(participants.find((p) => p.userId === "user-a")?.completed).toBe(
+        true,
+      );
+      expect(participants.find((p) => p.userId === "user-b")?.completed).toBe(
+        false,
+      );
     });
 
     it("attaches screenTime to participants when provided", () => {
@@ -230,19 +278,27 @@ describe("groupSessionStore", () => {
         { userId: "user-a", completed: true, screenTime: 12000 },
         { userId: "user-b", completed: true, screenTime: 5000 },
       ]);
-      const { participants } = useGroupSessionStore.getState().groupSessionHistory[0];
-      expect(participants.find((p) => p.userId === "user-a")?.screenTime).toBe(12000);
-      expect(participants.find((p) => p.userId === "user-b")?.screenTime).toBe(5000);
+      const { participants } =
+        useGroupSessionStore.getState().groupSessionHistory[0];
+      expect(participants.find((p) => p.userId === "user-a")?.screenTime).toBe(
+        12000,
+      );
+      expect(participants.find((p) => p.userId === "user-b")?.screenTime).toBe(
+        5000,
+      );
     });
 
     it("participants missing from results default to completed: false", () => {
       start();
       // Only provide result for user-a
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: true },
-      ]);
-      const { participants } = useGroupSessionStore.getState().groupSessionHistory[0];
-      expect(participants.find((p) => p.userId === "user-b")?.completed).toBe(false);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
+      const { participants } =
+        useGroupSessionStore.getState().groupSessionHistory[0];
+      expect(participants.find((p) => p.userId === "user-b")?.completed).toBe(
+        false,
+      );
     });
 
     it("credits payout to wallet when current user completed", () => {
@@ -253,7 +309,9 @@ describe("groupSessionStore", () => {
         { userId: "user-b", completed: false },
       ]);
       // even-split payout = stake, so balance is restored
-      expect(useWalletStore.getState().balance).toBe(balanceAfterStake + CADENCES.daily.stake);
+      expect(useWalletStore.getState().balance).toBe(
+        balanceAfterStake + CADENCES.daily.stake,
+      );
     });
 
     it("records forfeit (no extra balance deduction) when current user failed", () => {
@@ -265,7 +323,11 @@ describe("groupSessionStore", () => {
       ]);
       // Stake was already lost on start; forfeit just records the event
       expect(useWalletStore.getState().balance).toBe(balanceAfterStake);
-      expect(useWalletStore.getState().transactions.some((t) => t.type === "forfeit")).toBe(true);
+      expect(
+        useWalletStore
+          .getState()
+          .transactions.some((t) => t.type === "forfeit"),
+      ).toBe(true);
     });
 
     it("increments currentStreak on completion", () => {
@@ -280,47 +342,57 @@ describe("groupSessionStore", () => {
     it("resets currentStreak to 0 on failure", () => {
       useAuthStore.getState().updateUser({ currentStreak: 5 });
       start();
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: false },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
       expect(useAuthStore.getState().user!.currentStreak).toBe(0);
     });
 
     it("updates longestStreak when new streak surpasses it", () => {
-      useAuthStore.getState().updateUser({ currentStreak: 4, longestStreak: 4 });
+      useAuthStore
+        .getState()
+        .updateUser({ currentStreak: 4, longestStreak: 4 });
       start();
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: true },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
       expect(useAuthStore.getState().user!.longestStreak).toBe(5);
     });
 
     it("does not lower longestStreak on surrender", () => {
       useAuthStore.getState().updateUser({ longestStreak: 10 });
       start();
-      useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-a", completed: false },
-      ]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
       expect(useAuthStore.getState().user!.longestStreak).toBe(10);
     });
 
     it("increments totalSessions on both completion and failure", () => {
       start();
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: false }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
       expect(useAuthStore.getState().user!.totalSessions).toBe(1);
 
       start();
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: true }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
       expect(useAuthStore.getState().user!.totalSessions).toBe(2);
     });
 
     it("only increments completedSessions on successful completion", () => {
       start();
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: false }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: false }]);
       expect(useAuthStore.getState().user!.completedSessions).toBe(0);
 
       start();
-      useGroupSessionStore.getState().completeGroupSession([{ userId: "user-a", completed: true }]);
+      useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-a", completed: true }]);
       expect(useAuthStore.getState().user!.completedSessions).toBe(1);
     });
 
@@ -330,7 +402,9 @@ describe("groupSessionStore", () => {
         { userId: "user-a", completed: true },
         { userId: "user-b", completed: false },
       ]);
-      expect(useGroupSessionStore.getState().groupSessionHistory[0].transfers).toHaveLength(0);
+      expect(
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers,
+      ).toHaveLength(0);
     });
 
     it("attaches payout to each participant", () => {
@@ -339,7 +413,8 @@ describe("groupSessionStore", () => {
         { userId: "user-a", completed: true },
         { userId: "user-b", completed: true },
       ]);
-      const { participants } = useGroupSessionStore.getState().groupSessionHistory[0];
+      const { participants } =
+        useGroupSessionStore.getState().groupSessionHistory[0];
       participants.forEach((p) => expect(p.payout).toBeDefined());
     });
 
@@ -347,9 +422,9 @@ describe("groupSessionStore", () => {
       useAuthStore.setState({ user: null });
       start();
       expect(() =>
-        useGroupSessionStore.getState().completeGroupSession([
-          { userId: "user-a", completed: true },
-        ]),
+        useGroupSessionStore
+          .getState()
+          .completeGroupSession([{ userId: "user-a", completed: true }]),
       ).not.toThrow();
     });
   });
@@ -363,7 +438,9 @@ describe("groupSessionStore", () => {
 
     it("returns a positive value during an active session", () => {
       useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
-      expect(useGroupSessionStore.getState().getTimeRemaining()).toBeGreaterThan(0);
+      expect(
+        useGroupSessionStore.getState().getTimeRemaining(),
+      ).toBeGreaterThan(0);
     });
 
     it("never returns a negative value for an expired session", () => {
@@ -391,7 +468,8 @@ describe("groupSessionStore", () => {
       seedSessionWithTransfer({ status: "pending" });
       useGroupSessionStore.getState().markTransferPaid("session-1", "t1");
 
-      const t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      const t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.status).toBe("payment_indicated");
     });
 
@@ -401,7 +479,8 @@ describe("groupSessionStore", () => {
       useGroupSessionStore.getState().markTransferPaid("session-1", "t1");
       const after = Date.now();
 
-      const t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      const t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.paidAt).toBeDefined();
       expect(t.paidAt!.getTime()).toBeGreaterThanOrEqual(before);
       expect(t.paidAt!.getTime()).toBeLessThanOrEqual(after);
@@ -412,7 +491,9 @@ describe("groupSessionStore", () => {
       useGroupSessionStore.getState().markTransferPaid("session-1", "t1");
 
       expect(
-        useWalletStore.getState().transactions.some((t) => t.type === "settlement_paid"),
+        useWalletStore
+          .getState()
+          .transactions.some((t) => t.type === "settlement_paid"),
       ).toBe(true);
     });
 
@@ -420,7 +501,9 @@ describe("groupSessionStore", () => {
       seedSessionWithTransfer({ status: "pending" });
       useGroupSessionStore.getState().markTransferPaid("session-1", "t1");
 
-      expect(useAuthStore.getState().user!.reputation.paymentsCompleted).toBe(1);
+      expect(useAuthStore.getState().user!.reputation.paymentsCompleted).toBe(
+        1,
+      );
     });
 
     it("adds transfer amount to totalOwedPaid in reputation", () => {
@@ -434,7 +517,8 @@ describe("groupSessionStore", () => {
       seedSessionWithTransfer({ status: "payment_indicated" });
       useGroupSessionStore.getState().markTransferPaid("session-1", "t1");
 
-      const t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      const t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.status).toBe("payment_indicated"); // unchanged
     });
 
@@ -442,7 +526,8 @@ describe("groupSessionStore", () => {
       seedSessionWithTransfer({ status: "pending" });
       useGroupSessionStore.getState().markTransferPaid("wrong-session", "t1");
 
-      const t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      const t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.status).toBe("pending"); // unchanged
     });
   });
@@ -454,7 +539,8 @@ describe("groupSessionStore", () => {
       seedSessionWithTransfer({ status: "payment_indicated" });
       useGroupSessionStore.getState().markTransferConfirmed("session-1", "t1");
 
-      const t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      const t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.status).toBe("settled");
     });
 
@@ -464,7 +550,8 @@ describe("groupSessionStore", () => {
       useGroupSessionStore.getState().markTransferConfirmed("session-1", "t1");
       const after = Date.now();
 
-      const t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      const t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.confirmedAt).toBeDefined();
       expect(t.confirmedAt!.getTime()).toBeGreaterThanOrEqual(before);
       expect(t.confirmedAt!.getTime()).toBeLessThanOrEqual(after);
@@ -480,7 +567,9 @@ describe("groupSessionStore", () => {
       useGroupSessionStore.getState().markTransferConfirmed("session-1", "t1");
 
       expect(
-        useWalletStore.getState().transactions.some((t) => t.type === "settlement_received"),
+        useWalletStore
+          .getState()
+          .transactions.some((t) => t.type === "settlement_received"),
       ).toBe(true);
     });
 
@@ -488,7 +577,8 @@ describe("groupSessionStore", () => {
       seedSessionWithTransfer({ status: "pending" });
       useGroupSessionStore.getState().markTransferConfirmed("session-1", "t1");
 
-      const t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      const t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.status).toBe("pending"); // unchanged
     });
   });
@@ -500,13 +590,18 @@ describe("groupSessionStore", () => {
       seedSessionWithTransfer({ status: "pending" });
       useGroupSessionStore.getState().markTransferOverdue("session-1", "t1");
 
-      const t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      const t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.status).toBe("overdue");
     });
 
     it("penalizes reputation when current user is the payer", () => {
       // user-a is current user and fromUserId (payer)
-      seedSessionWithTransfer({ status: "pending", fromUserId: "user-a", amount: 500 });
+      seedSessionWithTransfer({
+        status: "pending",
+        fromUserId: "user-a",
+        amount: 500,
+      });
       useGroupSessionStore.getState().markTransferOverdue("session-1", "t1");
 
       const rep = useAuthStore.getState().user!.reputation;
@@ -535,7 +630,8 @@ describe("groupSessionStore", () => {
       useGroupSessionStore.getState().markTransferOverdue("session-1", "t1");
 
       // Status unchanged; no double-penalty
-      const t = useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
+      const t =
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0];
       expect(t.status).toBe("overdue");
       expect(useAuthStore.getState().user!.reputation.paymentsMissed).toBe(
         repBefore.paymentsMissed,
@@ -551,7 +647,8 @@ describe("groupSessionStore", () => {
       useGroupSessionStore.getState().markTransferDisputed("session-1", "t1");
 
       expect(
-        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0].status,
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0]
+          .status,
       ).toBe("disputed");
     });
 
@@ -560,7 +657,8 @@ describe("groupSessionStore", () => {
       useGroupSessionStore.getState().markTransferDisputed("session-1", "t1");
 
       expect(
-        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0].status,
+        useGroupSessionStore.getState().groupSessionHistory[0].transfers[0]
+          .status,
       ).toBe("disputed");
     });
   });
@@ -602,16 +700,22 @@ describe("groupSessionStore", () => {
         groupSessionHistory: [makeSession("s1", "pending", "user-a", "user-b")],
       });
       expect(
-        useGroupSessionStore.getState().getSessionsWithPendingTransfers("user-a"),
+        useGroupSessionStore
+          .getState()
+          .getSessionsWithPendingTransfers("user-a"),
       ).toHaveLength(1);
     });
 
     it("returns sessions where user is the recipient with actionable transfer", () => {
       useGroupSessionStore.setState({
-        groupSessionHistory: [makeSession("s1", "payment_indicated", "user-b", "user-a")],
+        groupSessionHistory: [
+          makeSession("s1", "payment_indicated", "user-b", "user-a"),
+        ],
       });
       expect(
-        useGroupSessionStore.getState().getSessionsWithPendingTransfers("user-a"),
+        useGroupSessionStore
+          .getState()
+          .getSessionsWithPendingTransfers("user-a"),
       ).toHaveLength(1);
     });
 
@@ -620,7 +724,9 @@ describe("groupSessionStore", () => {
         groupSessionHistory: [makeSession("s1", "overdue", "user-a", "user-b")],
       });
       expect(
-        useGroupSessionStore.getState().getSessionsWithPendingTransfers("user-a"),
+        useGroupSessionStore
+          .getState()
+          .getSessionsWithPendingTransfers("user-a"),
       ).toHaveLength(1);
     });
 
@@ -629,16 +735,22 @@ describe("groupSessionStore", () => {
         groupSessionHistory: [makeSession("s1", "settled", "user-a", "user-b")],
       });
       expect(
-        useGroupSessionStore.getState().getSessionsWithPendingTransfers("user-a"),
+        useGroupSessionStore
+          .getState()
+          .getSessionsWithPendingTransfers("user-a"),
       ).toHaveLength(0);
     });
 
     it("excludes disputed transfers", () => {
       useGroupSessionStore.setState({
-        groupSessionHistory: [makeSession("s1", "disputed", "user-a", "user-b")],
+        groupSessionHistory: [
+          makeSession("s1", "disputed", "user-a", "user-b"),
+        ],
       });
       expect(
-        useGroupSessionStore.getState().getSessionsWithPendingTransfers("user-a"),
+        useGroupSessionStore
+          .getState()
+          .getSessionsWithPendingTransfers("user-a"),
       ).toHaveLength(0);
     });
 
@@ -647,7 +759,9 @@ describe("groupSessionStore", () => {
         groupSessionHistory: [makeSession("s1", "pending", "user-b", "user-c")],
       });
       expect(
-        useGroupSessionStore.getState().getSessionsWithPendingTransfers("user-a"),
+        useGroupSessionStore
+          .getState()
+          .getSessionsWithPendingTransfers("user-a"),
       ).toHaveLength(0);
     });
   });
@@ -707,7 +821,9 @@ describe("groupSessionStore", () => {
         ],
       });
 
-      const result = useGroupSessionStore.getState().getPendingTransfersForUser("user-a");
+      const result = useGroupSessionStore
+        .getState()
+        .getPendingTransfersForUser("user-a");
       expect(result).toHaveLength(2);
       expect(result[0].session.id).toBe("s1");
       expect(result[0].transfer.id).toBe("t1");
@@ -770,40 +886,48 @@ describe("groupSessionStore", () => {
 
   describe("getVenmoPayLink", () => {
     it("generates a valid Venmo deep link", () => {
-      const link = useGroupSessionStore.getState().getVenmoPayLink(500, "@bob", "NIYAH session");
+      const link = useGroupSessionStore
+        .getState()
+        .getVenmoPayLink(500, "@bob", "NIYAH session");
       expect(link).toContain("venmo://paycharge");
       expect(link).toContain("txn=pay");
       expect(link).toContain("recipients=bob");
     });
 
     it("strips @ from handle", () => {
-      const link = useGroupSessionStore.getState().getVenmoPayLink(500, "@alice-test", "note");
+      const link = useGroupSessionStore
+        .getState()
+        .getVenmoPayLink(500, "@alice-test", "note");
       expect(link).toContain("recipients=alice-test");
       expect(link).not.toContain("@alice-test");
     });
 
     it("converts cents to dollars (500 → 5.00)", () => {
-      const link = useGroupSessionStore.getState().getVenmoPayLink(500, "@bob", "note");
+      const link = useGroupSessionStore
+        .getState()
+        .getVenmoPayLink(500, "@bob", "note");
       expect(link).toContain("amount=5.00");
     });
 
     it("converts larger amounts correctly (10000 → 100.00)", () => {
-      const link = useGroupSessionStore.getState().getVenmoPayLink(10000, "@bob", "note");
+      const link = useGroupSessionStore
+        .getState()
+        .getVenmoPayLink(10000, "@bob", "note");
       expect(link).toContain("amount=100.00");
     });
 
     it("URL-encodes the note", () => {
-      const link = useGroupSessionStore.getState().getVenmoPayLink(
-        500,
-        "@bob",
-        "NIYAH session & payment",
-      );
+      const link = useGroupSessionStore
+        .getState()
+        .getVenmoPayLink(500, "@bob", "NIYAH session & payment");
       expect(link).not.toContain(" "); // spaces encoded
       expect(link).toContain("note=");
     });
 
     it("works without @ prefix on handle", () => {
-      const link = useGroupSessionStore.getState().getVenmoPayLink(500, "bob", "note");
+      const link = useGroupSessionStore
+        .getState()
+        .getVenmoPayLink(500, "bob", "note");
       expect(link).toContain("recipients=bob");
     });
   });

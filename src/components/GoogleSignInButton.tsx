@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Alert,
   View,
@@ -8,7 +8,8 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useAuthStore } from "../store/authStore";
-import { Colors, Radius } from "../constants/colors";
+import { Radius } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 
 const GoogleIcon = () => (
   <Svg width={22} height={22} viewBox="0 0 24 24">
@@ -42,6 +43,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   onError,
   compact = false,
 }) => {
+  const Colors = useColors();
   const [isLoading, setIsLoading] = useState(false);
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
 
@@ -65,6 +67,42 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     }
   };
 
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        loadingContainer: {
+          height: 48,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        compactButton: {
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: Colors.backgroundCard,
+          borderWidth: 1,
+          borderColor: Colors.border,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        fullButton: {
+          width: "100%",
+          height: 48,
+          borderRadius: Radius.md,
+          backgroundColor: Colors.backgroundCard,
+          borderWidth: 1,
+          borderColor: Colors.border,
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        pressed: {
+          opacity: 0.7,
+          transform: [{ scale: 0.95 }],
+        },
+      }),
+    [Colors],
+  );
+
   if (isLoading) {
     return (
       <View style={compact ? styles.compactButton : styles.loadingContainer}>
@@ -85,37 +123,5 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     </Pressable>
   );
 };
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    height: 48,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  compactButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  fullButton: {
-    width: "100%",
-    height: 48,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  pressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.95 }],
-  },
-});
 
 export default GoogleSignInButton;

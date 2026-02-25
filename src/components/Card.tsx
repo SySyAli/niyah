@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   ViewStyle,
@@ -7,7 +7,8 @@ import {
   Animated,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Colors, Radius, Spacing } from "../constants/colors";
+import { Radius, Spacing } from "../constants/colors";
+import { useColors } from "../hooks/useColors";
 
 interface CardProps {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ export const Card: React.FC<CardProps> = ({
   animate = true,
   delay = 0,
 }) => {
+  const Colors = useColors();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(animate ? 0 : 1)).current;
 
@@ -58,6 +60,35 @@ export const Card: React.FC<CardProps> = ({
       }).start();
     }
   };
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        card: {
+          backgroundColor: Colors.backgroundCard,
+          borderRadius: Radius.lg,
+          padding: Spacing.lg,
+        },
+        elevated: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.4,
+          shadowRadius: 16,
+          elevation: 8,
+        },
+        outlined: {
+          backgroundColor: "transparent",
+          borderWidth: 1,
+          borderColor: Colors.border,
+        },
+        interactive: {
+          backgroundColor: Colors.backgroundSecondary,
+          borderWidth: 1,
+          borderColor: Colors.border,
+        },
+      }),
+    [Colors],
+  );
 
   const getVariantStyle = () => {
     switch (variant) {
@@ -102,28 +133,3 @@ export const Card: React.FC<CardProps> = ({
 
   return content;
 };
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-  },
-  elevated: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  outlined: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  interactive: {
-    backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-});

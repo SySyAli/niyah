@@ -64,6 +64,7 @@ describe("sessionStore", () => {
           totalOwedPaid: 0,
           totalOwedMissed: 0,
           lastUpdated: new Date(),
+          referralCount: 0,
         },
       },
       isAuthenticated: true,

@@ -1,57 +1,60 @@
-// NIYAH Color System - Dark, deep earth tones
+// NIYAH Color System
 // Rich, grounded, premium feel — dark greens, deep blues, clay reds
+// Two themes: dark (deep earth tones) and light (warm cream tones)
 
-export const Colors = {
+import { Platform } from "react-native";
+
+export const DarkColors = {
   // Backgrounds - Deep, dark earth tones
-  background: "#1A1714", // Very dark warm brown (almost black)
-  backgroundElevated: "#252019", // Slightly lighter dark brown
-  backgroundCard: "#2E2820", // Card surface — dark clay
-  backgroundSecondary: "#3A3228", // Secondary surface — warm dark
-  backgroundTertiary: "#4A4035", // Tertiary — muted earth
+  background: "#1A1714",
+  backgroundElevated: "#252019",
+  backgroundCard: "#2E2820",
+  backgroundSecondary: "#3A3228",
+  backgroundTertiary: "#4A4035",
 
   // Primary brand color - Deep forest green
-  primary: "#2D6A4F", // Deep forest green
-  primaryDark: "#1B4332", // Darker green
-  primaryLight: "#40916C", // Lighter forest green
+  primary: "#2D6A4F",
+  primaryDark: "#1B4332",
+  primaryLight: "#40916C",
   primaryMuted: "rgba(45, 106, 79, 0.25)",
 
-  // Accent colors - Deep earth palette
-  accent: "#5C415D", // Deep plum/mauve
-  accentBlue: "#1B3A4B", // Deep ocean blue
-  accentClay: "#8B2500", // Deep clay red
-  accentGold: "#B8860B", // Dark goldenrod
+  // Accent colors
+  accent: "#5C415D",
+  accentBlue: "#1B3A4B",
+  accentClay: "#8B2500",
+  accentGold: "#B8860B",
 
   // Text hierarchy - Light for contrast on dark bg
-  text: "#F2EDE4", // Warm off-white
-  textPrimary: "#F2EDE4", // Warm off-white
-  textSecondary: "#C4BAA8", // Muted sand
-  textTertiary: "#9A8E7A", // Dim earth
-  textMuted: "#6B6156", // Very dim
+  text: "#F2EDE4",
+  textPrimary: "#F2EDE4",
+  textSecondary: "#C4BAA8",
+  textTertiary: "#9A8E7A",
+  textMuted: "#6B6156",
 
-  // Money colors (critical for financial UI)
-  gain: "#40916C", // Forest green (positive)
+  // Money colors
+  gain: "#40916C",
   gainLight: "rgba(64, 145, 108, 0.20)",
-  loss: "#8B2500", // Deep clay red (negative)
+  loss: "#8B2500",
   lossLight: "rgba(139, 37, 0, 0.20)",
 
   // Status colors
-  success: "#40916C", // Forest green
-  warning: "#B8860B", // Dark goldenrod
+  success: "#40916C",
+  warning: "#B8860B",
   warningLight: "rgba(184, 134, 11, 0.20)",
-  danger: "#8B2500", // Deep clay red
+  danger: "#8B2500",
   dangerLight: "rgba(139, 37, 0, 0.20)",
-  info: "#1B3A4B", // Deep ocean blue
+  info: "#1B3A4B",
   infoLight: "rgba(27, 58, 75, 0.20)",
 
   // Interactive elements
-  buttonPrimary: "#2D6A4F", // Deep forest green
-  buttonSecondary: "#3A3228", // Warm dark
-  buttonDisabled: "#4A4035", // Muted earth
+  buttonPrimary: "#2D6A4F",
+  buttonSecondary: "#3A3228",
+  buttonDisabled: "#4A4035",
 
-  // Borders - subtle dividers on dark
-  border: "#4A4035", // Warm dark border
-  borderLight: "#3A3228", // Subtle border
-  borderFocused: "#40916C", // Forest green focus
+  // Borders
+  border: "#4A4035",
+  borderLight: "#3A3228",
+  borderFocused: "#40916C",
 
   // Overlays
   overlay: "rgba(0, 0, 0, 0.6)",
@@ -61,9 +64,86 @@ export const Colors = {
   shimmer: "#3A3228",
   skeleton: "#2E2820",
 
-  // White (for use on primary-colored buttons etc.)
   white: "#FFFFFF",
 } as const;
+
+export const LightColors = {
+  // Backgrounds - Warm beige tones
+  background: "#f5ead8ff",
+  backgroundElevated: "#E8DDD0",
+  backgroundCard: "#F5EFE6",
+  backgroundSecondary: "#E3D9CB",
+  backgroundTertiary: "#D9CEC0",
+
+  // Primary brand color - Deep forest green (same, works on light)
+  primary: "#2D6A4F",
+  primaryDark: "#1B4332",
+  primaryLight: "#40916C",
+  primaryMuted: "rgba(45, 106, 79, 0.12)",
+
+  // Accent colors
+  accent: "#5C415D",
+  accentBlue: "#1B3A4B",
+  accentClay: "#8B2500",
+  accentGold: "#B8860B",
+
+  // Text hierarchy - Dark for contrast on light bg
+  text: "#1A1714",
+  textPrimary: "#1A1714",
+  textSecondary: "#5A5248",
+  textTertiary: "#8C7E70",
+  textMuted: "#B5A899",
+
+  // Money colors (same — semantically distinct)
+  gain: "#2D6A4F",
+  gainLight: "rgba(45, 106, 79, 0.12)",
+  loss: "#8B2500",
+  lossLight: "rgba(139, 37, 0, 0.12)",
+
+  // Status colors
+  success: "#2D6A4F",
+  warning: "#B8860B",
+  warningLight: "rgba(184, 134, 11, 0.12)",
+  danger: "#8B2500",
+  dangerLight: "rgba(139, 37, 0, 0.12)",
+  info: "#1B3A4B",
+  infoLight: "rgba(27, 58, 75, 0.12)",
+
+  // Interactive elements
+  buttonPrimary: "#2D6A4F",
+  buttonSecondary: "#ECEAE3",
+  buttonDisabled: "#D4CEC5",
+
+  // Borders
+  border: "#D4CFC5",
+  borderLight: "#E3DED5",
+  borderFocused: "#40916C",
+
+  // Overlays
+  overlay: "rgba(0, 0, 0, 0.4)",
+  overlayLight: "rgba(0, 0, 0, 0.25)",
+
+  // Special
+  shimmer: "#ECEAE3",
+  skeleton: "#E3DFD7",
+
+  white: "#FFFFFF",
+} as const;
+
+// Backward-compatible default export (dark theme)
+export const Colors = DarkColors;
+
+export type Theme = "dark" | "light";
+
+// ThemeColors is a widened type so both DarkColors and LightColors satisfy it
+export type ThemeColors = {
+  readonly [K in keyof typeof DarkColors]: string;
+};
+
+export const ThemeColorMap = {
+  dark: DarkColors as ThemeColors,
+  light: LightColors as ThemeColors,
+};
 
 // Spacing system (8px grid)
 export const Spacing = {
@@ -104,19 +184,13 @@ export const Typography = {
 } as const;
 
 // Font weights - bolder across the board
-// SF Pro Rounded on iOS, Roboto on Android (falls back to fontWeight)
 export const FontWeight = {
-  regular: "500" as const, // Medium (was 400)
-  medium: "600" as const, // Semibold (was 500)
-  semibold: "700" as const, // Bold (was 600)
-  bold: "800" as const, // Heavy (was 700)
-  heavy: "900" as const, // Black (was 800)
+  regular: "500" as const,
+  medium: "600" as const,
+  semibold: "700" as const,
+  bold: "800" as const,
+  heavy: "900" as const,
 } as const;
-
-// SF Pro Rounded font family
-// "ui-rounded" is supported natively by React Native on iOS and resolves to
-// SF Pro Rounded at whatever fontWeight is set. No per-weight PostScript names needed.
-import { Platform } from "react-native";
 
 const ROUNDED = Platform.OS === "ios" ? "ui-rounded" : undefined;
 
@@ -128,7 +202,6 @@ export const Font = {
   heavy: { fontFamily: ROUNDED, fontWeight: "900" as const },
 } as const;
 
-// Base font family for body text (no explicit weight)
 export const BaseFontFamily = ROUNDED;
 
 // Border radius
@@ -141,4 +214,4 @@ export const Radius = {
   full: 9999,
 } as const;
 
-export type ColorName = keyof typeof Colors;
+export type ColorName = keyof typeof DarkColors;

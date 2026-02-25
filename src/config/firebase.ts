@@ -274,7 +274,9 @@ export const fetchUserProfile = async (
  * reputation score so the boost is visible the next time they open the app.
  * Fire-and-forget safe — errors are swallowed so the caller's flow is unaffected.
  */
-export const awardReferralToUser = async (referrerUid: string): Promise<void> => {
+export const awardReferralToUser = async (
+  referrerUid: string,
+): Promise<void> => {
   try {
     const doc = await NiyahFirestore.getDoc("users", referrerUid);
     const rep = (doc?.reputation as Record<string, number>) ?? {};
@@ -293,11 +295,15 @@ export const awardReferralToUser = async (referrerUid: string): Promise<void> =>
     score = Math.min(100, score + referralCount * 10);
 
     const level =
-      score <= 20 ? "seed"
-      : score <= 40 ? "sprout"
-      : score <= 60 ? "sapling"
-      : score <= 80 ? "tree"
-      : "oak";
+      score <= 20
+        ? "seed"
+        : score <= 40
+          ? "sprout"
+          : score <= 60
+            ? "sapling"
+            : score <= 80
+              ? "tree"
+              : "oak";
 
     await NiyahFirestore.setDoc(
       "users",

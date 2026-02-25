@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,13 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
-  Colors,
   Typography,
   Spacing,
   Radius,
   Font,
+  type ThemeColors,
 } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
 import { Card, Button } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -23,6 +24,8 @@ import { REPUTATION_LEVELS } from "../../src/constants/config";
 import { Partner } from "../../src/types";
 
 export default function PartnerSelectionScreen() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { partners, currentPartner, selectPartner, sendInvite } =
     usePartnerStore();
@@ -244,227 +247,228 @@ export default function PartnerSelectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
-  header: {
-    marginBottom: Spacing.md,
-  },
-  backText: {
-    color: Colors.textSecondary,
-    fontSize: Typography.bodyLarge,
-    ...Font.medium,
-  },
-  titleSection: {
-    alignItems: "center",
-    marginBottom: Spacing.xl,
-  },
-  title: {
-    fontSize: Typography.headlineMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-    textAlign: "center",
-  },
-  partnerList: {
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  partnerCard: {
-    marginBottom: 0,
-  },
-  partnerCardSelected: {
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  partnerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  partnerAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: Spacing.md,
-  },
-  partnerInitial: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.primary,
-  },
-  partnerInfo: {
-    flex: 1,
-  },
-  partnerNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    flexWrap: "wrap",
-  },
-  partnerTag: {
-    backgroundColor: Colors.primaryMuted,
-    borderRadius: Radius.full,
-    paddingVertical: 2,
-    paddingHorizontal: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.primaryLight,
-  },
-  partnerTagText: {
-    fontSize: Typography.labelSmall,
-    ...Font.medium,
-    color: Colors.primaryLight,
-  },
-  partnerName: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  partnerMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.xs,
-  },
-  reputationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: Spacing.xs,
-  },
-  reputationText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-  },
-  sessionsText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-  },
-  checkmark: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.sm,
-  },
-  checkmarkText: {
-    fontSize: Typography.labelSmall,
-    ...Font.semibold,
-    color: Colors.text,
-  },
-  venmoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  venmoLabel: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textMuted,
-    marginRight: Spacing.xs,
-  },
-  venmoHandle: {
-    fontSize: Typography.labelSmall,
-    color: Colors.primary,
-    ...Font.medium,
-  },
-  emptyCard: {
-    alignItems: "center",
-    paddingVertical: Spacing.xl,
-    marginBottom: Spacing.lg,
-  },
-  emptyTitle: {
-    fontSize: Typography.titleMedium,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  emptyText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  addButton: {
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  addButtonText: {
-    fontSize: Typography.bodyMedium,
-    color: Colors.primary,
-    ...Font.semibold,
-  },
-  inviteCard: {
-    marginBottom: Spacing.lg,
-  },
-  inviteTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  input: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    fontSize: Typography.bodyMedium,
-    color: Colors.text,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.md,
-  },
-  inviteButtons: {
-    flexDirection: "row",
-    gap: Spacing.md,
-  },
-  inviteButtonFlex: {
-    flex: 1,
-  },
-  infoCard: {
-    backgroundColor: Colors.backgroundCard,
-  },
-  infoTitle: {
-    fontSize: Typography.titleSmall,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  infoText: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: Spacing.md,
-  },
-  legendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.xs,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: Spacing.sm,
-  },
-  legendText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-  },
-});
+const makeStyles = (Colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: Spacing.lg,
+      paddingBottom: Spacing.xl,
+    },
+    header: {
+      marginBottom: Spacing.md,
+    },
+    backText: {
+      color: Colors.textSecondary,
+      fontSize: Typography.bodyLarge,
+      ...Font.medium,
+    },
+    titleSection: {
+      alignItems: "center",
+      marginBottom: Spacing.xl,
+    },
+    title: {
+      fontSize: Typography.headlineMedium,
+      ...Font.bold,
+      color: Colors.text,
+    },
+    subtitle: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      marginTop: Spacing.xs,
+      textAlign: "center",
+    },
+    partnerList: {
+      gap: Spacing.md,
+      marginBottom: Spacing.lg,
+    },
+    partnerCard: {
+      marginBottom: 0,
+    },
+    partnerCardSelected: {
+      borderWidth: 2,
+      borderColor: Colors.primary,
+    },
+    partnerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    partnerAvatar: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: Colors.primaryMuted,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: Spacing.md,
+    },
+    partnerInitial: {
+      fontSize: Typography.titleLarge,
+      ...Font.bold,
+      color: Colors.primary,
+    },
+    partnerInfo: {
+      flex: 1,
+    },
+    partnerNameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.sm,
+      flexWrap: "wrap",
+    },
+    partnerTag: {
+      backgroundColor: Colors.primaryMuted,
+      borderRadius: Radius.full,
+      paddingVertical: 2,
+      paddingHorizontal: Spacing.sm,
+      borderWidth: 1,
+      borderColor: Colors.primaryLight,
+    },
+    partnerTagText: {
+      fontSize: Typography.labelSmall,
+      ...Font.medium,
+      color: Colors.primaryLight,
+    },
+    partnerName: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.xs,
+    },
+    partnerMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: Spacing.xs,
+    },
+    reputationDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: Spacing.xs,
+    },
+    reputationText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+    },
+    sessionsText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+    },
+    checkmark: {
+      backgroundColor: Colors.primary,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.sm,
+    },
+    checkmarkText: {
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    venmoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: Spacing.sm,
+      paddingTop: Spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    venmoLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+      marginRight: Spacing.xs,
+    },
+    venmoHandle: {
+      fontSize: Typography.labelSmall,
+      color: Colors.primary,
+      ...Font.medium,
+    },
+    emptyCard: {
+      alignItems: "center",
+      paddingVertical: Spacing.xl,
+      marginBottom: Spacing.lg,
+    },
+    emptyTitle: {
+      fontSize: Typography.titleMedium,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.sm,
+    },
+    emptyText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    addButton: {
+      alignItems: "center",
+      paddingVertical: Spacing.md,
+      marginBottom: Spacing.lg,
+    },
+    addButtonText: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.primary,
+      ...Font.semibold,
+    },
+    inviteCard: {
+      marginBottom: Spacing.lg,
+    },
+    inviteTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.md,
+    },
+    input: {
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      fontSize: Typography.bodyMedium,
+      color: Colors.text,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      marginBottom: Spacing.md,
+    },
+    inviteButtons: {
+      flexDirection: "row",
+      gap: Spacing.md,
+    },
+    inviteButtonFlex: {
+      flex: 1,
+    },
+    infoCard: {
+      backgroundColor: Colors.backgroundCard,
+    },
+    infoTitle: {
+      fontSize: Typography.titleSmall,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.sm,
+    },
+    infoText: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: Spacing.md,
+    },
+    legendRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: Spacing.xs,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: Spacing.sm,
+    },
+    legendText: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+    },
+  });

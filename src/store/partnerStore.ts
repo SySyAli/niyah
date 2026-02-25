@@ -70,6 +70,7 @@ const DEMO_PARTNER: Partner = {
     totalOwedPaid: 4500, // $45 paid
     totalOwedMissed: 500, // $5 missed once
     lastUpdated: new Date(),
+    referralCount: 0,
   },
   connectedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
   totalSessionsTogether: 5,
@@ -319,6 +320,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
           totalOwedPaid: 0,
           totalOwedMissed: 0,
           lastUpdated: new Date(),
+          referralCount: 0,
         },
       });
 

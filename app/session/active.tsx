@@ -1,21 +1,187 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import {
-  Colors,
-  Typography,
-  Spacing,
-  Radius,
-  Font,
-} from "../../src/constants/colors";
+import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 import { Card, Button, Timer } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useCountdown } from "../../src/hooks/useCountdown";
 import { formatMoney } from "../../src/utils/format";
+import {
+  stopBlocking,
+  onShieldViolation,
+  isScreenTimeAvailable,
+} from "../../src/config/screentime";
 
 export default function ActiveSessionScreen() {
+  const Colors = useColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: Colors.background,
+        },
+        content: {
+          flex: 1,
+          padding: Spacing.lg,
+        },
+        header: {
+          alignItems: "center",
+          marginTop: Spacing.sm,
+          marginBottom: Spacing.md,
+        },
+        statusBadge: {
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: Colors.gainLight,
+          paddingHorizontal: Spacing.md,
+          paddingVertical: Spacing.sm,
+          borderRadius: Radius.full,
+          marginBottom: Spacing.md,
+        },
+        statusDot: {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: Colors.gain,
+          marginRight: Spacing.sm,
+        },
+        statusText: {
+          fontSize: Typography.labelSmall,
+          ...Font.bold,
+          color: Colors.gain,
+          letterSpacing: 1,
+        },
+        title: {
+          fontSize: Typography.headlineMedium,
+          ...Font.bold,
+          color: Colors.text,
+        },
+        subtitle: {
+          fontSize: Typography.bodySmall,
+          color: Colors.textSecondary,
+          marginTop: Spacing.xs,
+        },
+        timerSection: {
+          alignItems: "center",
+          marginBottom: Spacing.md,
+        },
+        progressSection: {
+          marginBottom: Spacing.md,
+        },
+        progressContainer: {
+          width: "100%",
+          height: 6,
+          backgroundColor: Colors.backgroundTertiary,
+          borderRadius: Radius.full,
+          overflow: "hidden",
+        },
+        progressBar: {
+          height: "100%",
+          backgroundColor: Colors.primary,
+          borderRadius: Radius.full,
+        },
+        progressText: {
+          fontSize: Typography.labelSmall,
+          color: Colors.textSecondary,
+          textAlign: "center",
+          marginTop: Spacing.sm,
+        },
+        payoutCard: {
+          alignItems: "center",
+          backgroundColor: Colors.gainLight,
+          borderWidth: 1,
+          borderColor: Colors.gain,
+          paddingVertical: Spacing.md,
+          marginBottom: Spacing.md,
+        },
+        payoutLabel: {
+          fontSize: Typography.labelMedium,
+          color: Colors.textSecondary,
+          marginBottom: Spacing.xs,
+        },
+        payoutAmount: {
+          fontSize: Typography.titleLarge,
+          ...Font.bold,
+          color: Colors.gain,
+        },
+        violationCard: {
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          backgroundColor: Colors.lossLight,
+          borderWidth: 1,
+          borderColor: Colors.loss,
+          paddingVertical: Spacing.sm,
+          paddingHorizontal: Spacing.md,
+          marginBottom: Spacing.md,
+          borderRadius: Radius.lg,
+        },
+        violationLabel: {
+          fontSize: Typography.bodySmall,
+          color: Colors.loss,
+          ...Font.medium,
+        },
+        violationCount: {
+          fontSize: Typography.titleMedium,
+          ...Font.bold,
+          color: Colors.loss,
+        },
+        tipsSection: {
+          backgroundColor: Colors.backgroundCard,
+          borderRadius: Radius.lg,
+          padding: Spacing.md,
+          marginBottom: Spacing.md,
+        },
+        tipsTitle: {
+          fontSize: Typography.bodyMedium,
+          ...Font.semibold,
+          color: Colors.text,
+          marginBottom: Spacing.xs,
+        },
+        tipsList: {
+          gap: 4,
+        },
+        tipRow: {
+          flexDirection: "row",
+          alignItems: "flex-start",
+          width: "100%",
+        },
+        tipBullet: {
+          width: 4,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: Colors.textMuted,
+          marginRight: Spacing.sm,
+        },
+        tipText: {
+          flex: 1,
+          fontSize: Typography.bodySmall,
+          color: Colors.textSecondary,
+          lineHeight: 16,
+        },
+        footer: {
+          marginTop: "auto",
+          gap: Spacing.sm,
+        },
+        footerButtonsRow: {
+          flexDirection: "row",
+          gap: Spacing.sm,
+        },
+        footerButton: {
+          flex: 1,
+        },
+        warningText: {
+          textAlign: "center",
+          color: Colors.textMuted,
+          fontSize: Typography.labelSmall,
+        },
+      }),
+    [Colors],
+  );
   const router = useRouter();
   const { activeGroupSession, completeGroupSession } = useGroupSessionStore();
   // Tracks intentional navigation away (complete or surrender) so the
@@ -24,10 +190,15 @@ export default function ActiveSessionScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [pauseStartedAt, setPauseStartedAt] = useState<number | null>(null);
   const [totalPausedMs, setTotalPausedMs] = useState(0);
+  const [violationCount, setViolationCount] = useState(0);
 
   const { timeRemaining, start, stop } = useCountdown({
     onComplete: () => {
       isNavigatingAwayRef.current = true;
+      // Stop blocking apps when session completes
+      if (isScreenTimeAvailable) {
+        stopBlocking().catch(() => {});
+      }
       // Delay by one animation cycle (950ms + buffer) so the final drain
       // animation reaches 100% before we navigate away.
       setTimeout(() => {
@@ -44,6 +215,16 @@ export default function ActiveSessionScreen() {
       }, 1000);
     },
   });
+
+  // Listen for shield violation events (user tried to open a blocked app)
+  useEffect(() => {
+    if (!isScreenTimeAvailable || !activeGroupSession) return;
+    const unsubscribe = onShieldViolation(() => {
+      setViolationCount((prev) => prev + 1);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    });
+    return unsubscribe;
+  }, [activeGroupSession]);
 
   useEffect(() => {
     if (activeGroupSession) {
@@ -144,6 +325,14 @@ export default function ActiveSessionScreen() {
           </Text>
         </Card>
 
+        {/* Violation Counter */}
+        {violationCount > 0 && (
+          <Card style={styles.violationCard}>
+            <Text style={styles.violationLabel}>Blocked app attempts</Text>
+            <Text style={styles.violationCount}>{violationCount}</Text>
+          </Card>
+        )}
+
         {/* Tips */}
         <View style={styles.tipsSection}>
           <Text style={styles.tipsTitle}>Stay strong</Text>
@@ -178,6 +367,10 @@ export default function ActiveSessionScreen() {
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                   isNavigatingAwayRef.current = true;
+                  // Stop blocking apps when navigating to surrender
+                  if (isScreenTimeAvailable) {
+                    stopBlocking().catch(() => {});
+                  }
                   router.push("/session/surrender");
                 }}
                 variant="outline"
@@ -194,143 +387,3 @@ export default function ActiveSessionScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    flex: 1,
-    padding: Spacing.lg,
-  },
-  header: {
-    alignItems: "center",
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.gainLight,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    marginBottom: Spacing.md,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.gain,
-    marginRight: Spacing.sm,
-  },
-  statusText: {
-    fontSize: Typography.labelSmall,
-    ...Font.bold,
-    color: Colors.gain,
-    letterSpacing: 1,
-  },
-  title: {
-    fontSize: Typography.headlineMedium,
-    ...Font.bold,
-    color: Colors.text,
-  },
-  subtitle: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.xs,
-  },
-  timerSection: {
-    alignItems: "center",
-    marginBottom: Spacing.md,
-  },
-  progressSection: {
-    marginBottom: Spacing.md,
-  },
-  progressContainer: {
-    width: "100%",
-    height: 6,
-    backgroundColor: Colors.backgroundTertiary,
-    borderRadius: Radius.full,
-    overflow: "hidden",
-  },
-  progressBar: {
-    height: "100%",
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-  },
-  progressText: {
-    fontSize: Typography.labelSmall,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    marginTop: Spacing.sm,
-  },
-  payoutCard: {
-    alignItems: "center",
-    backgroundColor: Colors.gainLight,
-    borderWidth: 1,
-    borderColor: Colors.gain,
-    paddingVertical: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  payoutLabel: {
-    fontSize: Typography.labelMedium,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
-  },
-  payoutAmount: {
-    fontSize: Typography.titleLarge,
-    ...Font.bold,
-    color: Colors.gain,
-  },
-  tipsSection: {
-    backgroundColor: Colors.backgroundCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  tipsTitle: {
-    fontSize: Typography.bodyMedium,
-    ...Font.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  tipsList: {
-    gap: 4,
-  },
-  tipRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    width: "100%",
-  },
-  tipBullet: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.textMuted,
-    marginRight: Spacing.sm,
-  },
-  tipText: {
-    flex: 1,
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    lineHeight: 16,
-  },
-  footer: {
-    marginTop: "auto",
-    gap: Spacing.sm,
-  },
-  footerButtonsRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  footerButton: {
-    flex: 1,
-  },
-  warningText: {
-    textAlign: "center",
-    color: Colors.textMuted,
-    fontSize: Typography.labelSmall,
-  },
-});

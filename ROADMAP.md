@@ -1,41 +1,68 @@
 # NIYAH - Project Roadmap
 
-## Immediate Actions (Do This Week)
+## Current Status (Feb 2026)
 
-These are approval/registration processes that take weeks-to-months. Start them NOW and code in parallel.
+### What's Built
 
-### 1. Apple Developer Program Registration
+| Area                  | Status      | Notes                                                                     |
+| --------------------- | ----------- | ------------------------------------------------------------------------- |
+| Firebase Auth         | Done        | Google, Apple, Email magic link via custom native Swift Expo module       |
+| Firestore             | Done        | User profiles, wallets, follows. Native module with get/set/update/delete |
+| Solo Sessions         | Done        | Select cadence, stake, timer, surrender/complete. Local state.            |
+| Duo Sessions          | Done        | Partner store, full lifecycle, Venmo deep links for settlement            |
+| Group Sessions        | Done        | N-person sessions, payout algorithm (placeholder), transfer tracking      |
+| Social Features       | Done        | Following/followers, public profiles, reputation system (5 tiers)         |
+| Referral System       | Done        | Deep link invites, reputation boost, partner auto-connect                 |
+| Contacts Integration  | Done        | expo-contacts for friend discovery                                        |
+| Onboarding            | In Progress | 10 scene components exist, animations need polish                         |
+| JITAI Module          | Done        | Adaptive intervention engine (simulation-only, no real usage data yet)    |
+| Testing               | Setup       | Vitest with integration + unit test directories                           |
+| Screen Time API       | Not Started | No native module code. This is the primary next milestone.                |
+| Stripe Payments       | Not Started | Trust model (virtual balances + Venmo settlement) works for now           |
+| Real Payout Algorithm | Not Started | Current algorithm is a placeholder even-split                             |
 
-- **Cost:** $99/year (teammates chipping in $25 each)
-- **Action:** Purchase immediately at developer.apple.com. Request reimbursement after.
-- **Why now:** Cannot apply for FamilyControls entitlement, create provisioning profiles, or submit to App Store without it. Everything downstream is blocked by this.
-- **Timeline:** Account activation typically takes 24-48 hours after purchase.
+### Apple Developer Account
 
-**Registration requirements:**
+- [x] Apple Developer Program account ($99) -- active
+- [ ] FamilyControls Development entitlement -- **not yet applied, apply NOW**
+- [ ] FamilyControls Distribution entitlement -- requires separate Apple approval (2-4 weeks)
 
-- [ ] Apple ID with two-factor authentication enabled
-- [ ] Legal name / organization name
-- [ ] Payment ($99)
-- [ ] For organization enrollment: D-U-N-S Number (free, but takes 5-14 business days if you don't have one)
+---
 
-**Decision:** Individual vs. Organization enrollment?
+## Current Priorities
 
-- **Individual** ($99): Faster, simpler. App published under your personal name.
-- **Organization** ($99): Requires D-U-N-S Number. App published under team/company name. Better for a serious product.
-- **Recommendation:** If you have any plans to make NIYAH a real company, register as Organization now. Get the D-U-N-S Number in parallel -- it's free but takes time.
+### 1. Screen Time API Native Module (HIGH)
 
-### 2. FamilyControls (Screen Time API) Entitlement
+The core product differentiator. Goal: start a NIYAH session, open a "blocked" app (e.g. Photos), get an Opal-style shield overlay, and lose money in NIYAH.
 
-- **Dependency:** Requires active Apple Developer Program account (step 1)
-- **Action:** Apply at Apple Developer Portal immediately after account is active
-- **Timeline:** 2-4 weeks for first-time approval. Extensions (Shield, etc.) may take 2+ weeks additional.
+**Blocker**: Must enable FamilyControls (Development) capability on App ID in the Apple Developer portal. Available immediately, no approval wait. (Distribution entitlement is separate -- apply for that in parallel, takes 2-4 weeks.)
 
-**What to apply for:**
+**Code Status**: Module scaffolded. All Swift code, TypeScript bridge, config plugins, and App Extension written. Needs first dev client build (`pnpm build:dev`) and physical device testing.
 
-- [ ] `com.apple.developer.family-controls` entitlement (Distribution version)
-- [ ] Development version is available immediately for testing -- start prototyping with this while waiting for Distribution approval
+**Remaining Milestones:**
 
-**Required frameworks (all part of the Screen Time API):**
+| #   | Milestone                                           | Status     | What's Left                                                           |
+| --- | --------------------------------------------------- | ---------- | --------------------------------------------------------------------- |
+| 1   | Enable FamilyControls + App Groups on App ID        | **Do now** | Apple Developer portal                                                |
+| 2   | Scaffold `modules/niyah-screentime/` Expo module    | **Done**   | Swift module, TS types, podspec, config                               |
+| 3   | FamilyControls authorization flow                   | **Done**   | `requestAuthorization()` in Swift + JS wrapper                        |
+| 4   | App selection with FamilyActivityPicker             | **Done**   | SwiftUI picker, hosted modally, selection persisted to App Groups     |
+| 5   | Shield configuration (ManagedSettings)              | **Done**   | `startBlocking()` / `stopBlocking()` apply/remove shields             |
+| 6   | DeviceActivityMonitor extension                     | **Done**   | Extension Swift code + Xcode config plugin to inject target           |
+| 7   | Bridge to RN (JS wrapper)                           | **Done**   | `src/config/screentime.ts` with typed functions + event subscriptions |
+| 8   | Build new dev client                                | **Next**   | `pnpm build:dev` to compile native modules                            |
+| 9   | Physical device testing                             | **Next**   | Test full flow on real iPhone                                         |
+| 10  | Session store integration                           | **Next**   | Wire `onShieldViolation` -> wallet deduction in session flow          |
+| 11  | End-to-end: session -> block -> violation -> deduct | **Next**   | Final integration + polish                                            |
+
+**Technical Notes:**
+
+- DeviceActivityMonitor is an **App Extension** (separate build target). The `withDeviceActivityMonitor.js` config plugin handles injecting it into the Xcode project during `expo prebuild`.
+- App Groups (`group.com.niyah.app`) enable data sharing between the main app and the extension (violation timestamps, blocking state, app selection).
+- All testing must be on a **physical iOS device**. The Screen Time API does not work in the iOS Simulator.
+- Opal and one sec are fully native iOS apps. This module proves Screen Time API can work in a React Native/Expo architecture.
+
+**Key Apple Frameworks:**
 
 | Framework       | Purpose                                                    |
 | --------------- | ---------------------------------------------------------- |
@@ -43,51 +70,65 @@ These are approval/registration processes that take weeks-to-months. Start them 
 | ManagedSettings | Apply restrictions (shield apps, block content)            |
 | DeviceActivity  | Monitor usage & execute code on schedules/events           |
 
-**Critical technical note:** No maintained React Native packages exist for Screen Time API. This will require a custom native Swift module. Options:
+### 2. Onboarding Polish (LOW)
 
-| Approach                          | Complexity | Timeline   |
-| --------------------------------- | ---------- | ---------- |
-| Custom Expo Module (Swift bridge) | High       | 4-8 weeks  |
-| Bare RN + Native Module           | High       | 4-8 weeks  |
-| Full Native Swift Rewrite         | Highest    | 8-12 weeks |
+Scene components already exist in `src/components/onboarding/`. What remains is animation and transition work:
 
-**Precedent:** Opal and one sec are both native iOS apps (not React Native) using the Productivity category with Individual authorization mode. This validates the use case for Apple's approval.
+- [ ] Migrate animations from legacy `Animated` API to Reanimated (shared values, springs)
+- [ ] Gesture-driven page transitions (swipe controls animation progress)
+- [ ] Background color interpolation between pages
+- [ ] Text fade/slide choreography
+- [ ] Page snap with spring physics + haptic feedback
+- [ ] Parallax depth layers on scene illustrations
 
-### 3. Stripe Account Setup
+This is UI polish. Not blocking any core functionality. Can be done in parallel or after Screen Time API.
 
-- **Action:** Create Stripe account and apply for production access
-- **Timeline:** 1-3 business days for approval
-- **Cost:** Free to set up. Fees are per-transaction (2.9% + $0.30)
+---
 
-**Steps:**
+## Deferred Priorities
 
-- [ ] Create Stripe account at dashboard.stripe.com
-- [ ] Start in test mode immediately (no approval needed for testing)
-- [ ] Submit business verification for production access
-- [ ] Install `@stripe/stripe-react-native` when ready to integrate
+### Stripe Integration (FUTURE)
 
-**Fee impact on $5 stake:**
+Not blocking anything right now. The trust model (virtual balances + Venmo/PayPal settlement outside app) works for demo and early users. Integrate Stripe when ready for real money flow.
+
+- [ ] Create Stripe account, start in test mode
+- [ ] Install `@stripe/stripe-react-native`
+- [ ] Build deposit flow with PaymentSheet
+- [ ] Build payout/withdrawal flow
+- [ ] Set up Firebase Cloud Functions for server-side (payment intents, webhooks)
+- [ ] Stripe Connect Express for user-to-user transfers (avoids money transmitter issues)
+
+### Real Payout Algorithm (FUTURE)
+
+Current `src/utils/payoutAlgorithm.ts` is a placeholder (everyone gets their stake back). Replace with the real formula when group sessions are in active use:
 
 ```
-Deposit: $5.00
-Stripe fee: -$0.45 (2.9% + $0.30)
-Net received: $4.55
+Let c = equal contribution from each person
+Let t_i = screen time for person i
+Let t_max = maximum time in the group
+Let t_bar = mean time of the group
 
-Payout (if user wins): $10.00
-Instant payout fee: -$0.15 (1.5%)
-User receives: $9.85
-
-Cost per successful session: ~$0.60
+Payout for person i:
+  P_i = c                                    if t_max = t_bar (everyone equal)
+  P_i = c * (t_max - t_i) / (t_max - t_bar)  otherwise
 ```
 
-### 4. Legal / Regulatory Review
+Lower screen time = higher payout. Subject to legal review for gambling risk.
 
-- **Action:** Consult VAIL (Mark & Cat) and Dr. White for legal guidance. Do this early -- a legal issue discovered late could require architectural changes.
-- **Timeline:** Schedule this within the next 1-2 weeks
+### Firebase Backend Hardening (FUTURE)
 
-**Key legal questions to resolve:**
+Firebase Auth and Firestore are working but some areas still use local state:
 
-#### Is NIYAH Gambling?
+- [ ] Migrate session data from local Zustand to Firestore
+- [ ] Migrate wallet/balance management to server-side (Cloud Functions)
+- [ ] Cloud Functions for payout calculations, streak tracking
+- [ ] Firestore security rules (currently permissive for dev)
+
+---
+
+## Legal & Regulatory
+
+### Is NIYAH Gambling?
 
 Three-element test:
 
@@ -97,7 +138,7 @@ Three-element test:
 
 **Verdict: Likely NOT gambling** for solo mode. Outcome is 100% effort-based.
 
-#### Precedents (Apps Operating Legally for 10+ Years)
+### Precedents (Apps Operating Legally for 10+ Years)
 
 | App       | Model                        | Status                               |
 | --------- | ---------------------------- | ------------------------------------ |
@@ -105,43 +146,27 @@ Three-element test:
 | Beeminder | Stakes go to company if fail | Legal, 10+ years                     |
 | DietBet   | Pool split among winners     | Legal, explicit skill/effort framing |
 
-#### IMPORTANT: NIYAH is NOT an Event Contract (Kalshi Model)
+### IMPORTANT: NIYAH is NOT an Event Contract (Kalshi Model)
 
-Do NOT frame NIYAH as an "event contract" platform. Kalshi operates as a CFTC-regulated derivatives exchange for betting on external events (elections, weather, etc.). NIYAH is fundamentally different:
+Do NOT frame NIYAH as an "event contract" platform. NIYAH is a **commitment contract** -- a contract where the user commits to a goal and stakes money as a motivational device. This is the same model stickK and Beeminder have used safely for over a decade.
 
-- Kalshi: Outcome determined by external events the user cannot control
-- NIYAH: Outcome determined 100% by the user's own effort and action
+### Pool/Duo Mode -- Higher Risk Area
 
-The correct legal framing is **"commitment contract"** -- a contract where the user commits to a goal and stakes money as a motivational device. This is the same model stickK and Beeminder have used safely for over a decade.
+Solo mode (user vs. themselves) is legally clean. Pool mode (users competing for a shared pot) introduces gambling risk because it's zero-sum.
 
-#### Pool/Duo Mode -- Higher Risk Area
+**Current approach**: Strategy A (Splitwise model) -- track virtual balances only, users settle outside app via Venmo. No MTL required, no gambling concern.
 
-Solo mode (user vs. themselves) is legally clean. Pool mode (users competing for a shared pot) introduces gambling risk because it's zero-sum (one person's loss is another's gain).
-
-**Mitigation strategies (safest to most complex):**
-
-| Strategy                              | Model                                                        | Risk Level                    |
-| ------------------------------------- | ------------------------------------------------------------ | ----------------------------- |
-| **A: Splitwise Model (MVP)**          | Track virtual balances only, users settle outside app        | LOW                           |
-| **B: Penalty-to-Charity**             | Failed stakes go to charity, not other users                 | LOW-MEDIUM                    |
-| **C: Forfeit-to-Company (Beeminder)** | Failed stakes kept as service fee, no user-to-user transfers | LOW-MEDIUM                    |
-| **D: Pool Redistribution**            | Winners receive losers' stakes                               | HIGHER -- closest to gambling |
-
-**Recommendation:** For MVP and likely for production, use Strategy A or C. Strategy D (pool redistribution) requires legal review and potentially money transmitter licensing.
-
-#### Money Transmission
-
-You ARE a money transmitter if you: custody user funds, transfer funds user-to-user, or pay out funds to users.
-Triggers: FinCEN registration + State Money Transmitter Licenses (49 states) = $50K-$500K+ in fees, 6-24 month timeline.
+### Money Transmission
 
 You are NOT a money transmitter if you: never custody funds (Splitwise model), only track debts with users settling outside app, or use a licensed third party (Stripe) for all fund movement.
 
-#### App Store Strategy
+### App Store Strategy
 
-- **Category:** Productivity or Health & Fitness (NOT Games)
-- **Avoid words:** "bet," "wager," "gamble," "win"
-- **Use words:** "stake," "commitment," "goal," "complete"
-- **Required disclaimer:**
+- **Category**: Productivity (NOT Games)
+- **Avoid words**: "bet," "wager," "gamble," "win"
+- **Use words**: "stake," "commitment," "goal," "complete"
+
+### Required Legal Disclaimer
 
 ```
 COMMITMENT CONTRACT DISCLAIMER
@@ -156,340 +181,57 @@ Successful completion is entirely within the user's control.
 NIYAH is not a gambling, gaming, lottery, or betting service.
 ```
 
----
+### Outstanding Legal Actions
 
-## Animation & UI Roadmap
-
-### Goal
-
-Build a professional, Robinhood-quality onboarding experience and polished UI animations using **Figma** (design) + **React Native Reanimated** (animation) + **Gesture Handler** (interaction).
-
-### Inspiration
-
-Robinhood's onboarding uses a single continuous Lottie animation scrubbed by a pan gesture. We replicate the same effect purely in code:
-
-- Gesture-driven page transitions (swipe controls animation progress, not time)
-- 3D perspective transforms (phone rotation, scale, tilt between pages)
-- Parallax depth layers (foreground moves faster than background)
-- Choreographed element entrances (staggered fades, springs, slides)
-- Background color interpolation between pages
-
-### Current State
-
-#### Installed But Unused
-
-| Library                        | Version | Status                                                            |
-| ------------------------------ | ------- | ----------------------------------------------------------------- |
-| `react-native-reanimated`      | 4.1.6   | Installed, Babel plugin configured, **not used in any component** |
-| `react-native-gesture-handler` | 2.28.0  | Installed, only used internally by expo-router                    |
-| `expo-linear-gradient`         | 15.0.8  | Installed, **not used in any component**                          |
-
-#### Currently Used for Animation
-
-| Library                     | Usage                                                   |
-| --------------------------- | ------------------------------------------------------- |
-| `react-native` Animated API | All current animations (press scale, fade-in, confetti) |
-| `react-native-svg`          | Timer progress ring                                     |
-| `expo-haptics`              | Button, Card, NumPad press feedback                     |
-
-All animations need to migrate from the legacy `Animated` API to Reanimated for UI-thread performance and gesture-driven capabilities.
-
-### Architecture: Gesture-Driven Onboarding
-
-```
-┌─────────────────────────────────────┐
-│           PanGesture                │  User swipes left/right
-│     translationX: -width to 0      │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│      Shared Value: progress         │  Normalized 0 to N (num pages)
-│      interpolate(translationX,      │
-│        [0, -screenWidth],           │
-│        [0, 1])                      │
-└──────────────┬──────────────────────┘
-               │
-    ┌──────────┼──────────┬───────────┐
-    ▼          ▼          ▼           ▼
- BG Color   Scene      Scene      Text
- interp     Scale      RotateY    Fade
-            interp     interp     interp
-```
-
-One shared value (gesture progress) drives every animation through `interpolate()`.
-
-### Key Techniques
-
-**1. Parallax Layers**
-
-Each scene is composed of stacked layers exported from Figma, each translating at different speeds:
-
-```
-far background:  speed = 0.2x (slowest)
-mid background:  speed = 0.5x
-foreground:      speed = 1.0x (fastest)
-```
-
-**2. 3D Phone Rotation Transition**
-
-Between pages, the scene shrinks into a phone frame and rotates:
-
-```
-progress 0.0 → 0.3: Scene normal
-progress 0.3 → 0.5: Scale 1→0.7, borderRadius 0→20, rotateY 0→15deg
-progress 0.5 → 0.7: Next scene scales 0.7→1, rotateY 15→0deg
-progress 0.7 → 1.0: Next scene normal
-
-Transforms: perspective(1000), rotateY, rotateZ, scale + animated borderRadius
-```
-
-**3. Background Color Interpolation**
-
-Reanimated's `interpolateColor()` smoothly transitions backgrounds between pages.
-
-**4. Text Choreography**
-
-```
-opacity:    interpolate(progress, [page-0.3, page, page+0.3], [0, 1, 0])
-translateY: interpolate(progress, [page-0.3, page, page+0.3], [30, 0, -30])
-```
-
-**5. Page Snap**
-
-On gesture end, snap to nearest integer page with `withSpring()` + haptic feedback.
-
-### Onboarding Content Plan
-
-| Page | Theme                                        | Hero Element                     | Color Direction          |
-| ---- | -------------------------------------------- | -------------------------------- | ------------------------ |
-| 1    | "You're spending 7 hours on your phone"      | Phone with distracting app icons | Cool/neutral tones       |
-| 2    | "What if quitting cost you $5?"              | Dollar/coin being staked         | Warm transition          |
-| 3    | "Complete your session, earn it back + more" | Growing plant / balance rising   | Green, NIYAH brand       |
-| 4    | "Ready to take control?"                     | NIYAH logo / shield              | Full brand palette, CTAs |
-
-### Figma Design Strategy
-
-Design each page as separate, stackable layers (NOT flat compositions):
-
-```
-Page N/
-├── background-far.svg      (distant elements, parallax slowest)
-├── background-mid.svg      (mid-ground environment)
-├── foreground.svg           (characters, main objects)
-├── hero.svg                 (central element)
-└── [UI overlay]             (text, dots, buttons -- in code, not Figma)
-```
-
-Export rules:
-
-- Each layer as separate SVG/PNG
-- Same canvas size for alignment
-- Clear naming: `page1-bg-far.svg`, `page1-foreground.svg`, etc.
-- Breathing room for elements that scale
-- Phone frame as its own reusable SVG
-
----
-
-## Implementation Phases
-
-### Phase 0: Approvals & Registration (Week 1 -- DO IMMEDIATELY)
-
-- [ ] Purchase Apple Developer Program ($99)
-- [ ] Decide: Individual vs. Organization enrollment
-- [ ] If Organization: Apply for D-U-N-S Number (free, 5-14 business days)
-- [ ] Once account active: Apply for FamilyControls Distribution entitlement
-- [ ] Enable FamilyControls Development entitlement for immediate testing
-- [ ] Create Stripe account, start in test mode
-- [ ] Submit Stripe business verification for production access
 - [ ] Schedule legal consultation with VAIL (Mark & Cat) and/or Dr. White
-- [ ] Review commitment contract framing with legal advisor
 - [ ] Confirm pool mode strategy (Splitwise vs. Charity vs. Forfeit-to-Company)
+- [ ] Review commitment contract framing with legal advisor
 
-### Phase 1: Learn Reanimated Fundamentals (Week 1-2)
+---
 
-Learn in isolation, then apply to existing NIYAH components.
+## Animation & UI Reference
 
-| Day | Focus                                                            | Exercise                                            |
-| --- | ---------------------------------------------------------------- | --------------------------------------------------- |
-| 1-2 | `useSharedValue`, `useAnimatedStyle`, `withSpring`, `withTiming` | Watch William Candillon "Reanimated 2 Fundamentals" |
-| 3   | `interpolate()` -- mapping one value to multiple properties      | Watch William Candillon "Interpolation" video       |
-| 4   | `Gesture.Pan()`, `Gesture.Tap()`, `GestureDetector`              | Read Gesture Handler docs, build a draggable box    |
-| 5   | Migrate existing components                                      | Apply to NIYAH code                                 |
+### Installed Libraries
 
-**Components to migrate:**
+| Library                        | Version | Status                                       |
+| ------------------------------ | ------- | -------------------------------------------- |
+| `react-native-reanimated`      | 4.1.6   | Installed, used in some onboarding scenes    |
+| `react-native-gesture-handler` | 2.28.0  | Installed, used internally by expo-router    |
+| `expo-linear-gradient`         | 15.0.8  | Installed, not used in any component         |
+| `react-native-svg`             | 15.15.3 | In use (Timer, onboarding SVG blobs)         |
+| `expo-haptics`                 | 15.0.8  | In use (Button, Card, NumPad press feedback) |
+
+### Components Still Using Legacy Animated API
+
+These should eventually migrate to Reanimated for UI-thread performance:
 
 | Component                      | Current                              | Target                                          |
 | ------------------------------ | ------------------------------------ | ----------------------------------------------- |
-| `Button.tsx`                   | `Animated.spring` scale 1→0.97       | `useSharedValue` + `Gesture.Tap` + `withSpring` |
+| `Button.tsx`                   | `Animated.spring` scale 1->0.97      | `useSharedValue` + `Gesture.Tap` + `withSpring` |
 | `Card.tsx`                     | `Animated.timing` fade + press scale | `withTiming` entrance + `withSpring` press      |
 | `(tabs)/_layout.tsx` tab icons | `Animated.sequence` bounce           | `withSequence(withTiming(), withSpring())`      |
+| `Confetti.tsx`                 | `Animated` particle system           | Reanimated shared values                        |
 
-### Phase 2: Design Onboarding in Figma (Week 2-3)
+### Onboarding Architecture Goal
 
-- [ ] Design 4 onboarding page compositions
-- [ ] Separate each into 3-4 depth layers
-- [ ] Design phone frame border SVG
-- [ ] Export all layers as individual SVGs/PNGs
-- [ ] Import into NIYAH `/assets/onboarding/`
-
-### Phase 3: Build Gesture-Driven Onboarding (Week 3-4)
-
-- [ ] Create `OnboardingScreen` with `GestureDetector`
-- [ ] Implement `progress` shared value driven by `Gesture.Pan()`
-- [ ] Build page snapping with `withSpring` on gesture end
-- [ ] Implement parallax layer system
-- [ ] Add `interpolateColor()` background transitions
-- [ ] Add text fade/slide choreography
-
-### Phase 4: 3D Transitions (Week 4-5)
-
-- [ ] Implement `perspective` + `rotateY` + `scale` transforms
-- [ ] Add animated `borderRadius` for phone frame effect
-- [ ] Add subtle `rotateZ` for dynamism
-- [ ] Tune transition curves
-
-### Phase 5: Polish (Week 5-6)
-
-- [ ] Tune spring physics (damping, stiffness, mass)
-- [ ] Add haptic feedback on page snap
-- [ ] Animate page indicator dots
-- [ ] Animate CTA button entrance on final page
-- [ ] Add rubber-band overshoot resistance (Extrapolation.CLAMP)
-- [ ] Test on physical device
-
-### Phase 6: Screen Time API Prototype (Week 4-8, parallel)
-
-- [ ] Set up native Swift module structure (Custom Expo Module or bare RN bridge)
-- [ ] Implement FamilyControls authorization flow (Development entitlement)
-- [ ] Implement basic app selection with ManagedSettings
-- [ ] Implement DeviceActivity monitoring
-- [ ] Test on physical device (Screen Time API does not work in simulator)
-- [ ] Once Distribution entitlement approved: test with distribution provisioning profile
-
-### Phase 7: Stripe Integration (Week 6-8)
-
-- [ ] Install `@stripe/stripe-react-native`
-- [ ] Implement Stripe test mode with PaymentSheet
-- [ ] Build deposit flow with real Stripe UI
-- [ ] Build payout/withdrawal flow
-- [ ] Set up Firebase Cloud Functions for Stripe server-side (payment intents, webhooks)
-- [ ] Test end-to-end with test cards (4242 4242 4242 4242)
-- [ ] Switch to production keys after business verification
-
-### Phase 8: Firebase Backend (Week 6-10, parallel)
-
-- [ ] Set up Firebase project (Auth, Firestore/Data Connect, Cloud Functions)
-- [ ] Implement authentication (email + Google Sign-In already started)
-- [ ] Migrate from Zustand mock data to Firestore
-- [ ] Implement session tracking in backend
-- [ ] Implement wallet/balance management server-side
-- [ ] Cloud Functions for payout calculations, streak tracking
-
-### Phase 9: App-Wide Animation Polish (Ongoing)
-
-Apply Reanimated techniques across all screens:
-
-| Screen          | Animation Opportunity                                   |
-| --------------- | ------------------------------------------------------- |
-| Dashboard       | Staggered card entrances with layout animations         |
-| Session timer   | Drive SVG strokeDashoffset with Reanimated shared value |
-| Surrender flow  | Tension animations (screen shake, red pulse)            |
-| Complete screen | Migrate confetti from Animated to Reanimated            |
-| Tab bar         | Gesture-driven tab switching                            |
-| Session select  | Card selection with spring feedback                     |
-| All pressables  | Consistent withSpring press feedback via shared hook    |
-
-### Phase 10: Pre-Launch (Week 10-12)
-
-- [ ] Legal disclaimer integrated into app (commitment contract disclaimer)
-- [ ] App Store listing preparation (Productivity category)
-- [ ] App Store screenshots and preview video
-- [ ] TestFlight beta distribution
-- [ ] Final legal review
-- [ ] App Store submission
-
-### Phase 11: 3D Gem Onboarding — SceneKit (Visual Upgrade, Parallel or Post-Launch)
-
-**Goal:** Replace the flat SVG blob characters on the first onboarding screen with photorealistic 3D gemstone versions using Apple's SceneKit — liquid glass aesthetic with real-time lighting, reflections, and refraction.
-
-**Key advantage:** The raw SVG `bodyPath` strings for all 6 blobs already exist in `src/components/onboarding/BlobsScene.tsx`. Each path can be imported into Blender as SVG, extruded into a rounded gemstone mesh (solidify → subdivision surface → bevel edges), and exported as `.usdz`. The hardest part (shape design) is already done — it's a matter of making each SVG into a 3D rounded extruded gemstone.
-
-**Platform:** iOS only via SceneKit. Android falls back to existing SVG blobs via `Platform.OS` check. Already using EAS dev client builds (no Expo Go), so native module integration needs no workflow changes.
-
-**Architecture:**
+One shared value (gesture progress) drives every animation through `interpolate()`:
 
 ```
-React Native (app shell, navigation, scroll)
-  └─ Local Expo Module (modules/gem-scene/)
-       └─ Swift GemSceneView wrapping SCNView
-            └─ 6 gem meshes (.usdz) from Blender pipeline
-            └─ PBR materials (glass, metallic, refraction per gem)
-            └─ HDR environment map for reflections
-            └─ Real-time lighting
+PanGesture -> progress (0 to N pages)
+  ├── Background color interpolation
+  ├── Scene scale/rotation transforms
+  ├── Parallax layer offsets
+  └── Text opacity/translateY
 ```
 
-**SVG-to-3D gem pipeline:**
+### Onboarding Content Plan
 
-```
-BlobsScene.tsx bodyPath strings
-  → Export as .svg files
-  → Blender: Import SVG → Extrude → Subdivision Surface → Bevel edges
-  → Glass/gem BSDF material preview
-  → Export as .usdz
-  → SceneKit PBR: metallic=0, roughness=0.05, clearcoat=1.0,
-    transparency=0.15, fresnelExponent=3.0
-```
-
-**Per-gem material mapping:**
-
-| Blob     | Color   | Gem Type | Material                          |
-| -------- | ------- | -------- | --------------------------------- |
-| plum     | #5C415D | Amethyst | Deep purple glass, high clearcoat |
-| blue     | #329DD8 | Sapphire | Blue glass, strong specular       |
-| red      | #E07A5F | Sunstone | Warm peach glass, inner glow      |
-| yellow   | #B8860B | Topaz    | Golden glass, metallic tint       |
-| offWhite | #F2EDE4 | Diamond  | Near-clear, rainbow caustics      |
-| green    | #40916C | Emerald  | Deep green glass                  |
-
-**Tasks:**
-
-- [ ] Expo Module scaffold (`modules/gem-scene/ios/`)
-- [ ] Swift `GemSceneView` wrapping `SCNView` with transparent background
-- [ ] Convert 6 SVG blob paths to 3D meshes in Blender (SVG → extrude → bevel → USDZ)
-- [ ] PBR glass materials per gem in SceneKit
-- [ ] HDR environment map for realistic reflections
-- [ ] Bridge `scrollX` shared value from RN → native module (gem rotation, parallax)
-- [ ] Bridge tap gestures → gem bounce/spin spring animation (native side)
-- [ ] Cosmic swirling background (pre-rendered image asset or Metal shader)
-- [ ] Gold border + rune text (image asset from Figma or Midjourney)
-- [ ] Shimmer animation on gold border
-- [ ] Android fallback: keep existing SVG `BlobsScene` unchanged
-- [ ] Performance profiling on physical devices (target 60fps)
-
-**Estimated timeline:** 3-4 weeks
-
-| Week | Focus                                                                             |
-| ---- | --------------------------------------------------------------------------------- |
-| 1    | Expo Module scaffold + SceneKit view integration + single gem with glass material |
-| 2    | All 6 gem models via Blender pipeline + per-gem PBR material tuning               |
-| 3    | RN ↔ native gesture bridge (scroll-driven rotation, tap bounce) + background     |
-| 4    | Gold border, shimmer effects, cosmic background, polish + perf testing            |
-
-**Dependencies:** None on other phases. Can be done in parallel with Phases 6-8 or after Phase 10.
-
----
-
-## Learning Resources (Priority Order)
-
-| #   | Resource                                                                                  | What You'll Learn                                                                |
-| --- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| 1   | **William Candillon -- "Can it be done in React Native?" (YouTube)**                      | Best RN animation channel. Watch onboarding, wallet, interpolation videos first. |
-| 2   | **Reanimated Docs -- Fundamentals** (docs.swmansion.com/react-native-reanimated)          | Official walkthrough of shared values, animations, layout animations             |
-| 3   | **Catalin Miron (YouTube)**                                                               | Step-by-step RN animation recreations of real app UIs                            |
-| 4   | **Gesture Handler Docs -- Pan Gesture** (docs.swmansion.com/react-native-gesture-handler) | Pan gesture API, connecting gestures to Reanimated                               |
-| 5   | **"Reanimated 3" by Software Mansion (YouTube)**                                          | Architecture and mental model                                                    |
-| 6   | **Figma -- Design for Development/Animation tutorials**                                   | Structuring layers for export                                                    |
+| Page | Theme                                        | Hero Element                     |
+| ---- | -------------------------------------------- | -------------------------------- |
+| 1    | "You're spending 7 hours on your phone"      | Phone with distracting app icons |
+| 2    | "What if quitting cost you $5?"              | Dollar/coin being staked         |
+| 3    | "Complete your session, earn it back + more" | Growing plant / balance rising   |
+| 4    | "Ready to take control?"                     | NIYAH logo / shield              |
 
 ---
 
@@ -511,44 +253,26 @@ BlobsScene.tsx bodyPath strings
 | Weekly  | 1.5x @ 4wk  | 2x @ 8wk    |
 | Monthly | 2x @ 3mo    | 3x @ 6mo    |
 
-### Pool Mode Payout Formula
-
-```
-Let c = equal contribution from each person
-Let t_i = screen time for person i
-Let t_max = maximum time in the group
-Let t_bar = mean time of the group
-
-Payout for person i:
-  P_i = c                                    if t_max = t_bar (everyone equal)
-  P_i = c * (t_max - t_i) / (t_max - t_bar)  otherwise
-```
-
-Lower screen time = higher payout. Subject to legal review for gambling risk.
-
 ---
 
-## Realistic Expectations
+## 3D Gem Onboarding -- SceneKit (Visual Upgrade, Post-Launch)
 
-### What the Pure Code Animation Approach CAN Achieve
+**Goal:** Replace flat SVG blob characters on the first onboarding screen with photorealistic 3D gemstones using Apple's SceneKit.
 
-- Smooth gesture-driven page transitions
-- 3D phone rotation/perspective effects
-- Parallax depth between illustration layers
-- Color and opacity choreography
-- Spring physics that feel natural and premium
-- All UI micro-interactions (press, entrance, exit, layout changes)
+The raw SVG `bodyPath` strings for all 6 blobs already exist in `src/components/onboarding/BlobsScene.tsx`. Each path can be imported into Blender as SVG, extruded into a rounded gemstone mesh, and exported as `.usdz`.
 
-### What It CANNOT Match (Without Dedicated Animation Tools)
+**Per-gem material mapping:**
 
-- Animated characters (people walking, waving)
-- Complex shape morphing (one shape flowing into another)
-- 50+ independently animated elements in a single scene
-- Path-following animations (elements moving along curves)
+| Blob     | Color   | Gem Type | Material                          |
+| -------- | ------- | -------- | --------------------------------- |
+| plum     | #5C415D | Amethyst | Deep purple glass, high clearcoat |
+| blue     | #329DD8 | Sapphire | Blue glass, strong specular       |
+| red      | #E07A5F | Sunstone | Warm peach glass, inner glow      |
+| yellow   | #B8860B | Topaz    | Golden glass, metallic tint       |
+| offWhite | #F2EDE4 | Diamond  | Near-clear, rainbow caustics      |
+| green    | #40916C | Emerald  | Deep green glass                  |
 
-### Why That's Fine for NIYAH
-
-NIYAH's brand is about focus, discipline, and simplicity. A clean, well-animated onboarding with strong illustrations, smooth parallax, and 3D page transitions will look more professional than 95% of apps on the App Store.
+This is a nice-to-have visual upgrade. Fully independent from Screen Time API work.
 
 ---
 
@@ -556,20 +280,21 @@ NIYAH's brand is about focus, discipline, and simplicity. A clean, well-animated
 
 - **Legal guidance:** VAIL (Mark & Cat), Dr. White
 - **Technical consulting:** 40AU (Logan & Andrew)
-- **Professor feedback:** De-risk Screen Time API, legal/gambling, and payments first
 
 ---
 
 ## Tooling Summary
 
-| Tool                                | Role                                      | Cost                 | Status                     |
-| ----------------------------------- | ----------------------------------------- | -------------------- | -------------------------- |
-| Figma                               | Design illustrations, export layered SVGs | Free                 | Ready                      |
-| react-native-reanimated 4.1.6       | All animations, interpolations, springs   | Free                 | Installed, unused          |
-| react-native-gesture-handler 2.28.0 | Pan/tap gesture tracking                  | Free                 | Installed, unused directly |
-| expo-linear-gradient 15.0.8         | Gradient backgrounds                      | Free                 | Installed, unused          |
-| react-native-svg 15.15.2            | Render SVG illustrations                  | Free                 | In use (Timer)             |
-| expo-haptics 15.0.8                 | Tactile feedback                          | Free                 | In use                     |
-| Stripe                              | Payments                                  | Per-transaction fees | Not yet set up             |
-| Firebase                            | Backend (Auth, DB, Functions)             | Free tier            | Not yet set up             |
-| EAS Build                           | iOS/Android builds                        | Free tier            | Configured                 |
+| Tool                                | Role                                | Cost                 | Status                                 |
+| ----------------------------------- | ----------------------------------- | -------------------- | -------------------------------------- |
+| Firebase (Auth + Firestore)         | Backend, auth, data                 | Free tier            | **Implemented** (custom native module) |
+| EAS Build                           | iOS/Android builds                  | Free tier            | **Configured and in use**              |
+| react-native-reanimated 4.1.6       | Animations, interpolations, springs | Free                 | Installed, partially used (onboarding) |
+| react-native-gesture-handler 2.28.0 | Pan/tap gesture tracking            | Free                 | Installed, used by router              |
+| expo-linear-gradient 15.0.8         | Gradient backgrounds                | Free                 | Installed, unused                      |
+| react-native-svg 15.15.3            | SVG illustrations, timer ring       | Free                 | **In use**                             |
+| expo-haptics 15.0.8                 | Tactile feedback                    | Free                 | **In use**                             |
+| Vitest 2.1.9                        | Unit + integration testing          | Free                 | **Configured**                         |
+| ESLint 9 + Prettier                 | Linting + formatting                | Free                 | **Configured**                         |
+| Stripe                              | Payments                            | Per-transaction fees | Not yet set up                         |
+| Figma                               | Design illustrations, export SVGs   | Free                 | Ready                                  |

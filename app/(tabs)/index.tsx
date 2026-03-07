@@ -165,7 +165,6 @@ export default function DashboardScreen() {
 
   const totalEarnings = user?.totalEarnings || 0;
 
-  // Calculate money plant stats
   const totalLeaves = groupSessionHistory.filter(
     (s) => s.participants.find((p) => p.userId === user?.id)?.completed,
   ).length;

@@ -25,7 +25,6 @@ interface GroupSessionState {
   activeGroupSession: GroupSession | null;
   groupSessionHistory: GroupSession[];
 
-  // Session lifecycle
   startGroupSession: (
     cadence: CadenceType,
     participants: NewParticipant[],
@@ -35,19 +34,16 @@ interface GroupSessionState {
   ) => GroupSession | undefined;
   getTimeRemaining: () => number;
 
-  // Settlement
   markTransferPaid: (sessionId: string, transferId: string) => void;
   markTransferConfirmed: (sessionId: string, transferId: string) => void;
   markTransferOverdue: (sessionId: string, transferId: string) => void;
   markTransferDisputed: (sessionId: string, transferId: string) => void;
 
-  // Queries
   getSessionsWithPendingTransfers: (userId: string) => GroupSession[];
   getPendingTransfersForUser: (
     userId: string,
   ) => Array<{ session: GroupSession; transfer: SessionTransfer }>;
 
-  // Utilities
   getVenmoPayLink: (
     amount: number,
     recipientHandle: string,
@@ -82,8 +78,7 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
       transfers: [],
     };
 
-    // Only deduct from the current user's wallet; other participants manage
-    // their own wallets on their own devices (or via Firebase when wired up).
+    // Only deduct from the current user's wallet; remote participants manage their own wallets.
     useWalletStore.getState().deductStake(config.stake, session.id);
 
     set({ activeGroupSession: session });
@@ -95,7 +90,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
 
     const currentUserId = useAuthStore.getState().user?.id;
 
-    // 1. Merge completion results into participants.
     const participantsWithResults: SessionParticipant[] =
       activeGroupSession.participants.map((p) => {
         const result = results.find((r) => r.userId === p.userId);
@@ -106,13 +100,11 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
         };
       });
 
-    // 2. Run payout algorithm.
     const payouts = calculatePayouts(
       activeGroupSession.stakePerParticipant,
       results,
     );
 
-    // 3. Attach payouts to participants.
     const finalParticipants: SessionParticipant[] = participantsWithResults.map(
       (p) => ({
         ...p,
@@ -122,7 +114,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
       }),
     );
 
-    // 4. Build transfers from algorithm output.
     const drafts = calculateTransfers(finalParticipants, payouts);
     const transfers: SessionTransfer[] = drafts.map((d) => ({
       ...d,
@@ -131,7 +122,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
       createdAt: new Date(),
     }));
 
-    // 5. Session status is from the current user's perspective.
     const currentUserResult = results.find((r) => r.userId === currentUserId);
     const didComplete = currentUserResult?.completed ?? false;
 
@@ -143,7 +133,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
       transfers,
     };
 
-    // 6. Update current user's wallet.
     if (currentUserId) {
       const currentUserPayout =
         payouts.find((p) => p.userId === currentUserId)?.payout ??
@@ -162,7 +151,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
           );
       }
 
-      // 7. Update current user's stats.
       const authStore = useAuthStore.getState();
       if (didComplete) {
         const newStreak = (authStore.user?.currentStreak ?? 0) + 1;
@@ -231,7 +219,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
           },
     );
 
-    // Record outgoing payment in wallet.
     useWalletStore
       .getState()
       .recordSettlement(
@@ -241,7 +228,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
         `Paid ${transfer.toUserName}`,
       );
 
-    // Reward reputation for paying.
     const authStore = useAuthStore.getState();
     const rep = authStore.user?.reputation;
     if (rep) {
@@ -278,7 +264,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
           },
     );
 
-    // Record incoming payment in wallet.
     useWalletStore
       .getState()
       .recordSettlement(
@@ -311,7 +296,7 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
           },
     );
 
-    // Penalise reputation only if the current user is the one who failed to pay.
+    // Penalise reputation only when the current user is the payer who missed.
     const currentUserId = useAuthStore.getState().user?.id;
     if (transfer.fromUserId === currentUserId) {
       const authStore = useAuthStore.getState();

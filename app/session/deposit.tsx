@@ -29,8 +29,7 @@ import {
 } from "../../src/config/functions";
 import { DEMO_MODE } from "../../src/constants/config";
 
-// Conditionally require Stripe to avoid crashing on dev client builds
-// that don't yet include the native StripeSdk module (requires a new build).
+// Lazily require Stripe — crashes on dev builds without the native StripeSdk module.
 // In DEMO_MODE the Stripe path is never reached so a no-op stub is fine.
 type UseStripe = typeof import("@stripe/stripe-react-native").useStripe;
 const _demoStripeHook: ReturnType<UseStripe> = {
@@ -115,7 +114,6 @@ export default function DepositScreen() {
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  // Convert input string to cents
   const amountInCents = inputValue
     ? Math.round(parseFloat(inputValue) * 100)
     : 0;
@@ -156,7 +154,6 @@ export default function DepositScreen() {
     setInputValue((amount / 100).toString());
   }, []);
 
-  // ─── Demo mode deposit (local only) ───────────────────────────────────────
   const handleDemoDeposit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const finalAmount = selectedQuickAmount ?? amountInCents;
@@ -177,7 +174,6 @@ export default function DepositScreen() {
     );
   };
 
-  // ─── Real Stripe deposit ────────────────────────────────────────────────────
   const handleStripeDeposit = async () => {
     const finalAmount = selectedQuickAmount ?? amountInCents;
     if (finalAmount < 100) return;
@@ -186,11 +182,9 @@ export default function DepositScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      // 1. Create PaymentIntent on server
       const { clientSecret, paymentIntentId, customerId } =
         await createPaymentIntent(finalAmount);
 
-      // 2. Initialize Stripe PaymentSheet
       const { error: initError } = await initPaymentSheet({
         merchantDisplayName: "NIYAH",
         paymentIntentClientSecret: clientSecret,
@@ -223,7 +217,6 @@ export default function DepositScreen() {
         return;
       }
 
-      // 3. Present the PaymentSheet
       const { error: presentError } = await presentPaymentSheet();
 
       if (presentError) {
@@ -233,11 +226,10 @@ export default function DepositScreen() {
         return;
       }
 
-      // 4. Verify payment server-side and credit balance (or handle ACH pending)
       const result = await verifyAndCreditDeposit(paymentIntentId);
 
       if ("processing" in result) {
-        // ACH bank debit — funds are pending, webhook will credit when cleared
+        // ACH bank debit — webhook will credit balance when cleared
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert(
           "Bank Transfer Initiated",
@@ -245,7 +237,6 @@ export default function DepositScreen() {
           [{ text: "Got it", onPress: () => router.back() }],
         );
       } else {
-        // Card / Apple Pay — credited immediately
         deposit(finalAmount, result.newBalance);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(

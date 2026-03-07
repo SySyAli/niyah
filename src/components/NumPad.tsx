@@ -172,7 +172,6 @@ const containerStyles = StyleSheet.create({
   },
 });
 
-// Amount display with cursor animation
 interface AmountDisplayProps {
   amount: string;
   label?: string;

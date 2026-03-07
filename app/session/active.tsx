@@ -196,12 +196,10 @@ export default function ActiveSessionScreen() {
   const { timeRemaining, start, stop } = useCountdown({
     onComplete: () => {
       isNavigatingAwayRef.current = true;
-      // Stop blocking apps when session completes
       if (isScreenTimeAvailable) {
         stopBlocking().catch(() => {});
       }
-      // Delay by one animation cycle (950ms + buffer) so the final drain
-      // animation reaches 100% before we navigate away.
+      // Delay one render cycle so the drain animation reaches 100% before navigating.
       setTimeout(() => {
         const session = useGroupSessionStore.getState().activeGroupSession;
         if (session) {
@@ -217,7 +215,6 @@ export default function ActiveSessionScreen() {
     },
   });
 
-  // Listen for shield violation events (user tried to open a blocked app)
   useEffect(() => {
     if (!isScreenTimeAvailable || !activeGroupSession) return;
     const unsubscribe = onShieldViolation(() => {
@@ -235,7 +232,7 @@ export default function ActiveSessionScreen() {
         start(new Date(activeGroupSession.endsAt.getTime() + totalPausedMs));
       }
     } else if (!isNavigatingAwayRef.current) {
-      // No active session and we didn't navigate away ourselves — stale route.
+      // No active session and we didn't navigate here intentionally — stale route.
       router.dismissAll();
     }
   }, [activeGroupSession, isPaused, router, start, stop, totalPausedMs]);
@@ -373,7 +370,6 @@ export default function ActiveSessionScreen() {
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                   isNavigatingAwayRef.current = true;
-                  // Stop blocking apps when navigating to surrender
                   if (isScreenTimeAvailable) {
                     stopBlocking().catch(() => {});
                   }

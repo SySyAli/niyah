@@ -10,6 +10,16 @@ import { useAuthStore } from "../../../store/authStore";
 import { CADENCES, INITIAL_BALANCE } from "../../../constants/config";
 import type { UserReputation } from "../../../types";
 
+jest.mock("../../../config/firebase", () => ({
+  fetchUserProfile: jest.fn(),
+  awardReferralToUser: jest.fn(),
+}));
+
+import {
+  fetchUserProfile,
+  awardReferralToUser,
+} from "../../../config/firebase";
+
 // Helper to create a fresh reputation object
 const makeReputation = (
   overrides: Partial<UserReputation> = {},
@@ -426,6 +436,91 @@ describe("partnerStore", () => {
 
       expect(link).toContain("recipients=bob-test");
       expect(link).not.toContain("recipients=@");
+    });
+  });
+
+  // ─── applyReferralBonus ──────────────────────────────────────────────────────
+
+  describe("applyReferralBonus", () => {
+    const referrerUid = "referrer-uid-123";
+
+    beforeEach(() => {
+      jest.mocked(fetchUserProfile).mockResolvedValue(null);
+      jest.mocked(awardReferralToUser).mockResolvedValue(undefined);
+    });
+
+    it("adds the referrer as a partner with correct fields", async () => {
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce({
+        name: "Alice Referrer",
+        firstName: undefined,
+        lastName: undefined,
+      });
+
+      await usePartnerStore.getState().applyReferralBonus(referrerUid);
+
+      const { partners } = usePartnerStore.getState();
+      expect(partners).toHaveLength(1);
+      expect(partners[0].oderId).toBe(referrerUid);
+      expect(partners[0].name).toBe("Alice Referrer");
+      expect(partners[0].tag).toBe("Your Referrer");
+    });
+
+    it("uses firstName + lastName when name field is absent", async () => {
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce({
+        name: undefined,
+        firstName: "Bob",
+        lastName: "Smith",
+      });
+
+      await usePartnerStore.getState().applyReferralBonus(referrerUid);
+
+      const { partners } = usePartnerStore.getState();
+      expect(partners[0].name).toBe("Bob Smith");
+    });
+
+    it("falls back to 'Unknown' when Firestore fetch fails", async () => {
+      jest
+        .mocked(fetchUserProfile)
+        .mockRejectedValueOnce(new Error("Network error"));
+
+      await usePartnerStore.getState().applyReferralBonus(referrerUid);
+
+      const { partners } = usePartnerStore.getState();
+      expect(partners).toHaveLength(1);
+      expect(partners[0].name).toBe("Unknown");
+    });
+
+    it("is idempotent — applying the same referral twice only adds one partner", async () => {
+      jest.mocked(fetchUserProfile).mockResolvedValue({ name: "Alice" });
+
+      await usePartnerStore.getState().applyReferralBonus(referrerUid);
+      await usePartnerStore.getState().applyReferralBonus(referrerUid);
+
+      // Second call must be a no-op
+      expect(usePartnerStore.getState().partners).toHaveLength(1);
+    });
+
+    it("increments the current user's referralCount", async () => {
+      const initialCount =
+        useAuthStore.getState().user?.reputation.referralCount ?? 0;
+
+      await usePartnerStore.getState().applyReferralBonus(referrerUid);
+
+      const newCount =
+        useAuthStore.getState().user?.reputation.referralCount ?? 0;
+      expect(newCount).toBe(initialCount + 1);
+    });
+
+    it("calls awardReferralToUser with the referrer uid", async () => {
+      await usePartnerStore.getState().applyReferralBonus(referrerUid);
+
+      expect(awardReferralToUser).toHaveBeenCalledWith(referrerUid);
+    });
+
+    it("does not award the referral boost to the wrong uid", async () => {
+      await usePartnerStore.getState().applyReferralBonus(referrerUid);
+
+      expect(awardReferralToUser).not.toHaveBeenCalledWith("test-user");
     });
   });
 });

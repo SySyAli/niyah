@@ -62,7 +62,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       marginTop: Spacing.xs,
     },
-    // Warning card
     warningCard: {
       alignItems: "center",
       backgroundColor: Colors.lossLight,
@@ -97,7 +96,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.primary,
       marginTop: Spacing.xs,
     },
-    // Payment card (after surrender)
     paymentCard: {
       alignItems: "center",
       backgroundColor: Colors.lossLight,
@@ -127,7 +125,6 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.semibold,
       color: Colors.primary,
     },
-    // Reputation cards
     reputationCard: {
       backgroundColor: Colors.warningLight,
       borderWidth: 1,
@@ -149,7 +146,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       lineHeight: 20,
     },
-    // Skip payment
     skipButton: {
       alignItems: "center",
       paddingVertical: Spacing.md,
@@ -158,7 +154,6 @@ const makeStyles = (Colors: ThemeColors) =>
       fontSize: Typography.labelSmall,
       color: Colors.textMuted,
     },
-    // Alternative suggestions
     alternativeCard: {
       marginBottom: Spacing.lg,
     },
@@ -246,10 +241,8 @@ export default function SurrenderScreen() {
 
   const canSurrender = confirmText.toLowerCase() === "quit";
 
-  // Solo = 1 participant (no partner to pay)
   const isSoloSession = (activeGroupSession?.participants.length ?? 0) <= 1;
 
-  // Derived from completedSession (available after surrender)
   const settledPartner = completedSession?.participants.find(
     (p) => p.userId !== userId,
   );
@@ -268,18 +261,15 @@ export default function SurrenderScreen() {
       }));
       const completed = completeGroupSession(results);
       if (isSoloSession) {
-        // Solo: no payment needed — go directly to complete screen
         setCompletedSession(completed ?? null);
         router.replace("/session/complete");
       } else {
-        // Duo/group: show payment screen
         setCompletedSession(completed ?? null);
         setShowPayment(true);
       }
     }
   };
 
-  // Derived from activeGroupSession (available before surrender)
   const activePartner = activeGroupSession?.participants.find(
     (p) => p.userId !== userId,
   );
@@ -344,7 +334,6 @@ export default function SurrenderScreen() {
     return null;
   }
 
-  // Payment screen after surrender
   if (showPayment) {
     return (
       <SafeAreaView style={styles.container}>

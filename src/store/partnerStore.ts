@@ -6,18 +6,12 @@ import { useWalletStore } from "./walletStore";
 import { fetchUserProfile, awardReferralToUser } from "../config/firebase";
 
 interface PartnerState {
-  // Current partner for duo sessions
   currentPartner: Partner | null;
-  // All partners (for money plant visualization)
   partners: Partner[];
-  // Active duo session
   activeDuoSession: DuoSession | null;
-  // History of duo sessions
   duoSessionHistory: DuoSession[];
-  // Pending partner invites
   pendingInvites: PartnerInvite[];
 
-  // Actions
   addPartner: (
     partner: Omit<
       Partner,
@@ -41,7 +35,7 @@ interface PartnerState {
     note: string,
   ) => string;
   // Called on the new user's device after they authenticate via a referral link.
-  // Fetches the referrer's name, boosts new user's credit, and awards the referrer.
+  // Fetches the referrer's name, boosts the new user's reputation, and awards the referrer.
   applyReferralBonus: (referrerUid: string) => Promise<void>;
 }
 
@@ -55,7 +49,6 @@ interface PartnerInvite {
   createdAt: Date;
 }
 
-// Demo partner for testing
 const DEMO_PARTNER: Partner = {
   id: "demo-partner-1",
   oderId: "partner-user-1",
@@ -131,10 +124,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       partnerVenmo: currentPartner.venmoHandle,
     };
 
-    // Deduct stake from wallet
     useWalletStore.getState().deductStake(config.stake, duoSession.id);
 
-    // Mark partner as active
     const updatedPartners = partners.map((p) =>
       p.oderId === currentPartner.oderId ? { ...p, isActive: true } : p,
     );
@@ -151,27 +142,22 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       get();
     if (!activeDuoSession) return;
 
-    // Determine outcome and settlement
     let settlementStatus: DuoSession["settlementStatus"] = undefined;
     let amountOwed: number;
 
     if (userCompleted && !partnerCompleted) {
-      // User wins - partner owes user
-      amountOwed = -activeDuoSession.stakeAmount; // Negative = partner owes user
+      amountOwed = -activeDuoSession.stakeAmount; // negative = partner owes user
       settlementStatus = "pending";
     } else if (!userCompleted && partnerCompleted) {
-      // Partner wins - user owes partner
-      amountOwed = activeDuoSession.stakeAmount; // Positive = user owes partner
+      amountOwed = activeDuoSession.stakeAmount; // positive = user owes partner
       settlementStatus = "pending";
     } else if (userCompleted && partnerCompleted) {
-      // Both completed - no settlement needed, both keep stakes
       amountOwed = 0;
-      // Return stake to wallet
       useWalletStore
         .getState()
         .creditPayout(activeDuoSession.stakeAmount, activeDuoSession.id);
     } else {
-      // Both failed - both lose stakes (to the house/charity)
+      // Both failed — stakes go to the house/charity
       amountOwed = 0;
       useWalletStore
         .getState()
@@ -188,7 +174,6 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       amountOwed,
     };
 
-    // Update partner stats
     const updatedPartners = partners.map((p) =>
       p.oderId === activeDuoSession.partnerId
         ? {
@@ -199,7 +184,6 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         : p,
     );
 
-    // Update user stats
     const authStore = useAuthStore.getState();
     if (userCompleted) {
       const newStreak = (authStore.user?.currentStreak || 0) + 1;
@@ -231,12 +215,10 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   markSettlementPaid: (sessionId: string) => {
     const { duoSessionHistory } = get();
 
-    // Update session
     const updatedHistory = duoSessionHistory.map((s) =>
       s.id === sessionId ? { ...s, settlementStatus: "paid" as const } : s,
     );
 
-    // Update user reputation (they paid what they owed)
     const session = duoSessionHistory.find((s) => s.id === sessionId);
     if (session && session.amountOwed && session.amountOwed > 0) {
       const authStore = useAuthStore.getState();
@@ -248,7 +230,6 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         });
       }
 
-      // Record in wallet
       useWalletStore
         .getState()
         .recordSettlement(
@@ -269,7 +250,6 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       s.id === sessionId ? { ...s, settlementStatus: "received" as const } : s,
     );
 
-    // Record in wallet
     const session = duoSessionHistory.find((s) => s.id === sessionId);
     if (session && session.amountOwed && session.amountOwed < 0) {
       useWalletStore
@@ -307,13 +287,12 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const invite = pendingInvites.find((i) => i.id === inviteId);
 
     if (invite) {
-      // Create partner from invite
       addPartner({
         oderId: invite.fromUserId,
         name: invite.fromUserName,
         email: invite.toEmail,
         reputation: {
-          score: 50, // New partner starts at 50
+          score: 50,
           level: "sapling",
           paymentsCompleted: 0,
           paymentsMissed: 0,
@@ -324,7 +303,6 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         },
       });
 
-      // Update invite status
       set((state) => ({
         pendingInvites: state.pendingInvites.map((i) =>
           i.id === inviteId ? { ...i, status: "accepted" as const } : i,
@@ -339,7 +317,6 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     // Idempotency: do nothing if this referrer is already in the partner list
     if (partners.some((p) => p.oderId === referrerUid)) return;
 
-    // Fetch the referrer's actual name from Firestore
     let referrerName = "Unknown";
     try {
       const profile = await fetchUserProfile(referrerUid);
@@ -375,22 +352,17 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
     set((state) => ({ partners: [...state.partners, newPartner] }));
 
-    // Boost the new user's social credit score for joining via referral
     const authStore = useAuthStore.getState();
     const currentCount = authStore.user?.reputation.referralCount ?? 0;
     authStore.updateReputation({ referralCount: currentCount + 1 });
 
-    // Award the referrer their boost in Firestore (visible on their next open)
     awardReferralToUser(referrerUid);
   },
 
   getVenmoPayLink: (amount: number, recipientHandle: string, note: string) => {
-    // Remove @ from handle if present
     const handle = recipientHandle.replace("@", "");
     const amountInDollars = (amount / 100).toFixed(2);
     const encodedNote = encodeURIComponent(note);
-
-    // Venmo deep link format
     return `venmo://paycharge?txn=pay&recipients=${handle}&amount=${amountInDollars}&note=${encodedNote}`;
   },
 }));

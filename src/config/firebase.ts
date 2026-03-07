@@ -11,9 +11,6 @@ import {
 import * as Linking from "expo-linking";
 import * as Crypto from "expo-crypto";
 
-// ---------------------------------------------------------------------------
-// Google Sign-In configuration
-// ---------------------------------------------------------------------------
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
@@ -21,13 +18,9 @@ GoogleSignin.configure({
 });
 
 // ---------------------------------------------------------------------------
-// Google Sign-In → Firebase credential
+// Google Sign-In
 // ---------------------------------------------------------------------------
 
-/**
- * Triggers native Google Sign-In dialog and returns a Firebase user.
- * The Swift module handles signInWithCredential internally.
- */
 export const signInWithGoogle = async (): Promise<FirebaseUser> => {
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
@@ -56,10 +49,6 @@ export const signOutGoogle = async () => {
 // Nonce helpers (required for Apple Sign-In with Firebase)
 // ---------------------------------------------------------------------------
 
-/**
- * Generate a cryptographically secure random nonce string.
- * Returns a hex-encoded 32-byte random string (64 characters).
- */
 export const generateNonce = async (): Promise<string> => {
   const randomBytes = await Crypto.getRandomBytesAsync(32);
   return Array.from(randomBytes)
@@ -67,22 +56,14 @@ export const generateNonce = async (): Promise<string> => {
     .join("");
 };
 
-/**
- * SHA-256 hash a string. Returns the hex-encoded digest.
- * Used to hash the nonce before sending to Apple's signInAsync.
- */
 export const sha256 = async (input: string): Promise<string> => {
   return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, input);
 };
 
 // ---------------------------------------------------------------------------
-// Apple Sign-In → Firebase credential
+// Apple Sign-In
 // ---------------------------------------------------------------------------
 
-/**
- * Signs in to Firebase with Apple identity token + raw nonce.
- * The Swift module calls OAuthProvider.appleCredential() internally.
- */
 export const signInWithApple = async (
   identityToken: string,
   rawNonce: string,
@@ -98,12 +79,8 @@ export const signInWithApple = async (
 // Email magic link (passwordless)
 // ---------------------------------------------------------------------------
 
-// The deep link URL the magic link will redirect to.
 const MAGIC_LINK_REDIRECT_URL = Linking.createURL("auth/email-callback");
 
-/**
- * Sends a sign-in link to the given email address.
- */
 export const sendMagicLink = async (email: string): Promise<void> => {
   await NiyahFirebaseAuth.sendSignInLinkToEmail(
     email,
@@ -112,16 +89,10 @@ export const sendMagicLink = async (email: string): Promise<void> => {
   );
 };
 
-/**
- * Checks if a URL is a Firebase email sign-in link.
- */
 export const isEmailSignInLink = (url: string): boolean => {
   return NiyahFirebaseAuth.isSignInWithEmailLink(url);
 };
 
-/**
- * Completes sign-in using the magic link URL and the stored email.
- */
 export const signInWithEmailLink = async (
   email: string,
   url: string,
@@ -133,25 +104,15 @@ export const signInWithEmailLink = async (
 // Firebase Auth helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Sign out from Firebase Auth (and Google if applicable).
- */
 export const signOut = async (): Promise<void> => {
   await signOutGoogle();
   await NiyahFirebaseAuth.signOut();
 };
 
-/**
- * Get the current Firebase user (null if not signed in).
- */
 export const getCurrentUser = (): FirebaseUser | null => {
   return NiyahFirebaseAuth.getCurrentUser();
 };
 
-/**
- * Subscribe to auth state changes.
- * Returns an unsubscribe function.
- */
 export const onAuthStateChanged = (
   callback: (user: FirebaseUser | null) => void,
 ): (() => void) => {
@@ -169,9 +130,6 @@ export const onAuthStateChanged = (
 // Firestore helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Get a user's Firestore document.
- */
 export const getUserDoc = async (
   uid: string,
 ): Promise<Record<string, unknown> | null> => {
@@ -180,9 +138,6 @@ export const getUserDoc = async (
   return doc as Record<string, unknown>;
 };
 
-/**
- * Get a user's wallet document.
- */
 export const getWalletDoc = async (
   uid: string,
 ): Promise<Record<string, unknown> | null> => {
@@ -191,18 +146,12 @@ export const getWalletDoc = async (
   return doc as Record<string, unknown>;
 };
 
-/**
- * Check if a user has completed their profile setup.
- */
 export const checkProfileComplete = async (uid: string): Promise<boolean> => {
   const doc = await NiyahFirestore.getDoc("users", uid);
   if (!doc) return false;
   return doc.profileComplete === true;
 };
 
-/**
- * Save a user's profile to Firestore.
- */
 export const saveUserProfile = async (
   uid: string,
   data: {
@@ -244,7 +193,6 @@ export const saveUserProfile = async (
     true, // merge
   );
 
-  // Initialize wallet if it doesn't exist
   const wallet = await NiyahFirestore.getDoc("wallets", uid);
   if (!wallet) {
     await NiyahFirestore.setDoc(
@@ -260,20 +208,13 @@ export const saveUserProfile = async (
   }
 };
 
-/**
- * Fetch a user's profile from Firestore.
- */
 export const fetchUserProfile = async (
   uid: string,
 ): Promise<Record<string, unknown> | null> => {
   return getUserDoc(uid);
 };
 
-/**
- * Increment a referrer's referralCount in Firestore and recalculate their
- * reputation score so the boost is visible the next time they open the app.
- * Fire-and-forget safe — errors are swallowed so the caller's flow is unaffected.
- */
+// Fire-and-forget safe — errors are swallowed so the caller's flow is unaffected.
 export const awardReferralToUser = async (
   referrerUid: string,
 ): Promise<void> => {
@@ -325,10 +266,6 @@ interface FollowsDoc extends Record<string, unknown> {
   followers: string[];
 }
 
-/**
- * Fetch the follows document for a user.
- * Returns { following: [], followers: [] } if the document doesn't exist yet.
- */
 export const getFollowsDoc = async (uid: string): Promise<FollowsDoc> => {
   const doc = await NiyahFirestore.getDoc("userFollows", uid);
   if (!doc) return { following: [], followers: [] };
@@ -338,10 +275,6 @@ export const getFollowsDoc = async (uid: string): Promise<FollowsDoc> => {
   };
 };
 
-/**
- * Follow targetUid from myUid.
- * Fetches both docs, pushes UIDs, writes back (non-atomic, fine for demo).
- */
 export const followUser = async (
   myUid: string,
   targetUid: string,
@@ -364,9 +297,6 @@ export const followUser = async (
   ]);
 };
 
-/**
- * Unfollow targetUid from myUid.
- */
 export const unfollowUser = async (
   myUid: string,
   targetUid: string,
@@ -385,9 +315,6 @@ export const unfollowUser = async (
   ]);
 };
 
-/**
- * Fetch a user's public profile data mapped to the PublicProfile shape.
- */
 export const getPublicProfile = async (
   uid: string,
 ): Promise<{

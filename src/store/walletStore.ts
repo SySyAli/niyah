@@ -8,7 +8,6 @@ interface WalletState {
   transactions: Transaction[];
   pendingWithdrawal: number;
 
-  // Actions
   // syncedBalance: when provided (from server after real Stripe payment), use as authoritative balance
   deposit: (amount: number, syncedBalance?: number) => void;
   withdraw: (amount: number) => void;
@@ -51,7 +50,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       transactions: [transaction, ...state.transactions],
     }));
 
-    // Update user balance
     useAuthStore.getState().updateUser({
       balance: get().balance,
     });
@@ -75,7 +73,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       transactions: [transaction, ...state.transactions],
     }));
 
-    // Update user balance
     useAuthStore.getState().updateUser({
       balance: get().balance,
     });
@@ -96,7 +93,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       transactions: [transaction, ...state.transactions],
     }));
 
-    // Update user balance
     useAuthStore.getState().updateUser({
       balance: get().balance,
     });
@@ -117,7 +113,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       transactions: [transaction, ...state.transactions],
     }));
 
-    // Update user balance
     useAuthStore.getState().updateUser({
       balance: get().balance,
     });
@@ -144,7 +139,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     partnerId: string,
     description: string,
   ) => {
-    // Positive amount = received payment, negative = paid out
     const transaction: Transaction = {
       id: Math.random().toString(36).substr(2, 9),
       type: amount > 0 ? "settlement_received" : "settlement_paid",
@@ -161,7 +155,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       transactions: [transaction, ...state.transactions],
     }));
 
-    // Update user balance
     useAuthStore.getState().updateUser({
       balance: get().balance,
     });

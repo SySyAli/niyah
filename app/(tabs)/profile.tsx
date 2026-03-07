@@ -49,7 +49,6 @@ export default function ProfileScreen() {
   const [venmoInput, setVenmoInput] = useState(user?.venmoHandle || "");
   const [zelleInput, setZelleInput] = useState(user?.zelleHandle || "");
 
-  // Screen Time state
   const [screenTimeAuth, setScreenTimeAuth] =
     useState<AuthorizationStatus>("notDetermined");
   const [appSelectionCount, setAppSelectionCount] = useState(0);
@@ -61,7 +60,7 @@ export default function ProfileScreen() {
       const selection = getSavedAppSelection();
       setAppSelectionCount(selection?.appCount ?? 0);
     } catch {
-      // Native module not loaded (simulator, etc.)
+      // not available on simulator
     }
   }, []);
 
@@ -622,7 +621,6 @@ const makeStyles = (Colors: ThemeColors) =>
       backgroundColor: Colors.border,
       marginHorizontal: Spacing.md,
     },
-    // Reputation badge in header
     reputationBadge: {
       flexDirection: "row",
       alignItems: "center",
@@ -643,7 +641,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       ...Font.medium,
     },
-    // Reputation card
     reputationCard: {
       marginBottom: Spacing.md,
       backgroundColor: Colors.primaryMuted,
@@ -705,7 +702,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       marginTop: Spacing.xs,
     },
-    // Invite card
     inviteCard: {
       backgroundColor: Colors.primaryMuted,
       borderRadius: Radius.lg,
@@ -741,7 +737,6 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.bold,
       color: Colors.white,
     },
-    // Screen Time
     screenTimeCard: {
       marginBottom: Spacing.md,
       backgroundColor: Colors.backgroundCard,
@@ -795,7 +790,6 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.semibold,
       color: Colors.gain,
     },
-    // Payment methods
     paymentHandlesCard: {
       marginBottom: Spacing.md,
     },

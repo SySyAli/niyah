@@ -76,7 +76,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       marginTop: Spacing.xs,
     },
-    // Partner card styles
     partnerCard: {
       marginBottom: Spacing.md,
       backgroundColor: Colors.primaryMuted,
@@ -148,7 +147,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       marginBottom: Spacing.md,
     },
-    // Details card
     detailsCard: {
       marginBottom: Spacing.md,
     },
@@ -177,7 +175,6 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.bold,
       color: Colors.text,
     },
-    // How it works card
     howItWorksCard: {
       marginBottom: Spacing.md,
       backgroundColor: Colors.backgroundCard,
@@ -209,7 +206,6 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.semibold,
       color: Colors.text,
     },
-    // Warning card
     warningCard: {
       backgroundColor: Colors.warningLight,
       borderWidth: 1,
@@ -297,7 +293,6 @@ export default function ConfirmSessionScreen() {
     if (!user) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Build participant list — solo if no partner selected, duo if partner present
     const participants: Parameters<typeof startGroupSession>[1] = currentPartner
       ? [
           {
@@ -327,7 +322,6 @@ export default function ConfirmSessionScreen() {
 
     startGroupSession(cadence, participants);
 
-    // Start blocking selected apps via Screen Time API
     if (isScreenTimeAvailable && getScreenTimeAuthStatus() === "approved") {
       try {
         await startBlocking();

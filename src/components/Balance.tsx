@@ -111,7 +111,6 @@ export const Balance: React.FC<BalanceProps> = ({
   );
 };
 
-// Compact balance display for lists
 interface CompactBalanceProps {
   amount: number;
   showSign?: boolean;
@@ -140,7 +139,6 @@ export const CompactBalance: React.FC<CompactBalanceProps> = ({
   );
 };
 
-// Animated digit (simplified)
 export const AnimatedDigit: React.FC<{
   digit: string;
   fontSize: number;

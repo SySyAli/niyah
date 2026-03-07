@@ -31,7 +31,6 @@ const makeStyles = (Colors: ThemeColors) =>
       paddingTop: Spacing.sm,
       paddingBottom: Spacing.md,
     },
-    // Header
     header: {
       alignItems: "center",
       marginTop: 0,
@@ -62,14 +61,12 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       marginTop: 2,
     },
-    // Section title (shared)
     sectionTitle: {
       fontSize: Typography.bodyMedium,
       ...Font.semibold,
       color: Colors.text,
       marginBottom: Spacing.sm,
     },
-    // Results card
     resultsCard: {
       marginBottom: Spacing.sm,
       paddingVertical: Spacing.sm,
@@ -124,7 +121,6 @@ const makeStyles = (Colors: ThemeColors) =>
     payoutNeutral: {
       color: Colors.textMuted,
     },
-    // Payments section
     paymentsSection: {
       marginBottom: Spacing.sm,
     },
@@ -144,7 +140,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       textAlign: "center",
     },
-    // Transfer cards
     transferCard: {
       marginBottom: Spacing.xs,
       paddingVertical: Spacing.sm,
@@ -215,7 +210,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.warning,
       ...Font.semibold,
     },
-    // Stats
     statsGrid: {
       flexDirection: "row",
       backgroundColor: Colors.backgroundCard,
@@ -242,7 +236,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       marginTop: Spacing.xs,
     },
-    // Motivation
     motivationCard: {
       backgroundColor: Colors.primaryMuted,
       borderWidth: 1,
@@ -279,10 +272,8 @@ export default function CompleteScreen() {
   const myParticipant = lastSession?.participants.find(
     (p) => p.userId === user?.id,
   );
-  // Transfers that require actual settlement (exclude "none" status from even-split)
   const activeTransfers =
     lastSession?.transfers.filter((t) => t.status !== "none") ?? [];
-  // Solo session = 1 participant. In duo+ sessions there are real transfers to settle.
   const isSoloSession = (lastSession?.participants.length ?? 0) <= 1;
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -343,7 +334,6 @@ export default function CompleteScreen() {
           ? venmoUrl
           : `https://venmo.com/${recipient.venmoHandle.replace("@", "")}`,
       );
-      // Mark as payment indicated once they've been sent to Venmo
       if (lastSession) {
         markTransferPaid(lastSession.id, transfer.id);
       }

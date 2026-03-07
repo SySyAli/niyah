@@ -4,6 +4,13 @@ import React from "react";
 // @ts-expect-error __DEV__ is a React Native global
 globalThis.__DEV__ = true;
 
+// Suppress console.error during tests.
+// Error-path tests intentionally trigger conditions that cause the source code
+// to log errors (e.g. Firebase offline, cloud sync failure). Those stack traces
+// are noise — the assertions in each test verify the actual behaviour.
+// Tests that need to assert console.error was called can re-mock it locally.
+jest.spyOn(console, "error").mockImplementation(() => {});
+
 // ============================================================================
 // REACT NATIVE MOCKS
 // ============================================================================

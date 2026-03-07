@@ -49,12 +49,10 @@ export const Timer: React.FC<TimerProps> = ({
   const timerSize = getTimerSize();
   const progress = totalTime > 0 ? timeRemaining / totalTime : 1;
 
-  // SVG circle calculations
   const radius = (timerSize.ring - timerSize.stroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  // Start at 0 (fully filled) so there is no initial fill animation on mount.
-  // useNativeDriver must be false because SVG props run on the JS thread.
+  // useNativeDriver must be false for SVG props (JS thread only).
   const offsetAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(offsetAnim, {
@@ -194,7 +192,6 @@ export const Timer: React.FC<TimerProps> = ({
   );
 };
 
-// Simple inline timer for headers
 interface InlineTimerProps {
   timeRemaining: number;
 }

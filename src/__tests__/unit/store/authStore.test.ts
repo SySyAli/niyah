@@ -24,6 +24,7 @@ jest.mock("../../../config/firebase", () => ({
   checkProfileComplete: jest.fn(),
   fetchUserProfile: jest.fn(),
   saveUserProfile: jest.fn(),
+  awardReferralToUser: jest.fn(),
   signOut: jest.fn(),
   onAuthStateChanged: jest.fn(() => jest.fn()), // returns unsubscribe
 }));
@@ -36,6 +37,7 @@ import {
   checkProfileComplete,
   fetchUserProfile,
   saveUserProfile,
+  sendMagicLink,
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from "../../../config/firebase";
@@ -591,6 +593,206 @@ describe("authStore", () => {
           });
         }),
       ).rejects.toThrow("Not authenticated");
+    });
+  });
+
+  // ─── initialize ──────────────────────────────────────────────────────────────
+
+  describe("initialize", () => {
+    it("returns an unsubscribe function", () => {
+      const unsubscribe = useAuthStore.getState().initialize();
+      expect(typeof unsubscribe).toBe("function");
+    });
+
+    it("sets user and isAuthenticated when Firebase fires with a user", async () => {
+      const mockFirebaseUser = {
+        uid: "init-uid-1",
+        email: "init@example.com",
+        displayName: "Init User",
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "google.com",
+        isNewUser: false,
+      };
+
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce({
+        __id: "init-uid-1",
+        name: "Init User",
+        firstName: "Init",
+        lastName: "User",
+        email: "init@example.com",
+        profileComplete: true,
+        authProvider: "google",
+        reputation: { score: 50, level: "sapling" },
+        stats: {},
+      });
+
+      let capturedCallback: (user: unknown) => Promise<void> = async () => {};
+      jest.mocked(onAuthStateChanged).mockImplementationOnce((cb) => {
+        capturedCallback = cb as (user: unknown) => Promise<void>;
+        return jest.fn();
+      });
+
+      useAuthStore.getState().initialize();
+
+      await act(async () => {
+        await capturedCallback(mockFirebaseUser);
+      });
+
+      const state = useAuthStore.getState();
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.isInitialized).toBe(true);
+      expect(state.user?.email).toBe("init@example.com");
+      expect(state.profileComplete).toBe(true);
+    });
+
+    it("clears auth state when Firebase signals sign-out (null user)", async () => {
+      // Pre-populate authenticated state
+      useAuthStore.setState({
+        user: { id: "test-uid" } as never,
+        isAuthenticated: true,
+        isInitialized: true,
+      });
+
+      let capturedCallback: (user: unknown) => Promise<void> = async () => {};
+      jest.mocked(onAuthStateChanged).mockImplementationOnce((cb) => {
+        capturedCallback = cb as (user: unknown) => Promise<void>;
+        return jest.fn();
+      });
+
+      useAuthStore.getState().initialize();
+
+      await act(async () => {
+        await capturedCallback(null);
+      });
+
+      const state = useAuthStore.getState();
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+      expect(state.isInitialized).toBe(true);
+    });
+
+    it("still marks as authenticated if Firestore fetch fails during init", async () => {
+      const mockFirebaseUser = {
+        uid: "init-uid-2",
+        email: "offline@example.com",
+        displayName: null,
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "email",
+        isNewUser: false,
+      };
+
+      jest
+        .mocked(fetchUserProfile)
+        .mockRejectedValueOnce(new Error("Firestore offline"));
+
+      let capturedCallback: (user: unknown) => Promise<void> = async () => {};
+      jest.mocked(onAuthStateChanged).mockImplementationOnce((cb) => {
+        capturedCallback = cb as (user: unknown) => Promise<void>;
+        return jest.fn();
+      });
+
+      useAuthStore.getState().initialize();
+
+      await act(async () => {
+        await capturedCallback(mockFirebaseUser);
+      });
+
+      const state = useAuthStore.getState();
+      // Must still authenticate — Firestore failure is non-fatal
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.isInitialized).toBe(true);
+      expect(state.profileComplete).toBe(false);
+    });
+  });
+
+  // ─── sendEmailLink ────────────────────────────────────────────────────────────
+
+  describe("sendEmailLink", () => {
+    it("calls sendMagicLink and stores email in AsyncStorage", async () => {
+      jest.mocked(sendMagicLink).mockResolvedValueOnce(undefined);
+
+      await act(async () => {
+        await useAuthStore.getState().sendEmailLink("user@test.com");
+      });
+
+      expect(sendMagicLink).toHaveBeenCalledWith("user@test.com");
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        "@niyah/magic_link_email",
+        "user@test.com",
+      );
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it("throws and resets isLoading when Firebase rejects", async () => {
+      jest
+        .mocked(sendMagicLink)
+        .mockRejectedValueOnce(new Error("Invalid email domain"));
+
+      await expect(
+        act(async () => {
+          await useAuthStore.getState().sendEmailLink("bad@example.com");
+        }),
+      ).rejects.toThrow("Invalid email domain");
+
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it("does not store email in AsyncStorage when Firebase fails", async () => {
+      jest
+        .mocked(sendMagicLink)
+        .mockRejectedValueOnce(new Error("Network error"));
+
+      await expect(
+        act(async () => {
+          await useAuthStore.getState().sendEmailLink("fail@test.com");
+        }),
+      ).rejects.toThrow();
+
+      // Email must NOT be stored if the magic link was never sent
+      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
+        "@niyah/magic_link_email",
+        "fail@test.com",
+      );
+    });
+  });
+
+  // ─── setZelleHandle ───────────────────────────────────────────────────────────
+
+  describe("setZelleHandle", () => {
+    it("sets the Zelle handle on the authenticated user", () => {
+      simulateAuthenticated();
+
+      act(() => {
+        useAuthStore.getState().setZelleHandle("user@bank.com");
+      });
+
+      expect(useAuthStore.getState().user?.zelleHandle).toBe("user@bank.com");
+    });
+
+    it("preserves all other user fields when setting Zelle handle", () => {
+      simulateAuthenticated({
+        email: "original@test.com",
+        venmoHandle: "@venmo-user",
+      });
+
+      act(() => {
+        useAuthStore.getState().setZelleHandle("zelle@bank.com");
+      });
+
+      const user = useAuthStore.getState().user!;
+      expect(user.email).toBe("original@test.com");
+      expect(user.venmoHandle).toBe("@venmo-user");
+      expect(user.zelleHandle).toBe("zelle@bank.com");
+    });
+
+    it("does nothing when not logged in", () => {
+      act(() => {
+        useAuthStore.getState().setZelleHandle("user@bank.com");
+      });
+
+      expect(useAuthStore.getState().user).toBeNull();
     });
   });
 });

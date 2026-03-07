@@ -413,7 +413,6 @@ export default function FriendsScreen() {
     }
   }, [requestedTab]);
 
-  // Load profiles for everyone we follow
   useEffect(() => {
     following.forEach((uid) => {
       if (!profiles[uid]) {

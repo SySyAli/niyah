@@ -165,7 +165,6 @@ const TabItem: React.FC<TabItemProps> = ({
   }, [focused, pillOpacity]);
 
   const handlePress = () => {
-    // Bounce animation – kick off from scaled-up, spring back to 1
     scale.value = 1.15;
     scale.value = withSpring(1, { damping: 6, stiffness: 300 });
 
@@ -265,7 +264,6 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
   const isDark = useThemeStore((s) => s.theme) === "dark";
   const { scrollY } = useScrollContext();
 
-  // Track whether the tab bar should be minimized
   const minimized = useDerivedValue<number>(() => {
     const target: number = scrollY.value > SCROLL_DOWN_THRESHOLD ? 1 : 0;
     return withTiming(target, {
@@ -274,7 +272,6 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
     });
   });
 
-  // Slide the whole bar down slightly when minimized (hide label area)
   const barAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
       {
@@ -283,7 +280,6 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
     ],
   }));
 
-  // Accessory visibility
   const accessoryVisible = useSharedValue(accessory ? 1 : 0);
 
   useEffect(() => {
@@ -302,7 +298,6 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
     ],
   }));
 
-  // Active indicator position (for potential future sliding indicator)
   const activeIndex = useSharedValue(state.index);
 
   useEffect(() => {

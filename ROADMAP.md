@@ -4,26 +4,26 @@
 
 ### What's Built
 
-| Area                     | Status      | Notes                                                                                    |
-| ------------------------ | ----------- | ---------------------------------------------------------------------------------------- |
-| Firebase Auth            | Done        | Google, Apple, Email magic link via custom native Swift Expo module                      |
-| Firestore                | Done        | User profiles, wallets, follows. Native module with get/set/update/delete                |
-| Solo Sessions            | Done        | Select cadence, stake, timer, surrender/complete. Local state only.                      |
-| Duo Sessions             | Done        | Partner store, full lifecycle, Venmo deep links for settlement                           |
-| Group Sessions (UI)      | Done        | N-person sessions, payout algorithm (placeholder), transfer tracking, propose.tsx screen |
-| Group Sessions (Backend) | Not Started | No Firebase write for proposals. No real-time listeners. No push notifications.          |
-| Social Features          | Done        | Following/followers, public profiles, reputation system (5 tiers)                        |
-| Referral System          | Done        | Deep link invites, reputation boost, partner auto-connect                                |
-| Contacts Integration     | Done        | expo-contacts for friend discovery                                                       |
-| Theme System             | Done        | Dark/light theme via themeStore + useColors hook, full DarkColors/LightColors palette    |
-| Onboarding               | In Progress | 10 scene components exist, animations need polish                                        |
-| JITAI Module             | Done        | Adaptive intervention engine (simulation-only, no real usage data yet)                   |
-| Testing                  | Done        | Vitest with integration + unit tests (stores, components, hooks, utils)                  |
-| Screen Time (Swift)      | Done        | Production-quality Swift. All APIs implemented. Needs device validation.                 |
-| Screen Time (Wiring)     | Not Started | sessionStore.ts does not call startBlocking/stopBlocking. Not integrated.                |
-| Push Notifications       | Not Started | APNs entitlement configured, no implementation                                           |
-| Stripe Payments          | Not Started | Trust model (virtual balances + Venmo settlement) works for now                          |
-| Real Payout Algorithm    | Not Started | Current algorithm is a placeholder even-split                                            |
+| Area                     | Status      | Notes                                                                                                                                          |
+| ------------------------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Firebase Auth            | Done        | Google, Apple, Email magic link via custom native Swift Expo module                                                                            |
+| Firestore                | Done        | User profiles, wallets, follows. Native module with get/set/update/delete                                                                      |
+| Solo Sessions            | Done        | Select cadence, stake, timer, surrender/complete. Local state only.                                                                            |
+| Duo Sessions             | Done        | Partner store, full lifecycle, Venmo deep links for settlement                                                                                 |
+| Group Sessions (UI)      | Done        | N-person sessions, payout algorithm (placeholder), transfer tracking, propose.tsx screen                                                       |
+| Group Sessions (Backend) | Not Started | No Firebase write for proposals. No real-time listeners. No push notifications.                                                                |
+| Social Features          | Done        | Following/followers, public profiles, reputation system (5 tiers)                                                                              |
+| Referral System          | Done        | Deep link invites, reputation boost, partner auto-connect                                                                                      |
+| Contacts Integration     | Done        | expo-contacts for friend discovery                                                                                                             |
+| Theme System             | Done        | Dark/light theme via themeStore + useColors hook, full DarkColors/LightColors palette                                                          |
+| Onboarding               | In Progress | 10 scene components exist, animations need polish                                                                                              |
+| JITAI Module             | Done        | Adaptive intervention engine (simulation-only, no real usage data yet)                                                                         |
+| Testing                  | Done        | Jest + jest-expo with integration + unit tests (stores, components, hooks, utils)                                                              |
+| Screen Time (Swift)      | Done        | Production-quality Swift. All APIs implemented. Needs device validation.                                                                       |
+| Screen Time (Wiring)     | Not Started | sessionStore.ts does not call startBlocking/stopBlocking. Not integrated.                                                                      |
+| Push Notifications       | Not Started | APNs entitlement configured, no implementation                                                                                                 |
+| Stripe Payments          | In Progress | Client lib installed, Cloud Functions deployed, deposit/withdrawal/KYC screens built. Live mode keys not enabled.                              |
+| Real Payout Algorithm    | Done        | Implemented in `src/utils/payoutAlgorithm.ts`. Solo: 2× stake. Group: pool split. Not yet wired to solo sessionStore (uses stickK 1× instead). |
 
 ### Apple Developer Account
 
@@ -174,9 +174,11 @@ This is a focus block model (deep work windows), NOT always-on screen time limit
 
 ---
 
-## Priority 4: Real Payout Algorithm (MEDIUM)
+## Priority 4: Solo Payout Reconciliation (MEDIUM)
 
-Current `src/utils/payoutAlgorithm.ts` is a placeholder (everyone gets their stake back). Replace with the real formula when group sessions are in active use with real screen time data:
+`src/utils/payoutAlgorithm.ts` is fully implemented (solo: `SOLO_COMPLETION_MULTIPLIER × stake`, group: pool split with greedy transfer netting). However, `sessionStore.ts` still uses the stickK model (`potentialPayout = stake`, i.e. 1×). The two are inconsistent. Decision needed: keep stickK (stake-back) or wire the multiplier from `payoutAlgorithm.ts`.
+
+The group formula from the original spec (using screen time data) is captured here for reference when real Screen Time data is available:
 
 ```
 Let c = equal contribution from each person
@@ -195,16 +197,19 @@ Lower screen time = higher payout. Subject to legal review for gambling risk.
 
 ## Deferred Priorities
 
-### Stripe Integration (FUTURE)
+### Stripe Integration (IN PROGRESS → needs live mode enablement)
 
-Not blocking anything right now. The trust model (virtual balances + Venmo/PayPal settlement outside app) works for demo and early users.
+Client library, Cloud Functions, and UI screens are built. Trust model (virtual balances + Venmo/PayPal) is still active while `DEMO_MODE = true`.
 
-- [ ] Create Stripe account, start in test mode
-- [ ] Install `@stripe/stripe-react-native`
-- [ ] Build deposit flow with PaymentSheet
-- [ ] Build payout/withdrawal flow
-- [ ] Set up Firebase Cloud Functions for server-side (payment intents, webhooks)
-- [ ] Stripe Connect Express for user-to-user transfers (avoids money transmitter issues)
+- [x] Create Stripe account, start in test mode
+- [x] Install `@stripe/stripe-react-native`
+- [x] Build deposit flow with PaymentSheet (`app/session/deposit.tsx`)
+- [x] Build payout/withdrawal flow (`app/session/withdraw.tsx`, `app/session/stripe-onboarding.tsx`)
+- [x] Set up Firebase Cloud Functions for server-side (payment intents, webhooks) (`functions/src/index.ts`)
+- [x] Stripe Connect Express for user-to-user transfers (`distributeGroupPayouts` Cloud Function)
+- [ ] Enable live mode Stripe keys (`STRIPE_SECRET_KEY` secret in Firebase)
+- [ ] End-to-end deposit/withdrawal test with real cards
+- [ ] App Store review submission (payments category)
 
 ### Firebase Backend Hardening (FUTURE)
 
@@ -385,16 +390,16 @@ The raw SVG `bodyPath` strings for all 6 blobs already exist in `src/components/
 
 ## Tooling Summary
 
-| Tool                                | Role                                | Cost                 | Status                                 |
-| ----------------------------------- | ----------------------------------- | -------------------- | -------------------------------------- |
-| Firebase (Auth + Firestore)         | Backend, auth, data                 | Free tier            | **Implemented** (custom native module) |
-| EAS Build                           | iOS/Android builds                  | Free tier            | **Configured and in use**              |
-| react-native-reanimated 4.1.6       | Animations, interpolations, springs | Free                 | Installed, partially used (onboarding) |
-| react-native-gesture-handler 2.28.0 | Pan/tap gesture tracking            | Free                 | Installed, used by router              |
-| expo-linear-gradient 15.0.8         | Gradient backgrounds                | Free                 | Installed, unused                      |
-| react-native-svg 15.15.3            | SVG illustrations, timer ring       | Free                 | **In use**                             |
-| expo-haptics 15.0.8                 | Tactile feedback                    | Free                 | **In use**                             |
-| Vitest 2.1.9                        | Unit + integration testing          | Free                 | **Configured**                         |
-| ESLint 9 + Prettier                 | Linting + formatting                | Free                 | **Configured**                         |
-| Stripe                              | Payments                            | Per-transaction fees | Not yet set up                         |
-| Figma                               | Design illustrations, export SVGs   | Free                 | Ready                                  |
+| Tool                                | Role                                | Cost                 | Status                                        |
+| ----------------------------------- | ----------------------------------- | -------------------- | --------------------------------------------- |
+| Firebase (Auth + Firestore)         | Backend, auth, data                 | Free tier            | **Implemented** (custom native module)        |
+| EAS Build                           | iOS/Android builds                  | Free tier            | **Configured and in use**                     |
+| react-native-reanimated 4.1.6       | Animations, interpolations, springs | Free                 | Installed, partially used (onboarding)        |
+| react-native-gesture-handler 2.28.0 | Pan/tap gesture tracking            | Free                 | Installed, used by router                     |
+| expo-linear-gradient 15.0.8         | Gradient backgrounds                | Free                 | Installed, unused                             |
+| react-native-svg 15.15.3            | SVG illustrations, timer ring       | Free                 | **In use**                                    |
+| expo-haptics 15.0.8                 | Tactile feedback                    | Free                 | **In use**                                    |
+| Jest + jest-expo 54.x               | Unit + integration testing          | Free                 | **Configured**                                |
+| ESLint 9 + Prettier                 | Linting + formatting                | Free                 | **Configured**                                |
+| Stripe                              | Payments (deposits, payouts, KYC)   | Per-transaction fees | **Integrated** (test mode, live keys pending) |
+| Figma                               | Design illustrations, export SVGs   | Free                 | Ready                                         |

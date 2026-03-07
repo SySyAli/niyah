@@ -21,7 +21,7 @@ NIYAH is a focus app with financial stakes. Users deposit money, stake it on foc
 - **Testing**: Jest + jest-expo (unit + integration)
 - **Linting**: ESLint 9 + Prettier
 - **Package Manager**: pnpm
-- **Payments**: Trust model (virtual balances, Venmo/PayPal settlement outside app). Stripe planned but not integrated.
+- **Payments**: Stripe integrated (`@stripe/stripe-react-native`, PaymentSheet deposits, Stripe Connect for withdrawals/payouts). Firebase Cloud Functions backend handles payment processing. Trust model still active in `DEMO_MODE`.
 
 ## Project Structure
 
@@ -53,7 +53,8 @@ niyah/
 │   │   ├── partner.tsx         # Partner/duo session flow
 │   │   ├── propose.tsx         # Group challenge proposal screen (stake, invitees, schedule)
 │   │   ├── deposit.tsx         # Deposit funds
-│   │   └── withdraw.tsx        # Withdraw funds
+│   │   ├── withdraw.tsx        # Withdraw funds
+│   │   └── stripe-onboarding.tsx # Stripe Connect KYC / payout account setup
 │   └── user/                   # User profile routes
 │       └── [uid].tsx           # Public user profile (dynamic route)
 ├── src/
@@ -62,6 +63,7 @@ niyah/
 │   │   ├── AnimatedTabBar.tsx   # Custom animated tab bar
 │   │   ├── AppleSignInButton.tsx
 │   │   ├── Balance.tsx         # Balance display
+│   │   ├── BottomTabs.tsx      # Bottom tab navigation wrapper
 │   │   ├── BlobsBackground.tsx  # Animated SVG blob background (3 variants)
 │   │   ├── Button.tsx          # Primary button component
 │   │   ├── Card.tsx            # Card container
@@ -85,9 +87,8 @@ niyah/
 │   │       └── StakeScene.tsx
 │   ├── config/
 │   │   ├── firebase.ts         # Firebase helpers (auth, Firestore, social)
+│   │   ├── functions.ts        # Firebase Cloud Functions client (Stripe payments, session sync)
 │   │   └── screentime.ts       # Screen Time API JS wrapper (typed functions + event subscriptions)
-│   ├── context/
-│   │   └── ScrollContext.tsx    # Shared scroll context
 │   ├── store/                  # Zustand state stores
 │   │   ├── authStore.ts        # Auth state, Firebase user, profile
 │   │   ├── sessionStore.ts     # Solo session lifecycle
@@ -98,7 +99,8 @@ niyah/
 │   │   └── themeStore.ts       # Dark/light theme with AsyncStorage persistence
 │   ├── hooks/
 │   │   ├── useCountdown.ts     # Countdown timer hook
-│   │   └── useColors.ts        # Returns current theme colors from themeStore
+│   │   ├── useColors.ts        # Returns current theme colors from themeStore
+│   │   └── ScrollContext.tsx    # Shared scroll context
 │   ├── jitai/                  # JITAI adaptive intervention engine
 │   │   ├── index.ts            # Barrel export
 │   │   ├── types.ts            # JITAI type definitions
@@ -114,12 +116,10 @@ niyah/
 │   │   └── config.ts           # Cadences, DEMO_MODE, INITIAL_BALANCE, reputation levels, payment info
 │   ├── utils/
 │   │   ├── format.ts           # Formatting utilities
-│   │   └── payoutAlgorithm.ts  # Group payout calculation (placeholder even-split -- needs real impl)
-│   ├── __tests__/              # Test suites
-│   │   ├── integration/        # Integration tests (session flows)
-│   │   └── unit/               # Unit tests (components, hooks, store, utils)
-│   └── __mocks__/              # Test mocks
-│       └── react-native.ts
+│   │   └── payoutAlgorithm.ts  # Solo & group payout calculation; greedy transfer netting
+│   └── __tests__/              # Test suites
+│       ├── integration/        # Integration tests (session flows)
+│       └── unit/               # Unit tests (components, hooks, store, utils)
 ├── modules/
 │   ├── niyah-firebase/         # Custom native Expo module for Firebase
 │   │   ├── expo-module.config.json
@@ -151,6 +151,7 @@ niyah/
 ├── plugins/                    # Expo config plugins
 │   ├── withFollyCoroutinesFix.js
 │   ├── withGoogleServicesPlist.js
+│   ├── withGoogleServicesJson.js       # Android Google Services config
 │   ├── withFirebaseStaticFrameworks.js
 │   ├── withScreenTimeEntitlement.js    # FamilyControls + App Groups entitlements
 │   └── withDeviceActivityMonitor.js    # Injects extension target into Xcode project
@@ -336,7 +337,7 @@ Auth state is managed by `authStore.ts` which listens to Firebase `onAuthStateCh
 | Weekly  | $25   | Same                                                       |
 | Monthly | $100  | Same                                                       |
 
-**Note**: The current payout algorithm (`src/utils/payoutAlgorithm.ts`) is a placeholder that returns even splits. The real algorithm needs to be implemented.
+**Note**: `src/utils/payoutAlgorithm.ts` has the real payout algorithm implemented (solo: `SOLO_COMPLETION_MULTIPLIER × stake`; group: completers split the pool with greedy transfer netting). The solo session store (`sessionStore.ts`) currently uses the stickK model (payout = stake returned) instead of the multiplier -- the store's `potentialPayout` field and the utility function are not yet reconciled.
 
 ### Trust Model (Current)
 
@@ -416,9 +417,9 @@ Currently simulation-only. Will integrate with real Screen Time API data when av
 2. **Push Notifications** (HIGH) - Required for group session invites. APNs entitlement is configured but push notification sending is not implemented.
 3. **Screen Time: Session Wiring** (HIGH) - Call `startBlocking()`/`stopBlocking()` from `sessionStore` when session starts/ends. Build the custom shield configuration (`ShieldConfigurationDataSource`) and handle button actions in the extension.
 4. **FamilyControls Entitlement** (BLOCKER for Screen Time) - Must enable Development entitlement on App ID in Apple Developer portal before any Screen Time testing.
-5. **Real Payout Algorithm** (MEDIUM) - Replace placeholder in `src/utils/payoutAlgorithm.ts` with actual formula.
+5. **Solo Payout Reconciliation** (MEDIUM) - `sessionStore.ts` uses stickK model (`potentialPayout = stake`). Reconcile with `payoutAlgorithm.ts` which applies `SOLO_COMPLETION_MULTIPLIER = 2`. Decide and align on one model.
 6. **Onboarding Polish** (LOW) - Scene components exist, needs animation and transition work.
-7. **Stripe Integration** (FUTURE) - Not started. Trust model works for now.
+7. **Stripe Live Mode** (FUTURE) - Client library, Cloud Functions, and KYC screens are built. Remaining: enable live mode keys, test end-to-end deposit/withdrawal, submit for App Store review.
 
 See ROADMAP.md for detailed plan.
 

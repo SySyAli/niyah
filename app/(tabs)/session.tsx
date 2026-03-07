@@ -126,9 +126,6 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
     [Colors],
   );
 
-  // stickK model: stake = stake (no ROI, just keep your stake on completion)
-  // In duo mode, winner takes loser's stake
-
   return (
     <Pressable
       onPress={canAfford ? handlePress : undefined}
@@ -268,7 +265,6 @@ export default function SessionTabScreen() {
           letterSpacing: 0.8,
           marginBottom: Spacing.md,
         },
-        // Active session styles
         activeHeader: {
           marginBottom: Spacing.xl,
         },
@@ -310,7 +306,6 @@ export default function SessionTabScreen() {
         activeFooter: {
           marginTop: "auto",
         },
-        // How it works
         howItWorks: {
           backgroundColor: Colors.backgroundCard,
           borderRadius: Radius.lg,

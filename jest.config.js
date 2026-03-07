@@ -19,4 +19,8 @@ module.exports = {
     "!src/constants/**",
   ],
   testTimeout: 15000,
+  // Watchman requires Full Disk Access on macOS; skip it and use the Node
+  // crawler directly. Tests still run at full speed — Watchman only matters
+  // for watch mode re-runs, which use --watchAll anyway.
+  watchman: false,
 };

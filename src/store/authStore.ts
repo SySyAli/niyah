@@ -16,20 +16,17 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { REFERRAL_REPUTATION_BOOST } from "../constants/config";
 
-// Key for storing email for magic link verification
 const MAGIC_LINK_EMAIL_KEY = "@niyah/magic_link_email";
 
 interface AuthState {
-  // State
   user: User | null;
   firebaseUser: FirebaseUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isInitialized: boolean; // true once first onAuthStateChanged fires
   profileComplete: boolean;
-  isNewUser: boolean; // true if this is a first-time sign-in
+  isNewUser: boolean;
 
-  // Actions
   initialize: () => () => void; // returns unsubscribe function
   loginWithGoogle: () => Promise<void>;
   loginWithApple: (
@@ -52,7 +49,6 @@ interface AuthState {
   setZelleHandle: (handle: string) => void;
 }
 
-// Default reputation for new users
 const createInitialReputation = (): UserReputation => ({
   score: 50,
   level: "sapling",
@@ -64,7 +60,6 @@ const createInitialReputation = (): UserReputation => ({
   referralCount: 0,
 });
 
-// Calculate reputation level based on score
 const getReputationLevel = (score: number): UserReputation["level"] => {
   if (score <= 20) return "seed";
   if (score <= 40) return "sprout";
@@ -73,15 +68,10 @@ const getReputationLevel = (score: number): UserReputation["level"] => {
   return "oak";
 };
 
-/**
- * Convert a FirebaseUser (from our Swift module) + Firestore profile
- * into our local User type.
- */
 const buildUser = (
   firebaseUser: FirebaseUser,
   firestoreData: Record<string, unknown> | null,
 ): User => {
-  // If Firestore profile exists, merge it
   if (firestoreData) {
     const rep = (firestoreData.reputation as Partial<UserReputation>) || {};
     const stats = (firestoreData.stats as Record<string, number>) || {};
@@ -131,7 +121,6 @@ const buildUser = (
     };
   }
 
-  // No Firestore profile yet (new user, hasn't completed profile)
   return {
     id: firebaseUser.uid,
     email: firebaseUser.email || "",
@@ -159,15 +148,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   profileComplete: false,
   isNewUser: false,
 
-  /**
-   * Initialize Firebase Auth listener.
-   * Call this once in the root layout. Returns unsubscribe function.
-   */
   initialize: () => {
     const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // Fetch Firestore profile
           const firestoreData = await fetchUserProfile(firebaseUser.uid);
           const user = buildUser(firebaseUser, firestoreData);
           const profileComplete = user.profileComplete === true;
@@ -209,9 +193,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return unsubscribe;
   },
 
-  /**
-   * Sign in with Google via native dialog → Firebase Auth.
-   */
   loginWithGoogle: async () => {
     set({ isLoading: true });
 
@@ -240,11 +221,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  /**
-   * Sign in with Apple → Firebase Auth.
-   * Requires the raw (unhashed) nonce that was generated before calling
-   * Apple's signInAsync.
-   */
   loginWithApple: async (
     identityToken: string,
     rawNonce: string,
@@ -278,15 +254,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  /**
-   * Send a magic link to the given email address.
-   */
   sendEmailLink: async (email: string) => {
     set({ isLoading: true });
 
     try {
       await sendMagicLink(email);
-      // Store email for when the link is clicked
       await AsyncStorage.setItem(MAGIC_LINK_EMAIL_KEY, email);
       set({ isLoading: false });
     } catch (error) {
@@ -295,9 +267,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  /**
-   * Complete sign-in from a magic link URL.
-   */
   completeEmailLink: async (url: string) => {
     if (!isEmailSignInLink(url)) {
       throw new Error("Invalid email sign-in link");
@@ -312,8 +281,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const firebaseUser = await signInWithEmailLink(email, url);
-
-      // Clean up stored email
       await AsyncStorage.removeItem(MAGIC_LINK_EMAIL_KEY);
 
       // Fetch Firestore profile and build user state immediately,
@@ -338,9 +305,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  /**
-   * Complete profile setup - saves to Firestore.
-   */
   completeProfile: async (data) => {
     const { firebaseUser } = get();
     if (!firebaseUser) throw new Error("Not authenticated");
@@ -348,7 +312,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      // Determine auth provider
       const providerId = firebaseUser.providerId;
       let authProvider: "google" | "apple" | "email" = "email";
       if (providerId === "google.com") authProvider = "google";
@@ -363,7 +326,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         authProvider,
       });
 
-      // Refresh user data
       const firestoreData = await fetchUserProfile(firebaseUser.uid);
       const user = buildUser(firebaseUser, firestoreData);
 
@@ -379,11 +341,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  /**
-   * Sign out completely - Firebase + Google.
-   */
   logout: async () => {
-    // Clear local state immediately
     set({
       user: null,
       firebaseUser: null,
@@ -399,9 +357,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  /**
-   * Update local user state (for non-critical updates).
-   */
   updateUser: (updates: Partial<User>) => {
     const { user } = get();
     if (user) {
@@ -409,9 +364,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  /**
-   * Update reputation with automatic score recalculation.
-   */
   updateReputation: (updates: Partial<UserReputation>) => {
     const { user } = get();
     if (user) {
@@ -440,9 +392,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  /**
-   * Set the user's Venmo handle.
-   */
   setVenmoHandle: (handle: string) => {
     const { user } = get();
     if (user) {
@@ -450,9 +399,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  /**
-   * Set the user's Zelle handle.
-   */
   setZelleHandle: (handle: string) => {
     const { user } = get();
     if (user) {

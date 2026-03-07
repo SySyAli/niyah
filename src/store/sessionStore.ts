@@ -13,7 +13,6 @@ interface SessionState {
   sessionHistory: Session[];
   isBlocking: boolean;
 
-  // Actions
   startSession: (cadence: CadenceType) => void;
   surrenderSession: () => void;
   completeSession: () => void;
@@ -39,7 +38,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       status: "active",
     };
 
-    // Deduct stake from wallet
     useWalletStore.getState().deductStake(config.stake, session.id);
 
     set({ currentSession: session, isBlocking: true });
@@ -56,7 +54,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       actualPayout: 0,
     };
 
-    // Update local state immediately for responsive UI
     const authStore = useAuthStore.getState();
     authStore.updateUser({
       currentStreak: 0,
@@ -93,7 +90,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       actualPayout: payout,
     };
 
-    // Update local state immediately for responsive UI
     const authStore = useAuthStore.getState();
     const newStreak = (authStore.user?.currentStreak || 0) + 1;
     authStore.updateUser({

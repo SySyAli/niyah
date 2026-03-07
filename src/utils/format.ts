@@ -1,6 +1,3 @@
-/**
- * Format cents to dollar string
- */
 export const formatMoney = (
   cents: number,
   showCents: boolean = true,
@@ -14,9 +11,6 @@ export const formatMoney = (
   }).format(dollars);
 };
 
-/**
- * Format cents to compact string (e.g., $1.2K, $10M)
- */
 export const formatMoneyCompact = (cents: number): string => {
   const dollars = cents / 100;
   if (dollars >= 1000000) {
@@ -28,9 +22,6 @@ export const formatMoneyCompact = (cents: number): string => {
   return formatMoney(cents, false);
 };
 
-/**
- * Format milliseconds to time string (HH:MM:SS or MM:SS)
- */
 export const formatTime = (ms: number): string => {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -43,9 +34,6 @@ export const formatTime = (ms: number): string => {
   return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 };
 
-/**
- * Format time remaining in human-readable form
- */
 export const formatTimeRemaining = (ms: number): string => {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -61,9 +49,6 @@ export const formatTimeRemaining = (ms: number): string => {
   return `${seconds}s remaining`;
 };
 
-/**
- * Format date to readable string
- */
 export const formatDate = (date: Date): string => {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -73,9 +58,6 @@ export const formatDate = (date: Date): string => {
   }).format(date);
 };
 
-/**
- * Format relative time (e.g., "2 hours ago")
- */
 export const formatRelativeTime = (date: Date): string => {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -91,9 +73,6 @@ export const formatRelativeTime = (date: Date): string => {
   return formatDate(date);
 };
 
-/**
- * Calculate streak multiplier
- */
 export const getStreakMultiplier = (
   streak: number,
   cadence: "daily" | "weekly" | "monthly",
@@ -111,9 +90,6 @@ export const getStreakMultiplier = (
   return 1.0;
 };
 
-/**
- * Format percentage
- */
 export const formatPercentage = (
   value: number,
   decimals: number = 0,
@@ -121,9 +97,6 @@ export const formatPercentage = (
   return `${value.toFixed(decimals)}%`;
 };
 
-/**
- * Format multiplier (e.g., 2.5x)
- */
 export const formatMultiplier = (value: number): string => {
   return `${value.toFixed(1)}x`;
 };

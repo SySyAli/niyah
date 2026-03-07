@@ -50,7 +50,6 @@ export default function WithdrawScreen() {
   const stripeStatus = user?.stripeAccountStatus ?? "none";
   const hasActiveStripe = stripeStatus === "active";
 
-  // Convert input string to cents
   const amountInCents = inputValue
     ? Math.round(parseFloat(inputValue) * 100)
     : 0;
@@ -94,7 +93,6 @@ export default function WithdrawScreen() {
     setStep("method");
   };
 
-  // ─── Stripe Connect withdrawal ─────────────────────────────────────────────
   const handleStripeWithdraw = async () => {
     setIsLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -123,17 +121,13 @@ export default function WithdrawScreen() {
     }
   };
 
-  // ─── Venmo deep link withdrawal ───────────────────────────────────────────
-  // Opens Venmo with a REQUEST (not payment) to @niyah-focus for the withdrawal
-  // amount. Balance is NOT deducted here — Niyah manually confirms and processes
-  // each request within 24 hours, then the admin updates the user's balance.
+  // Opens a Venmo REQUEST (not payment) to @niyah-focus. Balance is NOT deducted
+  // here — Niyah confirms and processes each request within 24 hours.
   const handleVenmoWithdraw = () => {
     const venmoUrl = `venmo://paycharge?txn=request&recipients=niyah-focus&amount=${(amountInCents / 100).toFixed(2)}&note=NIYAH%20withdrawal`;
     Linking.openURL(venmoUrl).catch(() =>
       Linking.openURL("https://venmo.com/niyah-focus"),
     );
-    // Do NOT deduct balance — payment not confirmed yet.
-    // Show confirmation and close the screen.
     Alert.alert(
       "Withdrawal Requested",
       `We'll send you ${formatMoney(amountInCents)} via Venmo within 24 hours. Your balance will update once confirmed.`,
@@ -149,7 +143,6 @@ export default function WithdrawScreen() {
   };
   const error = getAmountError();
 
-  // ─── Method selection step ─────────────────────────────────────────────────
   if (step === "method") {
     return (
       <SafeAreaView style={styles.container}>
@@ -341,7 +334,6 @@ export default function WithdrawScreen() {
     );
   }
 
-  // ─── Amount entry step ─────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -449,7 +441,6 @@ const makeStyles = (Colors: ThemeColors) =>
     },
     numPadContainer: { flex: 1, justifyContent: "center" },
     footer: { paddingVertical: Spacing.lg, gap: Spacing.md },
-    // Summary card
     summaryCard: {
       alignItems: "center",
       paddingVertical: Spacing.xl,
@@ -466,7 +457,6 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.bold,
       color: Colors.text,
     },
-    // Method selection
     sectionLabel: {
       fontSize: Typography.labelLarge,
       ...Font.semibold,
@@ -536,14 +526,12 @@ const makeStyles = (Colors: ThemeColors) =>
       fontSize: Typography.bodyMedium,
       ...Font.medium,
     },
-    // Venmo link
     venmoLink: { alignItems: "center", paddingVertical: Spacing.sm },
     venmoLinkText: {
       color: Colors.textSecondary,
       fontSize: Typography.bodyMedium,
       ...Font.medium,
     },
-    // No-Connect state
     setupCard: { gap: Spacing.md },
     setupTitle: {
       fontSize: Typography.titleSmall,

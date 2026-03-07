@@ -282,6 +282,8 @@ export default function CompleteScreen() {
   // Transfers that require actual settlement (exclude "none" status from even-split)
   const activeTransfers =
     lastSession?.transfers.filter((t) => t.status !== "none") ?? [];
+  // Solo session = 1 participant. In duo+ sessions there are real transfers to settle.
+  const isSoloSession = (lastSession?.participants.length ?? 0) <= 1;
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -307,7 +309,7 @@ export default function CompleteScreen() {
 
   const handleDone = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.replace("/(tabs)");
+    router.dismissAll();
   };
 
   const handleMarkReceived = (transferId: string) => {
@@ -378,7 +380,11 @@ export default function CompleteScreen() {
           </View>
           <Text style={styles.title}>Session Complete</Text>
           <Text style={styles.subtitle}>
-            {myParticipant?.completed ? "You stayed focused!" : "Session ended"}
+            {myParticipant?.completed
+              ? isSoloSession
+                ? "You stayed focused — stake returned!"
+                : "You stayed focused!"
+              : "Session ended"}
           </Text>
         </Animated.View>
 
@@ -416,7 +422,11 @@ export default function CompleteScreen() {
                     p.completed ? styles.payoutGain : styles.payoutNeutral,
                   ]}
                 >
-                  {formatMoney(p.payout ?? p.stakeAmount)}
+                  {p.completed
+                    ? isSoloSession
+                      ? `${formatMoney(p.payout ?? p.stakeAmount)} returned`
+                      : `+${formatMoney(p.payout ?? p.stakeAmount)}`
+                    : "Forfeited"}
                 </Text>
               </View>
             ))}

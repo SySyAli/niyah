@@ -3,12 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Pressable,
   Alert,
   ScrollView,
   Animated,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -22,6 +23,26 @@ import * as Haptics from "expo-haptics";
 import { Button, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
+import {
+  createPaymentIntent,
+  verifyAndCreditDeposit,
+} from "../../src/config/functions";
+import { DEMO_MODE } from "../../src/constants/config";
+
+// Conditionally require Stripe to avoid crashing on dev client builds
+// that don't yet include the native StripeSdk module (requires a new build).
+// In DEMO_MODE the Stripe path is never reached so a no-op stub is fine.
+type UseStripe = typeof import("@stripe/stripe-react-native").useStripe;
+const _demoStripeHook: ReturnType<UseStripe> = {
+  initPaymentSheet: async () => ({ error: undefined }),
+  presentPaymentSheet: async () => ({ error: undefined }),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+} as any;
+const useStripe: UseStripe = DEMO_MODE
+  ? () => _demoStripeHook
+  : (
+      require("@stripe/stripe-react-native") as typeof import("@stripe/stripe-react-native")
+    ).useStripe;
 
 const QUICK_AMOUNTS = [500, 1000, 2500, 5000, 10000]; // in cents
 
@@ -86,11 +107,13 @@ export default function DepositScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const { deposit, balance } = useWalletStore();
   const [inputValue, setInputValue] = useState("");
   const [selectedQuickAmount, setSelectedQuickAmount] = useState<number | null>(
     null,
   );
+  const [isLoading, setIsLoading] = useState(false);
 
   // Convert input string to cents
   const amountInCents = inputValue
@@ -111,13 +134,11 @@ export default function DepositScreen() {
         }
       }
 
-      // Limit to 2 decimal places
       if (inputValue.includes(".")) {
         const [, decimals] = inputValue.split(".");
         if (decimals && decimals.length >= 2) return;
       }
 
-      // Limit total length
       if (inputValue.replace(".", "").length >= 6) return;
 
       setInputValue((prev) => prev + key);
@@ -135,13 +156,14 @@ export default function DepositScreen() {
     setInputValue((amount / 100).toString());
   }, []);
 
-  const handleDeposit = () => {
+  // ─── Demo mode deposit (local only) ───────────────────────────────────────
+  const handleDemoDeposit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const finalAmount = selectedQuickAmount || amountInCents;
+    const finalAmount = selectedQuickAmount ?? amountInCents;
 
     Alert.alert(
       "Add Funds",
-      `Add ${formatMoney(finalAmount)} to your NIYAH balance?`,
+      `Add ${formatMoney(finalAmount)} to your NIYAH balance?\n\nDemo mode — no real money charged.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -154,6 +176,93 @@ export default function DepositScreen() {
       ],
     );
   };
+
+  // ─── Real Stripe deposit ────────────────────────────────────────────────────
+  const handleStripeDeposit = async () => {
+    const finalAmount = selectedQuickAmount ?? amountInCents;
+    if (finalAmount < 100) return;
+
+    setIsLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      // 1. Create PaymentIntent on server
+      const { clientSecret, paymentIntentId, customerId } =
+        await createPaymentIntent(finalAmount);
+
+      // 2. Initialize Stripe PaymentSheet
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: "NIYAH",
+        paymentIntentClientSecret: clientSecret,
+        customerId,
+        defaultBillingDetails: {},
+        // true = show ACH/bank debit in PaymentSheet (delayed, but much lower fee)
+        allowsDelayedPaymentMethods: true,
+        appearance: {
+          colors: {
+            primary: "#E07A5F",
+            background: "#1A1714",
+            componentBackground: "#2A2420",
+            componentBorder: "#3A3430",
+            componentDivider: "#3A3430",
+            primaryText: "#F5EFE6",
+            secondaryText: "#A89E94",
+            componentText: "#F5EFE6",
+            placeholderText: "#6B6056",
+            icon: "#A89E94",
+            error: "#E07A5F",
+          },
+          shapes: {
+            borderRadius: 12,
+          },
+        },
+      });
+
+      if (initError) {
+        Alert.alert("Payment Error", initError.message);
+        return;
+      }
+
+      // 3. Present the PaymentSheet
+      const { error: presentError } = await presentPaymentSheet();
+
+      if (presentError) {
+        if (presentError.code !== "Canceled") {
+          Alert.alert("Payment Failed", presentError.message);
+        }
+        return;
+      }
+
+      // 4. Verify payment server-side and credit balance (or handle ACH pending)
+      const result = await verifyAndCreditDeposit(paymentIntentId);
+
+      if ("processing" in result) {
+        // ACH bank debit — funds are pending, webhook will credit when cleared
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+          "Bank Transfer Initiated",
+          `Your $${(finalAmount / 100).toFixed(2)} bank transfer is being processed.\n\nFunds will appear in your NIYAH balance in ${result.estimatedArrival}. You'll be able to stake once the transfer clears.`,
+          [{ text: "Got it", onPress: () => router.back() }],
+        );
+      } else {
+        // Card / Apple Pay — credited immediately
+        deposit(finalAmount, result.newBalance);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          "Funds Added",
+          `${formatMoney(finalAmount)} added to your NIYAH balance.`,
+          [{ text: "Done", onPress: () => router.back() }],
+        );
+      }
+    } catch (err) {
+      console.error("Deposit error:", err);
+      Alert.alert("Deposit Failed", "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeposit = DEMO_MODE ? handleDemoDeposit : handleStripeDeposit;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -213,19 +322,26 @@ export default function DepositScreen() {
 
         {/* CTA */}
         <View style={styles.footer}>
-          <Button
-            title={
-              isValidAmount
-                ? `Add ${formatMoney(selectedQuickAmount || amountInCents)}`
-                : "Enter an amount"
-            }
-            onPress={handleDeposit}
-            disabled={!isValidAmount}
-            size="large"
-          />
-          <Text style={styles.disclaimer}>
-            Demo mode - funds added instantly
-          </Text>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={styles.loadingText}>Processing payment...</Text>
+            </View>
+          ) : (
+            <Button
+              title={
+                isValidAmount
+                  ? `Add ${formatMoney(selectedQuickAmount ?? amountInCents)}`
+                  : "Enter an amount"
+              }
+              onPress={handleDeposit}
+              disabled={!isValidAmount || isLoading}
+              size="large"
+            />
+          )}
+          {DEMO_MODE && (
+            <Text style={styles.disclaimer}>Demo mode — no real money</Text>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -311,6 +427,18 @@ const makeStyles = (Colors: ThemeColors) =>
     footer: {
       paddingVertical: Spacing.lg,
       gap: Spacing.md,
+    },
+    loadingContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing.sm,
+      paddingVertical: Spacing.lg,
+    },
+    loadingText: {
+      color: Colors.textSecondary,
+      fontSize: Typography.bodyMedium,
+      ...Font.medium,
     },
     disclaimer: {
       textAlign: "center",

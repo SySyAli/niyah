@@ -10,7 +10,18 @@ import { useColors } from "../src/hooks/useColors";
 import { useThemeStore } from "../src/store/themeStore";
 import { useAuthStore } from "../src/store/authStore";
 import { isEmailSignInLink } from "../src/config/firebase";
-import { PENDING_REFERRAL_KEY } from "../src/constants/config";
+import { DEMO_MODE, PENDING_REFERRAL_KEY } from "../src/constants/config";
+
+// Set in .env as EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
+// Use pk_test_... for development, pk_live_... for production
+const STRIPE_PK = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+
+// Lazily import StripeProvider only when Stripe is active (non-demo mode + key present).
+// This prevents crashes on dev client builds that don't yet have the native Stripe module linked.
+const StripeWrapper =
+  !DEMO_MODE && STRIPE_PK
+    ? require("@stripe/stripe-react-native").StripeProvider
+    : ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
 // Apply SF Pro Rounded globally as the default font family
 if (Platform.OS === "ios" && BaseFontFamily) {
@@ -68,42 +79,48 @@ export default function RootLayout() {
   }, [completeEmailLink]);
 
   return (
-    <GestureHandlerRootView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+    <StripeWrapper
+      publishableKey={STRIPE_PK}
+      merchantIdentifier="merchant.com.niyah.app"
+      urlScheme="niyah"
     >
-      <StatusBar style={theme === "dark" ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: Colors.background },
-          animation: "slide_from_right",
-        }}
+      <GestureHandlerRootView
+        style={{ flex: 1, backgroundColor: Colors.background }}
       >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="session"
-          options={{
+        <StatusBar style={theme === "dark" ? "light" : "dark"} />
+        <Stack
+          screenOptions={{
             headerShown: false,
-            presentation: "fullScreenModal",
-          }}
-        />
-        <Stack.Screen
-          name="invite"
-          options={{
-            headerShown: false,
-            animation: "slide_from_bottom",
-          }}
-        />
-        <Stack.Screen
-          name="user/[uid]"
-          options={{
-            headerShown: false,
+            contentStyle: { backgroundColor: Colors.background },
             animation: "slide_from_right",
           }}
-        />
-      </Stack>
-    </GestureHandlerRootView>
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="session"
+            options={{
+              headerShown: false,
+              presentation: "fullScreenModal",
+            }}
+          />
+          <Stack.Screen
+            name="invite"
+            options={{
+              headerShown: false,
+              animation: "slide_from_bottom",
+            }}
+          />
+          <Stack.Screen
+            name="user/[uid]"
+            options={{
+              headerShown: false,
+              animation: "slide_from_right",
+            }}
+          />
+        </Stack>
+      </GestureHandlerRootView>
+    </StripeWrapper>
   );
 }

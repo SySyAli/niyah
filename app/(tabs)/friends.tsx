@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Pressable,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Spacing,
@@ -466,7 +466,7 @@ export default function FriendsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Text style={styles.title}>Friends</Text>
@@ -487,6 +487,7 @@ export default function FriendsScreen() {
         <ScrollView
           style={styles.list}
           contentContainerStyle={styles.listContent}
+          contentInsetAdjustmentBehavior="automatic"
         >
           {tab === "following" ? (
             following.length === 0 ? (

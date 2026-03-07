@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Pressable,
   ScrollView,
   Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   Typography,
@@ -281,19 +281,14 @@ const CadenceOption: React.FC<CadenceOptionProps> = ({
           </Text>
           <View style={styles.optionPricing}>
             <View style={styles.priceColumn}>
-              <Text style={styles.priceLabel}>Your Stake</Text>
+              <Text style={styles.priceLabel}>Stake</Text>
               <Text style={styles.stakeAmount}>
                 {formatMoney(config.stake)}
               </Text>
-            </View>
-            <View style={styles.vsContainer}>
-              <Text style={styles.vsText}>vs</Text>
             </View>
             <View style={[styles.priceColumn, styles.priceColumnRight]}>
-              <Text style={styles.priceLabel}>Partner's Stake</Text>
-              <Text style={styles.stakeAmount}>
-                {formatMoney(config.stake)}
-              </Text>
+              <Text style={styles.priceLabel}>On Complete</Text>
+              <Text style={[styles.earnAmount]}>Keep it</Text>
             </View>
           </View>
           {!canAfford && (
@@ -358,32 +353,24 @@ export default function SelectCadenceScreen() {
 
         {/* Summary */}
         <Card style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Duo Session Summary</Text>
+          <Text style={styles.summaryTitle}>Session Summary</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Your stake</Text>
-            <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Partner's stake</Text>
+            <Text style={styles.summaryLabel}>Stake</Text>
             <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.outcomeSection}>
-            <Text style={styles.outcomeTitle}>Possible Outcomes</Text>
+            <Text style={styles.outcomeTitle}>Outcomes</Text>
             <View style={styles.outcomeRow}>
-              <Text style={styles.outcomeLabel}>Both complete:</Text>
-              <Text style={styles.outcomeValue}>Both keep stakes</Text>
-            </View>
-            <View style={styles.outcomeRow}>
-              <Text style={styles.outcomeLabel}>You win:</Text>
+              <Text style={styles.outcomeLabel}>Complete:</Text>
               <Text style={[styles.outcomeValue, { color: Colors.gain }]}>
-                Partner pays you {formatMoney(config.stake)}
+                Keep your {formatMoney(config.stake)} stake
               </Text>
             </View>
             <View style={styles.outcomeRow}>
-              <Text style={styles.outcomeLabel}>You lose:</Text>
+              <Text style={styles.outcomeLabel}>Surrender:</Text>
               <Text style={[styles.outcomeValue, { color: Colors.loss }]}>
-                You pay partner {formatMoney(config.stake)}
+                Lose your {formatMoney(config.stake)} stake
               </Text>
             </View>
           </View>

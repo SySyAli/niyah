@@ -9,7 +9,8 @@ interface WalletState {
   pendingWithdrawal: number;
 
   // Actions
-  deposit: (amount: number) => void;
+  // syncedBalance: when provided (from server after real Stripe payment), use as authoritative balance
+  deposit: (amount: number, syncedBalance?: number) => void;
   withdraw: (amount: number) => void;
   deductStake: (amount: number, sessionId: string) => void;
   creditPayout: (amount: number, sessionId: string) => void;
@@ -35,7 +36,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   ],
   pendingWithdrawal: 0,
 
-  deposit: (amount: number) => {
+  deposit: (amount: number, syncedBalance?: number) => {
     const transaction: Transaction = {
       id: Math.random().toString(36).substr(2, 9),
       type: "deposit",
@@ -45,7 +46,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     };
 
     set((state) => ({
-      balance: state.balance + amount,
+      // If server returned authoritative balance, use it; otherwise increment locally
+      balance: syncedBalance ?? state.balance + amount,
       transactions: [transaction, ...state.transactions],
     }));
 

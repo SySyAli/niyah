@@ -166,6 +166,10 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
       const authStore = useAuthStore.getState();
       if (didComplete) {
         const newStreak = (authStore.user?.currentStreak ?? 0) + 1;
+        // Net profit only: the stake was already deducted at session start,
+        // so earnings = payout received minus the stake we put in.
+        const netProfit =
+          currentUserPayout - activeGroupSession.stakePerParticipant;
         authStore.updateUser({
           currentStreak: newStreak,
           longestStreak: Math.max(
@@ -174,13 +178,16 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
           ),
           totalSessions: (authStore.user?.totalSessions ?? 0) + 1,
           completedSessions: (authStore.user?.completedSessions ?? 0) + 1,
-          totalEarnings:
-            (authStore.user?.totalEarnings ?? 0) + currentUserPayout,
+          totalEarnings: (authStore.user?.totalEarnings ?? 0) + netProfit,
         });
       } else {
+        // Surrendered: stake was already deducted, record the loss
         authStore.updateUser({
           currentStreak: 0,
           totalSessions: (authStore.user?.totalSessions ?? 0) + 1,
+          totalEarnings:
+            (authStore.user?.totalEarnings ?? 0) -
+            activeGroupSession.stakePerParticipant,
         });
       }
     }

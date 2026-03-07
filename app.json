@@ -52,6 +52,7 @@
     },
     "plugins": [
       "expo-router",
+      "react-native-bottom-tabs",
       [
         "@react-native-google-signin/google-signin",
         {
@@ -60,6 +61,13 @@
       ],
       "expo-apple-authentication",
       "expo-contacts",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.niyah.app",
+          "enableGooglePay": false
+        }
+      ],
       "./plugins/withFollyCoroutinesFix",
       "./plugins/withGoogleServicesPlist",
       "./plugins/withFirebaseStaticFrameworks",

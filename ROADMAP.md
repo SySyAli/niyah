@@ -1,25 +1,29 @@
 # NIYAH - Project Roadmap
 
-## Current Status (Feb 2026)
+## Current Status (Mar 2026)
 
 ### What's Built
 
-| Area                  | Status      | Notes                                                                     |
-| --------------------- | ----------- | ------------------------------------------------------------------------- |
-| Firebase Auth         | Done        | Google, Apple, Email magic link via custom native Swift Expo module       |
-| Firestore             | Done        | User profiles, wallets, follows. Native module with get/set/update/delete |
-| Solo Sessions         | Done        | Select cadence, stake, timer, surrender/complete. Local state.            |
-| Duo Sessions          | Done        | Partner store, full lifecycle, Venmo deep links for settlement            |
-| Group Sessions        | Done        | N-person sessions, payout algorithm (placeholder), transfer tracking      |
-| Social Features       | Done        | Following/followers, public profiles, reputation system (5 tiers)         |
-| Referral System       | Done        | Deep link invites, reputation boost, partner auto-connect                 |
-| Contacts Integration  | Done        | expo-contacts for friend discovery                                        |
-| Onboarding            | In Progress | 10 scene components exist, animations need polish                         |
-| JITAI Module          | Done        | Adaptive intervention engine (simulation-only, no real usage data yet)    |
-| Testing               | Setup       | Vitest with integration + unit test directories                           |
-| Screen Time API       | Not Started | No native module code. This is the primary next milestone.                |
-| Stripe Payments       | Not Started | Trust model (virtual balances + Venmo settlement) works for now           |
-| Real Payout Algorithm | Not Started | Current algorithm is a placeholder even-split                             |
+| Area                     | Status      | Notes                                                                                    |
+| ------------------------ | ----------- | ---------------------------------------------------------------------------------------- |
+| Firebase Auth            | Done        | Google, Apple, Email magic link via custom native Swift Expo module                      |
+| Firestore                | Done        | User profiles, wallets, follows. Native module with get/set/update/delete                |
+| Solo Sessions            | Done        | Select cadence, stake, timer, surrender/complete. Local state only.                      |
+| Duo Sessions             | Done        | Partner store, full lifecycle, Venmo deep links for settlement                           |
+| Group Sessions (UI)      | Done        | N-person sessions, payout algorithm (placeholder), transfer tracking, propose.tsx screen |
+| Group Sessions (Backend) | Not Started | No Firebase write for proposals. No real-time listeners. No push notifications.          |
+| Social Features          | Done        | Following/followers, public profiles, reputation system (5 tiers)                        |
+| Referral System          | Done        | Deep link invites, reputation boost, partner auto-connect                                |
+| Contacts Integration     | Done        | expo-contacts for friend discovery                                                       |
+| Theme System             | Done        | Dark/light theme via themeStore + useColors hook, full DarkColors/LightColors palette    |
+| Onboarding               | In Progress | 10 scene components exist, animations need polish                                        |
+| JITAI Module             | Done        | Adaptive intervention engine (simulation-only, no real usage data yet)                   |
+| Testing                  | Done        | Vitest with integration + unit tests (stores, components, hooks, utils)                  |
+| Screen Time (Swift)      | Done        | Production-quality Swift. All APIs implemented. Needs device validation.                 |
+| Screen Time (Wiring)     | Not Started | sessionStore.ts does not call startBlocking/stopBlocking. Not integrated.                |
+| Push Notifications       | Not Started | APNs entitlement configured, no implementation                                           |
+| Stripe Payments          | Not Started | Trust model (virtual balances + Venmo settlement) works for now                          |
+| Real Payout Algorithm    | Not Started | Current algorithm is a placeholder even-split                                            |
 
 ### Apple Developer Account
 
@@ -29,59 +33,163 @@
 
 ---
 
-## Current Priorities
+## Immediate Path to Real Users
 
-### 1. Screen Time API Native Module (HIGH)
+The fastest path to publishing and getting traction is **Group Pool Sessions** with real Firebase backend. The UI is fully built (`propose.tsx`, `groupSessionStore.ts`). What's missing is the backend coordination layer.
 
-The core product differentiator. Goal: start a NIYAH session, open a "blocked" app (e.g. Photos), get an Opal-style shield overlay, and lose money in NIYAH.
+**Why Group Sessions first**: Social accountability + financial stakes combined is the product's strongest hook. One person can invite friends, everyone stakes together, the losers pay the winners. This is immediately compelling and sharable.
 
-**Blocker**: Must enable FamilyControls (Development) capability on App ID in the Apple Developer portal. Available immediately, no approval wait. (Distribution entitlement is separate -- apply for that in parallel, takes 2-4 weeks.)
+---
 
-**Code Status**: Module scaffolded. All Swift code, TypeScript bridge, config plugins, and App Extension written. Needs first dev client build (`pnpm build:dev`) and physical device testing.
+## Priority 1: Group Session Firebase Backend (HIGH - Launch Blocker)
 
-**Remaining Milestones:**
+The `propose.tsx` screen and `groupSessionStore.ts` are fully built with local state. The missing pieces are real-time coordination and notifications so all participants see each other's status.
 
-| #   | Milestone                                           | Status     | What's Left                                                           |
-| --- | --------------------------------------------------- | ---------- | --------------------------------------------------------------------- |
-| 1   | Enable FamilyControls + App Groups on App ID        | **Do now** | Apple Developer portal                                                |
-| 2   | Scaffold `modules/niyah-screentime/` Expo module    | **Done**   | Swift module, TS types, podspec, config                               |
-| 3   | FamilyControls authorization flow                   | **Done**   | `requestAuthorization()` in Swift + JS wrapper                        |
-| 4   | App selection with FamilyActivityPicker             | **Done**   | SwiftUI picker, hosted modally, selection persisted to App Groups     |
-| 5   | Shield configuration (ManagedSettings)              | **Done**   | `startBlocking()` / `stopBlocking()` apply/remove shields             |
-| 6   | DeviceActivityMonitor extension                     | **Done**   | Extension Swift code + Xcode config plugin to inject target           |
-| 7   | Bridge to RN (JS wrapper)                           | **Done**   | `src/config/screentime.ts` with typed functions + event subscriptions |
-| 8   | Build new dev client                                | **Next**   | `pnpm build:dev` to compile native modules                            |
-| 9   | Physical device testing                             | **Next**   | Test full flow on real iPhone                                         |
-| 10  | Session store integration                           | **Next**   | Wire `onShieldViolation` -> wallet deduction in session flow          |
-| 11  | End-to-end: session -> block -> violation -> deduct | **Next**   | Final integration + polish                                            |
+### Required Work
 
-**Technical Notes:**
+| #   | Task                          | What's Needed                                                                  |
+| --- | ----------------------------- | ------------------------------------------------------------------------------ |
+| 1   | Firebase write on proposal    | When proposer taps "Send," write a `groupSessions` doc to Firestore            |
+| 2   | Push notification to invitees | APNs + Firebase Cloud Messaging -- invitees get a notification                 |
+| 3   | Invite accept/decline flow    | Screen for invitees to see incoming proposals and accept                       |
+| 4   | Real-time session listener    | All participants subscribe to the session doc via Firestore `onSnapshot`       |
+| 5   | Session lifecycle sync        | When host starts session, all participants' local state updates via listener   |
+| 6   | Payout/transfer calculation   | Wire real payout algorithm when session ends, sync results to all participants |
+
+### Firestore Schema (proposed)
+
+```
+groupSessions/{sessionId}
+  - hostUid: string
+  - participantUids: string[]
+  - status: "pending" | "active" | "complete"
+  - cadence: "daily" | "weekly" | "monthly"
+  - stakeAmount: number (cents)
+  - startedAt: Timestamp | null
+  - completedAt: Timestamp | null
+  - results: { [uid]: { completed: boolean, screenTimeMinutes: number } }
+  - transfers: Transfer[]
+
+groupInvites/{inviteId}
+  - sessionId: string
+  - inviteeUid: string
+  - inviterUid: string
+  - status: "pending" | "accepted" | "declined"
+  - createdAt: Timestamp
+```
+
+---
+
+## Priority 2: Push Notifications (HIGH - Required for Group Sessions)
+
+Group sessions are useless without push notifications. Invitees won't know they were invited. Session starts won't be coordinated.
+
+### Setup Tasks
+
+- [ ] Create APNs key in Apple Developer portal (already have entitlement)
+- [ ] Configure Firebase Cloud Messaging (FCM) with APNs key
+- [ ] Install `@react-native-firebase/messaging` or use Cloud Functions with APNs HTTP/2 API
+- [ ] Store FCM device token on user's Firestore document on app start
+- [ ] Implement Cloud Functions for:
+  - Group session invite notification
+  - Session starting soon reminder
+  - Session complete / results notification
+
+---
+
+## Priority 3: Screen Time -- Custom Shield UX (HIGH - Product Differentiator)
+
+### Vision (Updated)
+
+Instead of silently hard-blocking apps, the goal is an **interactive surrender decision point**. When a user opens a restricted app during a focus session:
+
+1. A **custom shield screen** appears (full-screen, replaces the blocked app at OS level)
+2. The screen shows the **Niyah blob character** and a clear prompt
+3. User has two choices:
+   - **"Surrender"** -- ends the session, loses stake, unblocks all apps
+   - **"Stay Focused"** -- dismisses the shield, returns user to previous context (home screen or NIYAH)
+
+This is a moment of intentional friction -- not a punishment, but a pause that forces conscious decision-making.
+
+### Technical Reality Check
+
+**iOS does NOT allow injecting modals, overlays, or custom views inside another running app.** The only API-compliant way to show interactive UI when a user opens a blocked app is `ManagedSettings ShieldConfiguration` -- a full-screen system overlay that replaces the app's launch, with limited customizable fields:
+
+- Custom icon (can show the Niyah blob as a PNG)
+- Title and subtitle text
+- Primary button (label + action) -- maps to "Surrender"
+- Secondary button (label + action) -- maps to "Stay Focused"
+
+The button actions fire in the `DeviceActivityMonitorExtension` (separate process). The extension records the choice and communicates back to the main app via shared App Groups `UserDefaults`.
+
+### What This Is NOT
+
+- NOT a full SwiftUI modal you design freely (the system renders the shield)
+- NOT possible to show rich animations inside the shield
+- NOT possible to overlay on top of the app without blocking it first
+
+### Screen Time Session Design
+
+The session model this enables is **deep work focus blocks**:
+
+1. User starts a NIYAH session (solo or group)
+2. Immediately after: FamilyActivityPicker opens -- user selects their distraction apps (Instagram, TikTok, etc.)
+3. Session timer starts. ManagedSettings shields the selected apps.
+4. If user tries to open a blocked app: Niyah shield appears with Surrender / Stay Focused
+5. If user surrenders: extension records it, clears shields, session ends with stake deducted
+6. If user stays focused: shield dismissed, user goes back to what they were doing
+7. When timer completes normally: shields clear, session completes, stake returned
+
+This is a focus block model (deep work windows), NOT always-on screen time limiting. That distinction is important -- this is about choosing to lock yourself in for a period, not limiting daily app usage.
+
+### Remaining Milestones
+
+| #   | Milestone                                    | Status     | What's Left                                                     |
+| --- | -------------------------------------------- | ---------- | --------------------------------------------------------------- |
+| 1   | Enable FamilyControls + App Groups on App ID | **Do now** | Apple Developer portal                                          |
+| 2   | Swift module (all APIs)                      | **Done**   | requestAuthorization, picker, startBlocking, stopBlocking       |
+| 3   | JS wrapper                                   | **Done**   | src/config/screentime.ts fully implemented                      |
+| 4   | Config plugins                               | **Done**   | withScreenTimeEntitlement, withDeviceActivityMonitor            |
+| 5   | Build new dev client                         | **Next**   | pnpm build:dev to compile native modules                        |
+| 6   | Physical device validation                   | **Next**   | Test FamilyControls auth + app picker on real iPhone            |
+| 7   | Session wiring                               | **Next**   | Call startBlocking()/stopBlocking() from sessionStore           |
+| 8   | Shield button actions                        | **Next**   | Handle Surrender/Stay Focused in DeviceActivityMonitorExtension |
+| 9   | ShieldConfigurationDataSource                | **Next**   | Custom App Extension target to provide shield UI config         |
+| 10  | End-to-end integration                       | **Next**   | Full session -> block -> shield -> surrender/complete flow      |
+
+### Key Apple Frameworks
+
+| Framework       | Purpose                                                                            |
+| --------------- | ---------------------------------------------------------------------------------- |
+| FamilyControls  | Authorization & privacy tokens for selecting apps/websites                         |
+| ManagedSettings | Apply restrictions (shield apps, block content), ShieldConfiguration for custom UI |
+| DeviceActivity  | Monitor usage & execute code on schedules/events, handle shield button actions     |
+
+### Technical Notes
 
 - DeviceActivityMonitor is an **App Extension** (separate build target). The `withDeviceActivityMonitor.js` config plugin handles injecting it into the Xcode project during `expo prebuild`.
-- App Groups (`group.com.niyah.app`) enable data sharing between the main app and the extension (violation timestamps, blocking state, app selection).
+- App Groups (`group.com.niyah.app`) enable data sharing between the main app and the extension (violation timestamps, blocking state, app selection, surrender decisions).
 - All testing must be on a **physical iOS device**. The Screen Time API does not work in the iOS Simulator.
-- Opal and one sec are fully native iOS apps. This module proves Screen Time API can work in a React Native/Expo architecture.
+- A `ShieldConfigurationDataSource` extension (separate from `DeviceActivityMonitor`) is needed to return custom `ShieldConfiguration` objects. This is how apps like Opal customize the shield appearance.
 
-**Key Apple Frameworks:**
+---
 
-| Framework       | Purpose                                                    |
-| --------------- | ---------------------------------------------------------- |
-| FamilyControls  | Authorization & privacy tokens for selecting apps/websites |
-| ManagedSettings | Apply restrictions (shield apps, block content)            |
-| DeviceActivity  | Monitor usage & execute code on schedules/events           |
+## Priority 4: Real Payout Algorithm (MEDIUM)
 
-### 2. Onboarding Polish (LOW)
+Current `src/utils/payoutAlgorithm.ts` is a placeholder (everyone gets their stake back). Replace with the real formula when group sessions are in active use with real screen time data:
 
-Scene components already exist in `src/components/onboarding/`. What remains is animation and transition work:
+```
+Let c = equal contribution from each person
+Let t_i = screen time for person i (on selected distraction apps)
+Let t_max = maximum time in the group
+Let t_bar = mean time of the group
 
-- [ ] Migrate animations from legacy `Animated` API to Reanimated (shared values, springs)
-- [ ] Gesture-driven page transitions (swipe controls animation progress)
-- [ ] Background color interpolation between pages
-- [ ] Text fade/slide choreography
-- [ ] Page snap with spring physics + haptic feedback
-- [ ] Parallax depth layers on scene illustrations
+Payout for person i:
+  P_i = c                                      if t_max = t_bar (everyone equal)
+  P_i = c * (t_max - t_i) / (t_max - t_bar)   otherwise
+```
 
-This is UI polish. Not blocking any core functionality. Can be done in parallel or after Screen Time API.
+Lower screen time = higher payout. Subject to legal review for gambling risk.
 
 ---
 
@@ -89,7 +197,7 @@ This is UI polish. Not blocking any core functionality. Can be done in parallel 
 
 ### Stripe Integration (FUTURE)
 
-Not blocking anything right now. The trust model (virtual balances + Venmo/PayPal settlement outside app) works for demo and early users. Integrate Stripe when ready for real money flow.
+Not blocking anything right now. The trust model (virtual balances + Venmo/PayPal settlement outside app) works for demo and early users.
 
 - [ ] Create Stripe account, start in test mode
 - [ ] Install `@stripe/stripe-react-native`
@@ -97,23 +205,6 @@ Not blocking anything right now. The trust model (virtual balances + Venmo/PayPa
 - [ ] Build payout/withdrawal flow
 - [ ] Set up Firebase Cloud Functions for server-side (payment intents, webhooks)
 - [ ] Stripe Connect Express for user-to-user transfers (avoids money transmitter issues)
-
-### Real Payout Algorithm (FUTURE)
-
-Current `src/utils/payoutAlgorithm.ts` is a placeholder (everyone gets their stake back). Replace with the real formula when group sessions are in active use:
-
-```
-Let c = equal contribution from each person
-Let t_i = screen time for person i
-Let t_max = maximum time in the group
-Let t_bar = mean time of the group
-
-Payout for person i:
-  P_i = c                                    if t_max = t_bar (everyone equal)
-  P_i = c * (t_max - t_i) / (t_max - t_bar)  otherwise
-```
-
-Lower screen time = higher payout. Subject to legal review for gambling risk.
 
 ### Firebase Backend Hardening (FUTURE)
 
@@ -123,6 +214,17 @@ Firebase Auth and Firestore are working but some areas still use local state:
 - [ ] Migrate wallet/balance management to server-side (Cloud Functions)
 - [ ] Cloud Functions for payout calculations, streak tracking
 - [ ] Firestore security rules (currently permissive for dev)
+
+### Onboarding Polish (LOW)
+
+Scene components already exist in `src/components/onboarding/`. What remains is animation and transition work:
+
+- [ ] Migrate animations from legacy `Animated` API to Reanimated (shared values, springs)
+- [ ] Gesture-driven page transitions (swipe controls animation progress)
+- [ ] Background color interpolation between pages
+- [ ] Text fade/slide choreography
+- [ ] Page snap with spring physics + haptic feedback
+- [ ] Parallax depth layers on scene illustrations
 
 ---
 
@@ -271,8 +373,6 @@ The raw SVG `bodyPath` strings for all 6 blobs already exist in `src/components/
 | yellow   | #B8860B | Topaz    | Golden glass, metallic tint       |
 | offWhite | #F2EDE4 | Diamond  | Near-clear, rainbow caustics      |
 | green    | #40916C | Emerald  | Deep green glass                  |
-
-This is a nice-to-have visual upgrade. Fully independent from Screen Time API work.
 
 ---
 

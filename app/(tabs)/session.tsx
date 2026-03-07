@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Pressable,
   ScrollView,
   Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
@@ -16,7 +16,10 @@ import { Card, Button } from "../../src/components";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
-import { CADENCES } from "../../src/constants/config";
+import {
+  CADENCES,
+  SOLO_COMPLETION_MULTIPLIER,
+} from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
 
 interface CadenceCardProps {
@@ -69,32 +72,15 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
           ...Font.bold,
           color: Colors.text,
         },
-        duoBadge: {
-          backgroundColor: Colors.primaryMuted,
-          paddingHorizontal: Spacing.sm,
-          paddingVertical: Spacing.xs,
-          borderRadius: Radius.full,
-        },
-        duoBadgeText: {
-          color: Colors.primary,
-          fontSize: Typography.labelSmall,
-          ...Font.semibold,
-        },
-        cadenceDetails: {
+        cadenceStakeRow: {
           flexDirection: "row",
           alignItems: "center",
-          marginBottom: Spacing.md,
+          justifyContent: "space-between",
+          marginBottom: Spacing.sm,
         },
-        cadenceColumn: {
-          flex: 1,
-        },
-        cadenceColumnRight: {
-          alignItems: "flex-end",
-        },
-        columnLabel: {
+        stakeLabel: {
           fontSize: Typography.labelSmall,
           color: Colors.textTertiary,
-          marginBottom: Spacing.xs,
           textTransform: "uppercase",
           letterSpacing: 0.5,
         },
@@ -103,33 +89,12 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
           ...Font.bold,
           color: Colors.text,
         },
-        arrowContainer: {
-          flexDirection: "row",
-          alignItems: "center",
-          paddingHorizontal: Spacing.md,
-        },
-        arrowLine: {
-          width: 40,
-          height: 2,
-          backgroundColor: Colors.border,
-        },
-        arrowHead: {
-          width: 0,
-          height: 0,
-          borderTopWidth: 6,
-          borderBottomWidth: 6,
-          borderLeftWidth: 8,
-          borderTopColor: "transparent",
-          borderBottomColor: "transparent",
-          borderLeftColor: Colors.border,
-        },
         outcomeHint: {
           fontSize: Typography.labelSmall,
           color: Colors.textSecondary,
-          textAlign: "center",
-          marginTop: Spacing.md,
+          marginTop: Spacing.sm,
           marginBottom: Spacing.md,
-          paddingTop: Spacing.md,
+          paddingTop: Spacing.sm,
           borderTopWidth: 1,
           borderTopColor: Colors.border,
         },
@@ -177,28 +142,17 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
         >
           <View style={styles.cadenceHeader}>
             <Text style={styles.cadenceName}>{config.name}</Text>
-            <View style={styles.duoBadge}>
-              <Text style={styles.duoBadgeText}>Duo Session</Text>
-            </View>
           </View>
 
-          <View style={styles.cadenceDetails}>
-            <View style={styles.cadenceColumn}>
-              <Text style={styles.columnLabel}>Your Stake</Text>
-              <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
-            </View>
-            <View style={styles.arrowContainer}>
-              <View style={styles.arrowLine} />
-              <View style={styles.arrowHead} />
-            </View>
-            <View style={[styles.cadenceColumn, styles.cadenceColumnRight]}>
-              <Text style={styles.columnLabel}>Partner's Stake</Text>
-              <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
-            </View>
+          <View style={styles.cadenceStakeRow}>
+            <Text style={styles.stakeLabel}>Stake</Text>
+            <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
           </View>
 
           <Text style={styles.outcomeHint}>
-            Win = Partner pays you | Lose = You pay partner
+            Complete = earn{" "}
+            {formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)} · Surrender
+            = lose {formatMoney(config.stake)}
           </Text>
 
           <View style={styles.cadenceMeta}>
@@ -400,13 +354,18 @@ export default function SessionTabScreen() {
   );
 
   if (activeGroupSession) {
+    const isSolo = activeGroupSession.participants.length <= 1;
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.content}>
           <View style={styles.activeHeader}>
-            <Text style={styles.title}>Duo Session Active</Text>
+            <Text style={styles.title}>
+              {isSolo ? "Solo Session Active" : "Duo Session Active"}
+            </Text>
             <Text style={styles.subtitle}>
-              Focus session with {activePartner?.name ?? "Partner"}
+              {isSolo
+                ? "Your focus session is in progress"
+                : `Focus session with ${activePartner?.name ?? "Partner"}`}
             </Text>
           </View>
 
@@ -438,10 +397,11 @@ export default function SessionTabScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.scrollContent}
       >
         <Text style={styles.title}>Start a Session</Text>

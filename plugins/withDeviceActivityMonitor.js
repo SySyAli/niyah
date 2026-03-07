@@ -166,15 +166,19 @@ function withDeviceActivityMonitor(config) {
           // Ensure the extension can import DeviceActivity etc.
           LD_RUNPATH_SEARCH_PATHS:
             '"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"',
+          // DeviceActivityMonitor uses Screen Time APIs — not available on the
+          // simulator. Restricting to iphoneos prevents the extension from being
+          // embedded in simulator builds (which would cause install failures).
+          SUPPORTED_PLATFORMS: "iphoneos",
         });
       }
     }
 
-    // --- Add target dependency from main app to extension ---
-    const mainTarget = project.getFirstTarget();
-    if (mainTarget && mainTarget.firstTarget) {
-      project.addTargetDependency(mainTarget.firstTarget.uuid, [target.uuid]);
-    }
+    // NOTE: We intentionally do NOT add a target dependency or embed phase here.
+    // The DeviceActivityMonitor extension requires the DeviceActivity + ManagedSettings
+    // frameworks (device-only APIs). The embed phase will be wired up properly when
+    // Screen Time is integrated into sessionStore (see CLAUDE.md: Critical Next Steps).
+    // Adding a broken embed phase caused lstat failures on both simulator and device builds.
 
     return config;
   });

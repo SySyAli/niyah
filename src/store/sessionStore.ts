@@ -3,6 +3,10 @@ import { Session, CadenceType } from "../types";
 import { CADENCES, DEMO_MODE } from "../constants/config";
 import { useAuthStore } from "./authStore";
 import { useWalletStore } from "./walletStore";
+import {
+  handleSessionComplete as cloudComplete,
+  handleSessionForfeit as cloudForfeit,
+} from "../config/functions";
 
 interface SessionState {
   currentSession: Session | null;
@@ -52,14 +56,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       actualPayout: 0,
     };
 
-    // Reset streak
+    // Update local state immediately for responsive UI
     const authStore = useAuthStore.getState();
     authStore.updateUser({
       currentStreak: 0,
       totalSessions: (authStore.user?.totalSessions || 0) + 1,
     });
-
-    // Record forfeit in wallet
     useWalletStore
       .getState()
       .recordForfeit(currentSession.stakeAmount, currentSession.id);
@@ -69,6 +71,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       isBlocking: false,
       sessionHistory: [completedSession, ...sessionHistory],
     });
+
+    // Sync to server (non-blocking — local state is source of truth in DEMO_MODE)
+    if (!DEMO_MODE) {
+      cloudForfeit(currentSession.id, currentSession.stakeAmount).catch((err) =>
+        console.error("cloudForfeit failed:", err),
+      );
+    }
   },
 
   completeSession: () => {
@@ -84,7 +93,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       actualPayout: payout,
     };
 
-    // Update user stats
+    // Update local state immediately for responsive UI
     const authStore = useAuthStore.getState();
     const newStreak = (authStore.user?.currentStreak || 0) + 1;
     authStore.updateUser({
@@ -94,8 +103,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       completedSessions: (authStore.user?.completedSessions || 0) + 1,
       totalEarnings: (authStore.user?.totalEarnings || 0) + payout,
     });
-
-    // Credit payout to wallet
     useWalletStore.getState().creditPayout(payout, currentSession.id);
 
     set({
@@ -103,6 +110,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       isBlocking: false,
       sessionHistory: [completedSession, ...sessionHistory],
     });
+
+    // Sync to server (non-blocking — local state is source of truth in DEMO_MODE)
+    if (!DEMO_MODE) {
+      cloudComplete(currentSession.id, currentSession.stakeAmount).catch(
+        (err) => console.error("cloudComplete failed:", err),
+      );
+    }
   },
 
   getTimeRemaining: () => {

@@ -1,12 +1,6 @@
 import React, { useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  Pressable,
-  Share,
-} from "react-native";
+import { View, Text, StyleSheet, Pressable, Share } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";

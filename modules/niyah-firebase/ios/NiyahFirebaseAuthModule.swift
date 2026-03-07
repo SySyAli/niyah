@@ -100,6 +100,14 @@ public class NiyahFirebaseAuthModule: Module {
     }
 
     // ------------------------------------------------------------------
+    // Get Firebase ID token for authenticating Cloud Function calls
+    // ------------------------------------------------------------------
+    AsyncFunction("getIdToken") { () -> String? in
+      guard let user = Auth.auth().currentUser else { return nil }
+      return try await user.getIDToken()
+    }
+
+    // ------------------------------------------------------------------
     // Module lifecycle
     // ------------------------------------------------------------------
     OnCreate {

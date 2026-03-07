@@ -62,7 +62,6 @@ const BlobsBackground: React.FC = () => {
             {
               ...blob.style,
               position: "absolute",
-              zIndex: -1,
             },
           ]}
           width={blob.style.width}
@@ -95,7 +94,9 @@ const BlobsBackground: React.FC = () => {
 const styles = StyleSheet.create({
   absoluteFill: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: -1,
+    // No zIndex here — render order (first child of container) keeps blobs
+    // behind siblings without needing negative z-index, which would cause the
+    // blobs to render behind the parent's backgroundColor layer.
   },
   blob: {
     // position: "absolute", // handled inline

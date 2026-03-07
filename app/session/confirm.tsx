@@ -1,12 +1,6 @@
 import React, { useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  Pressable,
-  ScrollView,
-} from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   Typography,
@@ -26,6 +20,7 @@ import {
   CadenceId,
   DEMO_MODE,
   REPUTATION_LEVELS,
+  SOLO_COMPLETION_MULTIPLIER,
 } from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
 import {
@@ -299,41 +294,49 @@ export default function ConfirmSessionScreen() {
   const config = CADENCES[cadence];
 
   const handleConfirm = async () => {
-    if (currentPartner && user) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      startGroupSession(cadence, [
-        {
-          userId: user.id,
-          name: user.name,
-          venmoHandle: user.venmoHandle,
-          profileImage: user.profileImage,
-          reputation: user.reputation,
-        },
-        {
-          userId: currentPartner.oderId,
-          name: currentPartner.name,
-          venmoHandle: currentPartner.venmoHandle,
-          profileImage: currentPartner.profileImage,
-          reputation: currentPartner.reputation,
-        },
-      ]);
+    if (!user) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Start blocking selected apps via Screen Time API
-      if (isScreenTimeAvailable && getScreenTimeAuthStatus() === "approved") {
-        try {
-          await startBlocking();
-        } catch (error) {
-          console.warn("Failed to start Screen Time blocking:", error);
-        }
+    // Build participant list — solo if no partner selected, duo if partner present
+    const participants: Parameters<typeof startGroupSession>[1] = currentPartner
+      ? [
+          {
+            userId: user.id,
+            name: user.name,
+            venmoHandle: user.venmoHandle,
+            profileImage: user.profileImage,
+            reputation: user.reputation,
+          },
+          {
+            userId: currentPartner.oderId,
+            name: currentPartner.name,
+            venmoHandle: currentPartner.venmoHandle,
+            profileImage: currentPartner.profileImage,
+            reputation: currentPartner.reputation,
+          },
+        ]
+      : [
+          {
+            userId: user.id,
+            name: user.name,
+            venmoHandle: user.venmoHandle,
+            profileImage: user.profileImage,
+            reputation: user.reputation,
+          },
+        ];
+
+    startGroupSession(cadence, participants);
+
+    // Start blocking selected apps via Screen Time API
+    if (isScreenTimeAvailable && getScreenTimeAuthStatus() === "approved") {
+      try {
+        await startBlocking();
+      } catch (error) {
+        console.warn("Failed to start Screen Time blocking:", error);
       }
-
-      router.replace("/session/active");
-    } else if (!currentPartner) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      // No partner selected - go to partner selection
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      router.push("/session/partner" as any);
     }
+
+    router.replace("/session/active");
   };
 
   const getDurationText = () => {
@@ -373,13 +376,17 @@ export default function ConfirmSessionScreen() {
         {/* Title */}
         <View style={styles.titleSection}>
           <Text style={styles.title}>Ready to Focus?</Text>
-          <Text style={styles.subtitle}>Review your duo session details</Text>
+          <Text style={styles.subtitle}>
+            {currentPartner
+              ? "Review your duo session details"
+              : "Review your session details"}
+          </Text>
         </View>
 
         {/* Partner Card */}
-        {currentPartner ? (
+        {currentPartner && (
           <Card style={styles.partnerCard}>
-            <Text style={styles.partnerLabel}>Your Accountability Partner</Text>
+            <Text style={styles.partnerLabel}>With Partner</Text>
             <View style={styles.partnerInfo}>
               <View style={styles.partnerAvatar}>
                 <Text style={styles.partnerInitial}>
@@ -404,16 +411,6 @@ export default function ConfirmSessionScreen() {
               <Text style={styles.changePartnerText}>Change Partner</Text>
             </Pressable>
           </Card>
-        ) : (
-          <Card style={styles.noPartnerCard}>
-            <Text style={styles.noPartnerText}>No partner selected</Text>
-            <Button
-              title="Select Partner"
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={() => router.push("/session/partner" as any)}
-              variant="secondary"
-            />
-          </Card>
         )}
 
         {/* Session Details */}
@@ -431,29 +428,36 @@ export default function ConfirmSessionScreen() {
             <Text style={styles.detailLabel}>Your Stake</Text>
             <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
           </View>
+          {currentPartner && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Partner's Stake</Text>
+              <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
+            </View>
+          )}
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Partner's Stake</Text>
-            <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
+            <Text style={styles.detailLabel}>
+              {currentPartner ? "Your Potential Earn" : "Earn on Completion"}
+            </Text>
+            <Text style={[styles.stakeValue, { color: Colors.gain }]}>
+              {currentPartner
+                ? `Up to ${formatMoney(config.stake * 2)}`
+                : formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)}
+            </Text>
           </View>
         </Card>
 
         {/* How It Works */}
         <Card style={styles.howItWorksCard}>
-          <Text style={styles.howItWorksTitle}>How Duo Sessions Work</Text>
-          <View style={styles.outcomeRow}>
-            <View style={styles.outcomeDot} />
-            <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>Both complete:</Text> You
-              both keep your stakes
-            </Text>
-          </View>
+          <Text style={styles.howItWorksTitle}>How It Works</Text>
           <View style={styles.outcomeRow}>
             <View
               style={[styles.outcomeDot, { backgroundColor: Colors.gain }]}
             />
             <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>You win:</Text> Partner pays
-              you {formatMoney(config.stake)} via Venmo
+              <Text style={styles.outcomeHighlight}>Complete the session:</Text>{" "}
+              {currentPartner
+                ? `Earn your share of the pool — up to ${formatMoney(config.stake * 2)}`
+                : `Earn ${formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)} (${SOLO_COMPLETION_MULTIPLIER}× your stake)`}
             </Text>
           </View>
           <View style={styles.outcomeRow}>
@@ -461,28 +465,28 @@ export default function ConfirmSessionScreen() {
               style={[styles.outcomeDot, { backgroundColor: Colors.loss }]}
             />
             <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>You lose:</Text> You pay
-              partner {formatMoney(config.stake)} via Venmo
+              <Text style={styles.outcomeHighlight}>Surrender early:</Text> You
+              forfeit your {formatMoney(config.stake)} stake
             </Text>
           </View>
-          <View style={styles.outcomeRow}>
-            <View
-              style={[styles.outcomeDot, { backgroundColor: Colors.textMuted }]}
-            />
-            <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>Both fail:</Text> Both
-              stakes forfeited
-            </Text>
-          </View>
+          {currentPartner && (
+            <View style={styles.outcomeRow}>
+              <View style={styles.outcomeDot} />
+              <Text style={styles.outcomeText}>
+                <Text style={styles.outcomeHighlight}>Duo mode:</Text> If your
+                partner surrenders and you complete, you split their stake
+              </Text>
+            </View>
+          )}
         </Card>
 
         {/* Warning */}
         <Card style={styles.warningCard}>
           <Text style={styles.warningTitle}>Important</Text>
           <Text style={styles.warningText}>
-            Once you start, distracting apps will be blocked. If you surrender
-            early, you'll owe your partner {formatMoney(config.stake)}. Your
-            reputation score will be affected by payment reliability.
+            {currentPartner
+              ? `Once you start, distracting apps will be blocked. Surrendering forfeits your ${formatMoney(config.stake)} stake. Your reputation score is affected by payment reliability.`
+              : `Once you start, distracting apps will be blocked. Surrendering forfeits your ${formatMoney(config.stake)} stake — no refunds.`}
           </Text>
         </Card>
 
@@ -526,12 +530,9 @@ export default function ConfirmSessionScreen() {
       {/* Footer */}
       <View style={styles.footer}>
         <Button
-          title={
-            currentPartner ? "Start Duo Session" : "Select a Partner First"
-          }
+          title={currentPartner ? "Start Duo Session" : "Start Solo Session"}
           onPress={handleConfirm}
           size="large"
-          disabled={!currentPartner}
         />
         <Text style={styles.disclaimer}>
           Your {formatMoney(config.stake)} stake will be deducted immediately

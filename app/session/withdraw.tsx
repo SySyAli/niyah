@@ -3,14 +3,15 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Pressable,
-  TextInput,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -23,24 +24,39 @@ import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
 import { Button, Card, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
+import { useAuthStore } from "../../src/store/authStore";
 import { formatMoney } from "../../src/utils/format";
+import { requestWithdrawal } from "../../src/config/functions";
+
+type WithdrawMethod = "standard" | "instant";
+
+// Stripe instant payout fee: 1.5%, minimum $0.50 (in cents)
+function calcInstantFee(amountCents: number): number {
+  return Math.max(50, Math.round(amountCents * 0.015));
+}
 
 export default function WithdrawScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const { withdraw, balance } = useWalletStore();
+  const { user } = useAuthStore();
   const [inputValue, setInputValue] = useState("");
-  const [step, setStep] = useState<"amount" | "details">("amount");
-  const [venmoHandle, setVenmoHandle] = useState("");
+  const [step, setStep] = useState<"amount" | "method">("amount");
+  const [selectedMethod, setSelectedMethod] =
+    useState<WithdrawMethod>("standard");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const stripeStatus = user?.stripeAccountStatus ?? "none";
+  const hasActiveStripe = stripeStatus === "active";
 
   // Convert input string to cents
   const amountInCents = inputValue
     ? Math.round(parseFloat(inputValue) * 100)
     : 0;
   const displayAmount = inputValue ? `$${inputValue}` : "";
-  const isValidAmount = amountInCents >= 1000 && amountInCents <= balance; // Min $10
-  const canWithdraw = isValidAmount && venmoHandle.length > 1;
+  const isValidAmount = amountInCents >= 1000 && amountInCents <= balance;
+  const instantFee = calcInstantFee(amountInCents);
 
   const handleKeyPress = useCallback(
     (key: string) => {
@@ -51,23 +67,13 @@ export default function WithdrawScreen() {
           return;
         }
       }
-
-      // Limit to 2 decimal places
       if (inputValue.includes(".")) {
         const [, decimals] = inputValue.split(".");
         if (decimals && decimals.length >= 2) return;
       }
-
-      // Limit total length
       if (inputValue.replace(".", "").length >= 6) return;
-
-      // Don't exceed balance
       const newValue = inputValue + key;
-      const newAmountCents = Math.round(parseFloat(newValue) * 100);
-      if (newAmountCents > balance) {
-        return;
-      }
-
+      if (Math.round(parseFloat(newValue) * 100) > balance) return;
       setInputValue(newValue);
     },
     [inputValue, balance],
@@ -85,26 +91,53 @@ export default function WithdrawScreen() {
   const handleContinue = () => {
     if (!isValidAmount) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setStep("details");
+    setStep("method");
   };
 
-  const handleWithdraw = () => {
-    if (!canWithdraw) return;
+  // ─── Stripe Connect withdrawal ─────────────────────────────────────────────
+  const handleStripeWithdraw = async () => {
+    setIsLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const result = await requestWithdrawal(amountInCents, selectedMethod);
+      withdraw(amountInCents);
+      const methodLabel =
+        selectedMethod === "instant"
+          ? "within 30 minutes"
+          : "in 1–2 business days";
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        "Withdrawal Sent",
+        `${formatMoney(amountInCents)} is on its way to your bank — arrives ${methodLabel}.`,
+        [{ text: "Done", onPress: () => router.back() }],
+      );
+      void result; // transferId/payoutId logged server-side
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.";
+      Alert.alert("Withdrawal Failed", message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // ─── Venmo deep link withdrawal ───────────────────────────────────────────
+  // Opens Venmo with a REQUEST (not payment) to @niyah-focus for the withdrawal
+  // amount. Balance is NOT deducted here — Niyah manually confirms and processes
+  // each request within 24 hours, then the admin updates the user's balance.
+  const handleVenmoWithdraw = () => {
+    const venmoUrl = `venmo://paycharge?txn=request&recipients=niyah-focus&amount=${(amountInCents / 100).toFixed(2)}&note=NIYAH%20withdrawal`;
+    Linking.openURL(venmoUrl).catch(() =>
+      Linking.openURL("https://venmo.com/niyah-focus"),
+    );
+    // Do NOT deduct balance — payment not confirmed yet.
+    // Show confirmation and close the screen.
     Alert.alert(
-      "Confirm Withdrawal",
-      `Withdraw ${formatMoney(amountInCents)} to ${venmoHandle}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Confirm",
-          onPress: () => {
-            withdraw(amountInCents);
-            router.back();
-          },
-        },
-      ],
+      "Withdrawal Requested",
+      `We'll send you ${formatMoney(amountInCents)} via Venmo within 24 hours. Your balance will update once confirmed.`,
+      [{ text: "OK", onPress: () => router.back() }],
     );
   };
 
@@ -114,17 +147,16 @@ export default function WithdrawScreen() {
     if (amountInCents > balance) return "Exceeds available balance";
     return null;
   };
-
   const error = getAmountError();
 
-  if (step === "details") {
+  // ─── Method selection step ─────────────────────────────────────────────────
+  if (step === "method") {
     return (
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.content}
         >
-          {/* Header */}
           <View style={styles.header}>
             <Pressable
               onPress={() => setStep("amount")}
@@ -133,7 +165,7 @@ export default function WithdrawScreen() {
             >
               <Text style={styles.closeText}>Back</Text>
             </Pressable>
-            <Text style={styles.title}>Withdrawal Details</Text>
+            <Text style={styles.title}>Withdraw</Text>
             <View style={styles.closeButton} />
           </View>
 
@@ -142,7 +174,7 @@ export default function WithdrawScreen() {
             contentContainerStyle={styles.detailsContent}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Amount Summary */}
+            {/* Amount summary */}
             <View style={styles.summaryCard}>
               <Text style={styles.summaryLabel}>Withdrawal Amount</Text>
               <Text style={styles.summaryAmount}>
@@ -150,64 +182,169 @@ export default function WithdrawScreen() {
               </Text>
             </View>
 
-            {/* Venmo Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Venmo Username</Text>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputPrefix}>@</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={venmoHandle}
-                  onChangeText={setVenmoHandle}
-                  placeholder="username"
-                  placeholderTextColor={Colors.textMuted}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-            </View>
-
-            {/* Info Card */}
-            <Card style={styles.infoCard} variant="outlined">
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Processing time</Text>
-                <Text style={styles.infoValue}>Instant (demo)</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Fee</Text>
-                <Text style={styles.infoValueGreen}>Free</Text>
-              </View>
-              <View style={[styles.infoRow, styles.infoRowLast]}>
-                <Text style={styles.infoLabel}>You will receive</Text>
-                <Text style={styles.infoValueBold}>
-                  {formatMoney(amountInCents)}
+            {hasActiveStripe ? (
+              <>
+                <Text style={styles.sectionLabel}>
+                  How would you like to receive it?
                 </Text>
-              </View>
-            </Card>
-          </ScrollView>
 
-          {/* CTA */}
-          <View style={styles.footer}>
-            <Button
-              title={
-                canWithdraw
-                  ? `Withdraw ${formatMoney(amountInCents)}`
-                  : "Enter Venmo username"
-              }
-              onPress={handleWithdraw}
-              disabled={!canWithdraw}
-              size="large"
-            />
-          </View>
+                {/* Standard method card */}
+                <Pressable onPress={() => setSelectedMethod("standard")}>
+                  <View
+                    style={[
+                      styles.methodCard,
+                      selectedMethod === "standard" &&
+                        styles.methodCardSelected,
+                    ]}
+                  >
+                    <View style={styles.methodCardHeader}>
+                      <View style={styles.methodInfo}>
+                        <Text
+                          style={[
+                            styles.methodTitle,
+                            selectedMethod === "standard" &&
+                              styles.methodTitleSelected,
+                          ]}
+                        >
+                          Standard
+                        </Text>
+                        <Text style={styles.methodSubtitle}>
+                          1–2 business days
+                        </Text>
+                      </View>
+                      <View style={styles.methodBadge}>
+                        <Text style={styles.methodBadgeText}>Free</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.methodDescription}>
+                      Transferred to your linked bank account via ACH. No fees.
+                    </Text>
+                  </View>
+                </Pressable>
+
+                {/* Instant method card */}
+                <Pressable onPress={() => setSelectedMethod("instant")}>
+                  <View
+                    style={[
+                      styles.methodCard,
+                      selectedMethod === "instant" && styles.methodCardSelected,
+                    ]}
+                  >
+                    <View style={styles.methodCardHeader}>
+                      <View style={styles.methodInfo}>
+                        <Text
+                          style={[
+                            styles.methodTitle,
+                            selectedMethod === "instant" &&
+                              styles.methodTitleSelected,
+                          ]}
+                        >
+                          Instant
+                        </Text>
+                        <Text style={styles.methodSubtitle}>
+                          Within 30 minutes
+                        </Text>
+                      </View>
+                      <View
+                        style={[styles.methodBadge, styles.methodBadgeAccent]}
+                      >
+                        <Text style={styles.methodBadgeTextAccent}>
+                          {formatMoney(instantFee)} fee
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.methodDescription}>
+                      Instant bank deposit. Stripe charges 1.5% (min $0.50) —
+                      covered by NIYAH. You receive the full{" "}
+                      {formatMoney(amountInCents)}.
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <View style={styles.footer}>
+                  {isLoading ? (
+                    <View style={styles.loadingRow}>
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                      <Text style={styles.loadingText}>
+                        Processing withdrawal...
+                      </Text>
+                    </View>
+                  ) : (
+                    <Button
+                      title={`Withdraw ${formatMoney(amountInCents)} to Bank`}
+                      onPress={handleStripeWithdraw}
+                      size="large"
+                    />
+                  )}
+
+                  <Pressable
+                    onPress={handleVenmoWithdraw}
+                    style={styles.venmoLink}
+                  >
+                    <Text style={styles.venmoLinkText}>
+                      Send via Venmo instead
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              /* No active Stripe Connect account */
+              <>
+                <Card style={styles.setupCard} variant="outlined">
+                  <Text style={styles.setupTitle}>
+                    {stripeStatus === "pending"
+                      ? "Verification In Progress"
+                      : "Bank Payouts Not Set Up"}
+                  </Text>
+                  <Text style={styles.setupDescription}>
+                    {stripeStatus === "pending"
+                      ? "Your Stripe account is being verified. This usually takes a few minutes."
+                      : "Connect your bank account to withdraw directly. Secure, free, and instant setup."}
+                  </Text>
+                  <Button
+                    title={
+                      stripeStatus === "pending"
+                        ? "Check Status"
+                        : "Set Up Bank Payouts"
+                    }
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    onPress={() =>
+                      router.push("/session/stripe-onboarding" as any)
+                    }
+                    size="large"
+                    style={styles.setupButton}
+                  />
+                </Card>
+
+                <View style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                <Text style={styles.venmoSectionLabel}>Request via Venmo</Text>
+                <Text style={styles.venmoSectionDescription}>
+                  Opens Venmo to request {formatMoney(amountInCents)} from
+                  @niyah-focus. We'll approve and send it within 24 hours.
+                </Text>
+                <Button
+                  title="Open Venmo"
+                  onPress={handleVenmoWithdraw}
+                  size="large"
+                  variant="secondary"
+                />
+              </>
+            )}
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
 
+  // ─── Amount entry step ─────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {/* Header */}
         <View style={styles.header}>
           <Pressable
             onPress={() => router.back()}
@@ -226,23 +363,18 @@ export default function WithdrawScreen() {
           </Pressable>
         </View>
 
-        {/* Balance Info */}
         <View style={styles.balanceInfo}>
           <Text style={styles.balanceLabel}>Available Balance</Text>
           <Text style={styles.balanceAmount}>{formatMoney(balance)}</Text>
         </View>
 
-        {/* Amount Display */}
         <AmountDisplay
           amount={displayAmount}
           label="Enter amount"
           placeholder="$0"
         />
-
-        {/* Error Message */}
         {error && <Text style={styles.errorText}>{error}</Text>}
 
-        {/* NumPad */}
         <View style={styles.numPadContainer}>
           <NumPad
             onKeyPress={handleKeyPress}
@@ -251,7 +383,6 @@ export default function WithdrawScreen() {
           />
         </View>
 
-        {/* CTA */}
         <View style={styles.footer}>
           <Button
             title={isValidAmount ? "Continue" : "Enter amount (min $10)"}
@@ -267,20 +398,13 @@ export default function WithdrawScreen() {
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: Spacing.lg,
-    },
-    scrollContent: {
-      flex: 1,
-    },
+    container: { flex: 1, backgroundColor: Colors.background },
+    content: { flex: 1, paddingHorizontal: Spacing.lg },
+    scrollContent: { flex: 1 },
     detailsContent: {
       paddingTop: Spacing.lg,
       gap: Spacing.lg,
+      paddingBottom: Spacing.xl,
     },
     header: {
       flexDirection: "row",
@@ -288,18 +412,13 @@ const makeStyles = (Colors: ThemeColors) =>
       justifyContent: "space-between",
       paddingVertical: Spacing.md,
     },
-    closeButton: {
-      width: 60,
-    },
+    closeButton: { width: 60 },
     closeText: {
       color: Colors.textSecondary,
       fontSize: Typography.bodyLarge,
       ...Font.medium,
     },
-    maxButton: {
-      width: 60,
-      alignItems: "flex-end",
-    },
+    maxButton: { width: 60, alignItems: "flex-end" },
     maxText: {
       color: Colors.primary,
       fontSize: Typography.bodyLarge,
@@ -310,10 +429,7 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.semibold,
       color: Colors.text,
     },
-    balanceInfo: {
-      alignItems: "center",
-      paddingVertical: Spacing.md,
-    },
+    balanceInfo: { alignItems: "center", paddingVertical: Spacing.md },
     balanceLabel: {
       fontSize: Typography.labelMedium,
       color: Colors.textTertiary,
@@ -331,14 +447,9 @@ const makeStyles = (Colors: ThemeColors) =>
       marginTop: -Spacing.md,
       marginBottom: Spacing.sm,
     },
-    numPadContainer: {
-      flex: 1,
-      justifyContent: "center",
-    },
-    footer: {
-      paddingVertical: Spacing.lg,
-    },
-    // Details step styles
+    numPadContainer: { flex: 1, justifyContent: "center" },
+    footer: { paddingVertical: Spacing.lg, gap: Spacing.md },
+    // Summary card
     summaryCard: {
       alignItems: "center",
       paddingVertical: Spacing.xl,
@@ -355,65 +466,107 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.bold,
       color: Colors.text,
     },
-    inputGroup: {
-      gap: Spacing.sm,
-    },
-    inputLabel: {
+    // Method selection
+    sectionLabel: {
       fontSize: Typography.labelLarge,
-      ...Font.medium,
-      color: Colors.text,
-    },
-    inputContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: Colors.backgroundSecondary,
-      borderRadius: Radius.md,
-      borderWidth: 1,
-      borderColor: Colors.border,
-      paddingHorizontal: Spacing.md,
-    },
-    inputPrefix: {
-      fontSize: Typography.titleMedium,
+      ...Font.semibold,
       color: Colors.textSecondary,
-      marginRight: Spacing.xs,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
     },
-    textInput: {
-      flex: 1,
-      fontSize: Typography.titleMedium,
-      color: Colors.text,
-      paddingVertical: Spacing.md,
-    },
-    infoCard: {
+    methodCard: {
+      padding: Spacing.md,
+      borderRadius: Radius.lg,
+      backgroundColor: Colors.backgroundSecondary,
+      borderWidth: 2,
+      borderColor: Colors.border,
       gap: Spacing.sm,
     },
-    infoRow: {
+    methodCardSelected: {
+      borderColor: Colors.primary,
+      backgroundColor: Colors.primaryMuted,
+    },
+    methodCardHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "center",
-      paddingVertical: Spacing.xs,
-      borderBottomWidth: 1,
-      borderBottomColor: Colors.border,
+      alignItems: "flex-start",
     },
-    infoRowLast: {
-      borderBottomWidth: 0,
-      paddingTop: Spacing.sm,
+    methodInfo: { gap: 2 },
+    methodTitle: {
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+      color: Colors.text,
     },
-    infoLabel: {
-      fontSize: Typography.bodyMedium,
+    methodTitleSelected: { color: Colors.primary },
+    methodSubtitle: {
+      fontSize: Typography.bodySmall,
       color: Colors.textSecondary,
     },
-    infoValue: {
-      fontSize: Typography.bodyMedium,
-      color: Colors.text,
+    methodBadge: {
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs / 2,
+      borderRadius: Radius.full,
+      backgroundColor: Colors.gainLight,
     },
-    infoValueGreen: {
-      fontSize: Typography.bodyMedium,
+    methodBadgeText: {
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
       color: Colors.gain,
+    },
+    methodBadgeAccent: { backgroundColor: Colors.primaryMuted },
+    methodBadgeTextAccent: {
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
+      color: Colors.primary,
+    },
+    methodDescription: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      lineHeight: Typography.bodySmall * 1.5,
+    },
+    loadingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing.sm,
+      paddingVertical: Spacing.lg,
+    },
+    loadingText: {
+      color: Colors.textSecondary,
+      fontSize: Typography.bodyMedium,
       ...Font.medium,
     },
-    infoValueBold: {
-      fontSize: Typography.titleMedium,
-      color: Colors.text,
+    // Venmo link
+    venmoLink: { alignItems: "center", paddingVertical: Spacing.sm },
+    venmoLinkText: {
+      color: Colors.textSecondary,
+      fontSize: Typography.bodyMedium,
+      ...Font.medium,
+    },
+    // No-Connect state
+    setupCard: { gap: Spacing.md },
+    setupTitle: {
+      fontSize: Typography.titleSmall,
       ...Font.semibold,
+      color: Colors.text,
+    },
+    setupDescription: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      lineHeight: Typography.bodyMedium * 1.5,
+    },
+    setupButton: { marginTop: Spacing.sm },
+    dividerRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
+    dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+    dividerText: { color: Colors.textMuted, fontSize: Typography.labelMedium },
+    venmoSectionLabel: {
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    venmoSectionDescription: {
+      fontSize: Typography.bodyMedium,
+      color: Colors.textSecondary,
+      lineHeight: Typography.bodyMedium * 1.5,
     },
   });

@@ -1,4 +1,5 @@
 import { SessionParticipant, SessionTransfer } from "../types";
+import { SOLO_COMPLETION_MULTIPLIER } from "../constants/config";
 
 export interface ParticipantResult {
   userId: string;
@@ -21,18 +22,50 @@ export interface TransferDraft {
 }
 
 /**
- * PLACEHOLDER — even-split payout.
- * Every participant receives their exact stake back regardless of outcome.
- * Net effect: no transfers are required.
+ * Calculate payouts for a completed session.
  *
- * Replace with the real algorithm when available. The signature must stay
- * the same; only the distribution logic inside changes.
+ * Solo (1 participant):
+ *   NIYAH is the counterparty. Complete → stake × SOLO_COMPLETION_MULTIPLIER.
+ *   Surrender → 0 (NIYAH keeps the stake).
+ *
+ * Group (N > 1 participants):
+ *   Peer-to-peer pool. NIYAH takes no cut.
+ *   Completers split the entire pool (all stakes) equally.
+ *   Surrenderers get 0.
+ *   Edge case: if all surrender, nobody gets anything.
+ *   Edge case: if all complete, each gets their stake back (net $0 change).
  */
 export const calculatePayouts = (
   stakePerParticipant: number,
   results: ParticipantResult[],
-): ParticipantPayout[] =>
-  results.map((r) => ({ userId: r.userId, payout: stakePerParticipant }));
+): ParticipantPayout[] => {
+  const isSolo = results.length === 1;
+
+  if (isSolo) {
+    return results.map((r) => ({
+      userId: r.userId,
+      payout: r.completed
+        ? stakePerParticipant * SOLO_COMPLETION_MULTIPLIER
+        : 0,
+    }));
+  }
+
+  // Group: completers split the full pool
+  const completers = results.filter((r) => r.completed);
+  if (completers.length === 0) {
+    // All surrendered — nobody gets anything (NIYAH keeps the pool)
+    return results.map((r) => ({ userId: r.userId, payout: 0 }));
+  }
+
+  const totalPool = results.length * stakePerParticipant;
+  // Floor to avoid fractional cents; any remainder stays with NIYAH
+  const payoutPerCompleter = Math.floor(totalPool / completers.length);
+
+  return results.map((r) => ({
+    userId: r.userId,
+    payout: r.completed ? payoutPerCompleter : 0,
+  }));
+};
 
 /**
  * Derive the transfers needed to settle the pool given each participant's

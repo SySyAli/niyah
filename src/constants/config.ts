@@ -1,6 +1,11 @@
 // Session configurations
-// stickK model: stake = stake (no 2x payouts, no gambling)
-// Duo sessions: loser pays winner their stake
+// Solo sessions: NIYAH is the counterparty. Complete = earn SOLO_COMPLETION_MULTIPLIER × stake.
+// Surrender = lose stake (NIYAH keeps it). Expected to profit via law of large numbers.
+// Group sessions: peer-to-peer pool. Completers split surrenderers' stakes. NIYAH takes no cut.
+
+// Payout multiplier for solo sessions on completion (demo value; real value set by risk engine).
+// Stake $5, complete → earn $10. NIYAH profits if >50% of users surrender.
+export const SOLO_COMPLETION_MULTIPLIER = 2;
 export const CADENCES = {
   daily: {
     id: "daily",

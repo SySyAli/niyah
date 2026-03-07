@@ -9,6 +9,7 @@ import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useCountdown } from "../../src/hooks/useCountdown";
 import { formatMoney } from "../../src/utils/format";
+import { SOLO_COMPLETION_MULTIPLIER } from "../../src/constants/config";
 import {
   stopBlocking,
   onShieldViolation,
@@ -210,8 +211,8 @@ export default function ActiveSessionScreen() {
               completed: true,
             })),
           );
+          router.replace("/session/complete");
         }
-        router.replace("/session/complete");
       }, 1000);
     },
   });
@@ -235,7 +236,7 @@ export default function ActiveSessionScreen() {
       }
     } else if (!isNavigatingAwayRef.current) {
       // No active session and we didn't navigate away ourselves — stale route.
-      router.replace("/(tabs)");
+      router.dismissAll();
     }
   }, [activeGroupSession, isPaused, router, start, stop, totalPausedMs]);
 
@@ -319,9 +320,14 @@ export default function ActiveSessionScreen() {
 
         {/* Payout Card */}
         <Card style={styles.payoutCard}>
-          <Text style={styles.payoutLabel}>Complete to keep</Text>
+          <Text style={styles.payoutLabel}>Complete to earn</Text>
           <Text style={styles.payoutAmount}>
-            {formatMoney(activeGroupSession.stakePerParticipant)}
+            {activeGroupSession.participants.length <= 1
+              ? formatMoney(
+                  activeGroupSession.stakePerParticipant *
+                    SOLO_COMPLETION_MULTIPLIER,
+                )
+              : `Up to ${formatMoney(activeGroupSession.poolTotal)}`}
           </Text>
         </Card>
 

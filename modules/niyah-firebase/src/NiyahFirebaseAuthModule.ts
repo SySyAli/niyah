@@ -21,6 +21,8 @@ declare class NiyahFirebaseAuthModuleClass extends NativeModule<NiyahFirebaseAut
   signOut(): Promise<void>;
 
   getCurrentUser(): FirebaseUser | null;
+
+  getIdToken(): Promise<string | null>;
 }
 
 export default requireNativeModule<NiyahFirebaseAuthModuleClass>(

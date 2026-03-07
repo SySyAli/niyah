@@ -4,7 +4,9 @@ import { SymbolView } from "expo-symbols";
 import type { SFSymbol } from "sf-symbols-typescript";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
+import { useThemeStore } from "../store/themeStore";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -72,7 +74,7 @@ const TABS: TabConfig[] = [
 // Constants
 // ────────────────────────────────────────────────────────────────────
 
-const TAB_BAR_HEIGHT = 85;
+export const TAB_BAR_HEIGHT = 85;
 const LABEL_HEIGHT = 20;
 const ICON_SIZE = 24;
 const PILL_WIDTH = 64;
@@ -260,6 +262,7 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
 }) => {
   const Colors = useColors();
   const insets = useSafeAreaInsets();
+  const isDark = useThemeStore((s) => s.theme) === "dark";
   const { scrollY } = useScrollContext();
 
   // Track whether the tab bar should be minimized
@@ -314,9 +317,19 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
       StyleSheet.create({
         wrapper: {
           position: "relative",
+          overflow: "hidden",
+        },
+        blur: {
+          ...StyleSheet.absoluteFillObject,
+        },
+        tint: {
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: isDark
+            ? "rgba(26, 23, 20, 0.55)"
+            : "rgba(252, 249, 244, 0.55)",
         },
         accessoryContainer: {
-          backgroundColor: Colors.backgroundCard,
+          backgroundColor: "transparent",
           borderTopColor: Colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,
           paddingHorizontal: Spacing.md,
@@ -324,20 +337,31 @@ export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
         },
         tabBar: {
           flexDirection: "row",
-          backgroundColor: Colors.backgroundElevated,
-          borderTopColor: Colors.border,
-          borderTopWidth: 1,
+          backgroundColor: "transparent",
+          borderTopColor: isDark
+            ? "rgba(255,255,255,0.08)"
+            : "rgba(0,0,0,0.08)",
+          borderTopWidth: StyleSheet.hairlineWidth,
           height: TAB_BAR_HEIGHT,
           paddingTop: Spacing.sm,
           alignItems: "flex-start",
           justifyContent: "space-around",
         },
       }),
-    [Colors],
+    [Colors, isDark],
   );
 
   return (
     <View style={styles.wrapper}>
+      {/* Frosted glass background */}
+      <BlurView
+        intensity={isDark ? 70 : 50}
+        tint={isDark ? "dark" : "light"}
+        style={styles.blur}
+      />
+      {/* Subtle color tint on top of blur */}
+      <View style={styles.tint} />
+
       {/* Accessory slot */}
       {accessory && (
         <Animated.View

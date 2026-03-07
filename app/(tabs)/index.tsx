@@ -4,11 +4,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Pressable,
   Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { useRouter } from "expo-router";
 import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
@@ -177,13 +178,18 @@ export default function DashboardScreen() {
           flex: 1,
           backgroundColor: Colors.background,
         },
+        safeArea: {
+          flex: 1,
+        },
         scrollView: {
           flex: 1,
         },
         scrollContent: {
-          padding: Spacing.lg,
+          paddingHorizontal: Spacing.lg,
+          paddingTop: Spacing.lg,
           paddingBottom: Spacing.xxl,
         },
+
         header: {
           flexDirection: "row",
           justifyContent: "space-between",
@@ -407,220 +413,236 @@ export default function DashboardScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Blurry blobs background */}
+    <View style={styles.container}>
+      {/* Full-screen blob background sits OUTSIDE SafeAreaView so it fills all
+          the way to the screen edges. The green blob (bottom: -30) ends up
+          directly behind the tab bar, giving the UITabBar liquid-glass blur
+          something colorful to refract. */}
       <BlobsBackground />
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>Welcome back</Text>
-            <Text style={styles.name}>{user?.name || "there"}</Text>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.greeting}>Welcome back</Text>
+              <Text style={styles.name}>{user?.name || "there"}</Text>
+            </View>
+            <PeachAvatar
+              size={56}
+              onPress={() => router.push("/(tabs)/profile")}
+            />
           </View>
-          <PeachAvatar
-            size={56}
-            onPress={() => router.push("/(tabs)/profile")}
-          />
-        </View>
 
-        {/* Balance Card */}
-        <Card style={styles.balanceCard} variant="elevated">
-          <Text style={styles.balanceLabel}>Total Balance</Text>
-          <Balance amount={balance} size="display" />
-          <View style={styles.balanceChange}>
-            <Text
-              style={[
-                styles.changeText,
-                totalEarnings >= 0
-                  ? styles.changePositive
-                  : styles.changeNegative,
-              ]}
+          {/* Balance Card */}
+          <Card style={styles.balanceCard} variant="elevated">
+            <Text style={styles.balanceLabel}>Total Balance</Text>
+            <Balance amount={balance} size="display" />
+            <View style={styles.balanceChange}>
+              <Text
+                style={[
+                  styles.changeText,
+                  totalEarnings >= 0
+                    ? styles.changePositive
+                    : styles.changeNegative,
+                ]}
+              >
+                {totalEarnings >= 0 ? "+" : ""}
+                {formatMoney(totalEarnings)} all time
+              </Text>
+            </View>
+            <View style={styles.balanceActions}>
+              <ActionButton
+                label="Add Funds"
+                onPress={() => router.push("/session/deposit")}
+              />
+              <ActionButton
+                label="Withdraw"
+                onPress={() => router.push("/session/withdraw")}
+                variant="secondary"
+              />
+            </View>
+          </Card>
+
+          {/* Active Session Banner */}
+          {activeGroupSession && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/session/active");
+              }}
             >
-              {totalEarnings >= 0 ? "+" : ""}
-              {formatMoney(totalEarnings)} all time
-            </Text>
-          </View>
-          <View style={styles.balanceActions}>
-            <ActionButton
-              label="Add Funds"
-              onPress={() => router.push("/session/deposit")}
-            />
-            <ActionButton
-              label="Withdraw"
-              onPress={() => router.push("/session/withdraw")}
-              variant="secondary"
-            />
-          </View>
-        </Card>
+              <Card style={styles.activeSessionCard}>
+                <View style={styles.activeSessionIndicator} />
+                <View style={styles.activeSessionContent}>
+                  <Text style={styles.activeSessionLabel}>
+                    {activeGroupSession.participants.length <= 1
+                      ? "SESSION IN PROGRESS"
+                      : "DUO SESSION IN PROGRESS"}
+                  </Text>
+                  <Text style={styles.activeSessionText}>
+                    {activeGroupSession.cadence.charAt(0).toUpperCase() +
+                      activeGroupSession.cadence.slice(1)}{" "}
+                    {activeGroupSession.participants.length <= 1
+                      ? "Focus Session"
+                      : `Focus with ${activeGroupSession.participants.find((p) => p.userId !== user?.id)?.name ?? "Partner"}`}
+                  </Text>
+                  <Text style={styles.activeSessionPayout}>
+                    Stake: {formatMoney(activeGroupSession.stakePerParticipant)}
+                  </Text>
+                </View>
+                <Text style={styles.activeSessionArrow}>View</Text>
+              </Card>
+            </Pressable>
+          )}
 
-        {/* Active Session Banner */}
-        {activeGroupSession && (
+          {/* Quick Start CTA */}
+          {!activeGroupSession && (
+            <Card style={styles.ctaCard}>
+              <Text style={styles.ctaTitle}>Ready to focus?</Text>
+              <Text style={styles.ctaSubtitle}>
+                Start a solo or group session with real financial stakes
+              </Text>
+              <Button
+                title="Start Session"
+                onPress={() => router.push("/session/select")}
+                size="large"
+              />
+            </Card>
+          )}
+
+          {/* Invite Friends Card */}
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push("/session/active");
+              router.push("/invite" as never);
             }}
+            style={styles.inviteCard}
           >
-            <Card style={styles.activeSessionCard}>
-              <View style={styles.activeSessionIndicator} />
-              <View style={styles.activeSessionContent}>
-                <Text style={styles.activeSessionLabel}>
-                  DUO SESSION IN PROGRESS
-                </Text>
-                <Text style={styles.activeSessionText}>
-                  {activeGroupSession.cadence.charAt(0).toUpperCase() +
-                    activeGroupSession.cadence.slice(1)}{" "}
-                  Focus with{" "}
-                  {activeGroupSession.participants.find(
-                    (p) => p.userId !== user?.id,
-                  )?.name ?? "Partner"}
-                </Text>
-                <Text style={styles.activeSessionPayout}>
-                  Stake: {formatMoney(activeGroupSession.stakePerParticipant)}
+            <View style={styles.inviteCardContent}>
+              <View>
+                <Text style={styles.inviteCardTitle}>Invite Friends</Text>
+                <Text style={styles.inviteCardSubtitle}>
+                  Earn +10 social credit per referral
                 </Text>
               </View>
-              <Text style={styles.activeSessionArrow}>View</Text>
-            </Card>
+              <View style={styles.inviteBadge}>
+                <Text style={styles.inviteBadgeText}>+10</Text>
+              </View>
+            </View>
           </Pressable>
-        )}
 
-        {/* Quick Start CTA */}
-        {!activeGroupSession && (
-          <Card style={styles.ctaCard}>
-            <Text style={styles.ctaTitle}>Ready to focus?</Text>
-            <Text style={styles.ctaSubtitle}>
-              Start a duo session with your accountability partner
-            </Text>
-            <Button
-              title="Start Duo Session"
-              onPress={() => router.push("/session/select")}
-              size="large"
-            />
-          </Card>
-        )}
-
-        {/* Invite Friends Card */}
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push("/invite" as never);
-          }}
-          style={styles.inviteCard}
-        >
-          <View style={styles.inviteCardContent}>
-            <View>
-              <Text style={styles.inviteCardTitle}>Invite Friends</Text>
-              <Text style={styles.inviteCardSubtitle}>
-                Earn +10 social credit per referral
-              </Text>
-            </View>
-            <View style={styles.inviteBadge}>
-              <Text style={styles.inviteBadgeText}>+10</Text>
+          {/* Stats Grid */}
+          <View style={styles.statsSection}>
+            <Text style={styles.sectionTitle}>Your Stats</Text>
+            <View style={styles.statsGrid}>
+              <StatCard
+                value={user?.currentStreak || 0}
+                label="Current Streak"
+                color={user?.currentStreak ? Colors.primary : undefined}
+              />
+              <StatCard
+                value={formatMoney(totalEarnings, false)}
+                label="Total Earned"
+                color={totalEarnings > 0 ? Colors.gain : undefined}
+              />
+              <StatCard value={`${completionRate}%`} label="Success Rate" />
+              <StatCard value={user?.longestStreak || 0} label="Best Streak" />
             </View>
           </View>
-        </Pressable>
 
-        {/* Stats Grid */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Your Stats</Text>
-          <View style={styles.statsGrid}>
-            <StatCard
-              value={user?.currentStreak || 0}
-              label="Current Streak"
-              color={user?.currentStreak ? Colors.primary : undefined}
-            />
-            <StatCard
-              value={formatMoney(totalEarnings, false)}
-              label="Total Earned"
-              color={totalEarnings > 0 ? Colors.gain : undefined}
-            />
-            <StatCard value={`${completionRate}%`} label="Success Rate" />
-            <StatCard value={user?.longestStreak || 0} label="Best Streak" />
+          {/* Money Plant Section */}
+          <View style={styles.plantSection}>
+            <Text style={styles.sectionTitle}>Your Money Plant</Text>
+            <Card style={styles.plantCard}>
+              <MoneyPlant
+                partners={partners}
+                totalLeaves={totalLeaves}
+                growthStage={growthStage}
+                totalEarned={totalEarnings}
+              />
+            </Card>
           </View>
-        </View>
 
-        {/* Money Plant Section */}
-        <View style={styles.plantSection}>
-          <Text style={styles.sectionTitle}>Your Money Plant</Text>
-          <Card style={styles.plantCard}>
-            <MoneyPlant
-              partners={partners}
-              totalLeaves={totalLeaves}
-              growthStage={growthStage}
-              totalEarned={totalEarnings}
-            />
-          </Card>
-        </View>
-
-        {/* Recent Activity */}
-        {groupSessionHistory.length > 0 && (
-          <View style={styles.recentSection}>
-            <Text style={styles.sectionTitle}>Recent Duo Sessions</Text>
-            {groupSessionHistory.slice(0, 3).map((session) => {
-              const me = session.participants.find(
-                (p) => p.userId === user?.id,
-              );
-              const sessionPartner = session.participants.find(
-                (p) => p.userId !== user?.id,
-              );
-              const inbound = session.transfers.find(
-                (t) => t.toUserId === user?.id && t.status !== "none",
-              );
-              const didComplete = me?.completed ?? false;
-              return (
-                <Card key={session.id} style={styles.activityCard}>
-                  <View style={styles.activityRow}>
-                    <View style={styles.activityInfo}>
-                      <Text style={styles.activityTitle}>
-                        {session.cadence.charAt(0).toUpperCase() +
-                          session.cadence.slice(1)}{" "}
-                        with {sessionPartner?.name ?? "Partner"}
-                      </Text>
-                      <Text style={styles.activityDate}>
-                        {session.completedAt
-                          ? formatRelativeTime(session.completedAt)
-                          : "In progress"}
-                      </Text>
+          {/* Recent Activity */}
+          {groupSessionHistory.length > 0 && (
+            <View style={styles.recentSection}>
+              <Text style={styles.sectionTitle}>Recent Sessions</Text>
+              {groupSessionHistory.slice(0, 3).map((session) => {
+                const me = session.participants.find(
+                  (p) => p.userId === user?.id,
+                );
+                const sessionPartner = session.participants.find(
+                  (p) => p.userId !== user?.id,
+                );
+                const inbound = session.transfers.find(
+                  (t) => t.toUserId === user?.id && t.status !== "none",
+                );
+                const didComplete = me?.completed ?? false;
+                const isSolo = session.participants.length <= 1;
+                return (
+                  <Card key={session.id} style={styles.activityCard}>
+                    <View style={styles.activityRow}>
+                      <View style={styles.activityInfo}>
+                        <Text style={styles.activityTitle}>
+                          {session.cadence.charAt(0).toUpperCase() +
+                            session.cadence.slice(1)}{" "}
+                          {isSolo
+                            ? "Solo Session"
+                            : `with ${sessionPartner?.name ?? "Partner"}`}
+                        </Text>
+                        <Text style={styles.activityDate}>
+                          {session.completedAt
+                            ? formatRelativeTime(session.completedAt)
+                            : "In progress"}
+                        </Text>
+                      </View>
+                      <View style={styles.activityResult}>
+                        {didComplete ? (
+                          <>
+                            <Text style={styles.activityEarned}>
+                              {inbound
+                                ? `Won ${formatMoney(inbound.amount)}`
+                                : isSolo
+                                  ? `${formatMoney(me?.stakeAmount ?? session.stakePerParticipant)} returned`
+                                  : "Stake kept"}
+                            </Text>
+                            <View style={styles.statusBadge}>
+                              <Text style={styles.statusSuccess}>
+                                Completed
+                              </Text>
+                            </View>
+                          </>
+                        ) : (
+                          <>
+                            <Text style={styles.activityLost}>
+                              -{formatMoney(session.stakePerParticipant)}
+                            </Text>
+                            <View
+                              style={[
+                                styles.statusBadge,
+                                styles.statusBadgeFailed,
+                              ]}
+                            >
+                              <Text style={styles.statusFailed}>
+                                Surrendered
+                              </Text>
+                            </View>
+                          </>
+                        )}
+                      </View>
                     </View>
-                    <View style={styles.activityResult}>
-                      {didComplete ? (
-                        <>
-                          <Text style={styles.activityEarned}>
-                            {inbound
-                              ? `Won ${formatMoney(inbound.amount)}`
-                              : "Stake kept"}
-                          </Text>
-                          <View style={styles.statusBadge}>
-                            <Text style={styles.statusSuccess}>Completed</Text>
-                          </View>
-                        </>
-                      ) : (
-                        <>
-                          <Text style={styles.activityLost}>
-                            -{formatMoney(session.stakePerParticipant)}
-                          </Text>
-                          <View
-                            style={[
-                              styles.statusBadge,
-                              styles.statusBadgeFailed,
-                            ]}
-                          >
-                            <Text style={styles.statusFailed}>Surrendered</Text>
-                          </View>
-                        </>
-                      )}
-                    </View>
-                  </View>
-                </Card>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+                  </Card>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }

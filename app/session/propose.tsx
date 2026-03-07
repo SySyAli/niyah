@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Pressable,
   TextInput,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -162,6 +162,7 @@ const makeStyles = (Colors: ThemeColors) =>
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.sm,
       fontSize: Typography.bodyMedium,
+      letterSpacing: 0,
       ...Font.regular,
       color: Colors.text,
     },

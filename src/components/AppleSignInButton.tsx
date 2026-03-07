@@ -74,11 +74,6 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
     }
   };
 
-  // Apple Sign-In is only available on iOS
-  if (Platform.OS !== "ios") {
-    return null;
-  }
-
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -106,6 +101,11 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
       }),
     [Colors],
   );
+
+  // Apple Sign-In is only available on iOS
+  if (Platform.OS !== "ios") {
+    return null;
+  }
 
   if (isLoading) {
     return (

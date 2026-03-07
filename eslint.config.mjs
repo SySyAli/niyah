@@ -15,6 +15,7 @@ export default tseslint.config(
       "dist/",
       "coverage/",
       "plugins/",
+      "functions/",
       "*.config.js",
       "*.config.mjs",
       "*.config.ts",
@@ -69,6 +70,7 @@ export default tseslint.config(
     files: [
       "**/*.test.{ts,tsx}",
       "**/*.spec.{ts,tsx}",
+      "**/jest.setup.ts",
       "**/vitest.setup.ts",
       "**/__mocks__/**",
       "**/test-declarations.d.ts",
@@ -78,6 +80,28 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-function-type": "off",
       "no-console": "off",
       "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+
+  // Node.js scripts - enable Node globals
+  {
+    files: ["scripts/**/*.js"],
+    languageOptions: {
+      globals: {
+        require: "readonly",
+        module: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        process: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        console: "readonly",
+      },
+    },
+    rules: {
+      "no-console": "off",
     },
   },
 

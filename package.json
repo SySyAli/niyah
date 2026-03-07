@@ -26,7 +26,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"app/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"app/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "ci": "pnpm lint && pnpm typecheck && pnpm test"
+    "ci": "pnpm lint && pnpm typecheck && pnpm test",
+    "prepare": "husky"
   },
   "dependencies": {
     "@bottom-tabs/react-navigation": "^1.1.0",
@@ -68,19 +69,20 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
-    "eas": "^0.1.0",
-    "eas-cli": "^18.1.0",
     "@eslint/js": "^9.39.4",
     "@testing-library/react-native": "^12.9.0",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.1.17",
     "babel-preset-expo": "^54.0.10",
+    "eas": "^0.1.0",
+    "eas-cli": "^18.1.0",
     "eslint": "^9.39.4",
     "eslint-config-expo": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "husky": "^9.1.7",
     "jest-expo": "^54.0.17",
     "prettier": "^3.8.1",
     "react-native-web": "~0.20.0",

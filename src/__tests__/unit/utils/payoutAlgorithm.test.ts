@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import {
   calculatePayouts,
   calculateTransfers,
@@ -20,7 +19,7 @@ const makeParticipant = (
 // ─── calculatePayouts ────────────────────────────────────────────────────────
 
 describe("calculatePayouts", () => {
-  it("returns stake for every participant (even-split placeholder)", () => {
+  it("completer wins opponent's stake (2-person: 1 complete, 1 surrender)", () => {
     const results: ParticipantResult[] = [
       { userId: "a", completed: true },
       { userId: "b", completed: false },
@@ -28,17 +27,19 @@ describe("calculatePayouts", () => {
     const payouts = calculatePayouts(500, results);
 
     expect(payouts).toHaveLength(2);
-    expect(payouts.find((p) => p.userId === "a")?.payout).toBe(500);
-    expect(payouts.find((p) => p.userId === "b")?.payout).toBe(500);
+    // Pool = 2 × 500 = 1000; only A completed → A gets all 1000, B gets 0
+    expect(payouts.find((p) => p.userId === "a")?.payout).toBe(1000);
+    expect(payouts.find((p) => p.userId === "b")?.payout).toBe(0);
   });
 
-  it("works with a single participant", () => {
+  it("solo complete returns stake × SOLO_COMPLETION_MULTIPLIER (2×)", () => {
     const payouts = calculatePayouts(1000, [{ userId: "a", completed: true }]);
     expect(payouts).toHaveLength(1);
-    expect(payouts[0].payout).toBe(1000);
+    // SOLO_COMPLETION_MULTIPLIER = 2, so 1000 × 2 = 2000
+    expect(payouts[0].payout).toBe(2000);
   });
 
-  it("works with three participants", () => {
+  it("two of three complete: completers split full pool, surrenderer gets 0", () => {
     const results: ParticipantResult[] = [
       { userId: "a", completed: true },
       { userId: "b", completed: true },
@@ -46,10 +47,13 @@ describe("calculatePayouts", () => {
     ];
     const payouts = calculatePayouts(2500, results);
     expect(payouts).toHaveLength(3);
-    payouts.forEach((p) => expect(p.payout).toBe(2500));
+    // Pool = 3 × 2500 = 7500; 2 completers → floor(7500/2) = 3750 each
+    expect(payouts.find((p) => p.userId === "a")?.payout).toBe(3750);
+    expect(payouts.find((p) => p.userId === "b")?.payout).toBe(3750);
+    expect(payouts.find((p) => p.userId === "c")?.payout).toBe(0);
   });
 
-  it("completed flag does not affect payout in even-split placeholder", () => {
+  it("completed flag determines payout: surrenderers get 0, completers split pool", () => {
     const stake = 500;
     const allFail = calculatePayouts(stake, [
       { userId: "a", completed: false },
@@ -59,7 +63,10 @@ describe("calculatePayouts", () => {
       { userId: "a", completed: true },
       { userId: "b", completed: true },
     ]);
-    expect(allFail.map((p) => p.payout)).toEqual(allWin.map((p) => p.payout));
+    // All fail → everyone gets 0 (NIYAH keeps pool)
+    expect(allFail.map((p) => p.payout)).toEqual([0, 0]);
+    // All win → pool split evenly = stake each (net 0)
+    expect(allWin.map((p) => p.payout)).toEqual([500, 500]);
   });
 
   it("preserves userId in output", () => {

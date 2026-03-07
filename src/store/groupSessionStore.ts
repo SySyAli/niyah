@@ -181,13 +181,12 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
           totalEarnings: (authStore.user?.totalEarnings ?? 0) + netProfit,
         });
       } else {
-        // Surrendered: stake was already deducted, record the loss
+        // Surrendered: stake was already deducted at session start.
+        // totalEarnings is only updated on successful completions (consistent
+        // with solo session behaviour in sessionStore.ts).
         authStore.updateUser({
           currentStreak: 0,
           totalSessions: (authStore.user?.totalSessions ?? 0) + 1,
-          totalEarnings:
-            (authStore.user?.totalEarnings ?? 0) -
-            activeGroupSession.stakePerParticipant,
         });
       }
     }

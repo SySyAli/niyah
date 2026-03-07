@@ -4,9 +4,8 @@
  * Tests amount display, formatting, sign handling, and color modes.
  */
 
-import { describe, it, expect } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react-native";
 import {
   Balance,
   CompactBalance,

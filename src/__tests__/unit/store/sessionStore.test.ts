@@ -8,7 +8,6 @@
  * - Session lifecycle testing
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { act } from "react";
 import { useSessionStore } from "../../../store/sessionStore";
 import { useWalletStore } from "../../../store/walletStore";

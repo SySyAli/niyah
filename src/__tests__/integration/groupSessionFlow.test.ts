@@ -7,7 +7,6 @@
  * - State consistency validation across stores after multi-step operations
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
 import { useGroupSessionStore } from "../../store/groupSessionStore";
 import { useWalletStore } from "../../store/walletStore";
 import { useAuthStore } from "../../store/authStore";
@@ -276,7 +275,7 @@ describe("Group Session Flow Integration Tests", () => {
       );
     });
 
-    it("wallet net = 0 when current user completes (even-split)", () => {
+    it("wallet nets +250 when current user completes with 1 of 3 surrendering", () => {
       const initial = useWalletStore.getState().balance;
       useGroupSessionStore
         .getState()
@@ -286,7 +285,9 @@ describe("Group Session Flow Integration Tests", () => {
         { userId: "user-b", completed: false },
         { userId: "user-c", completed: true },
       ]);
-      expect(useWalletStore.getState().balance).toBe(initial);
+      // Pool = 3 × 500 = 1500; 2 completers → floor(1500/2) = 750 each
+      // Net for user-a: 750 − 500 (stake) = +250
+      expect(useWalletStore.getState().balance).toBe(initial + 250);
     });
 
     it("each participant has payout attached after completion", () => {
@@ -322,7 +323,7 @@ describe("Group Session Flow Integration Tests", () => {
       expect(user.completedSessions).toBe(5);
     });
 
-    it("wallet stays at initial after N completions (even-split net 0 each)", () => {
+    it("wallet grows by stake per completion when partner surrenders each session", () => {
       const initial = useWalletStore.getState().balance;
       for (let i = 0; i < 5; i++) {
         useGroupSessionStore.getState().startGroupSession("daily", [P_A, P_B]);
@@ -330,7 +331,11 @@ describe("Group Session Flow Integration Tests", () => {
           .getState()
           .completeGroupSession([{ userId: "user-a", completed: true }]);
       }
-      expect(useWalletStore.getState().balance).toBe(initial);
+      // Each session: user-b defaults to false → user-a wins pool (2×stake),
+      // net per session = +stake. After 5 sessions: initial + 5×stake.
+      expect(useWalletStore.getState().balance).toBe(
+        initial + 5 * CADENCES.daily.stake,
+      );
     });
 
     it("history accumulates all sessions, most recent first, each with unique id", () => {
@@ -412,7 +417,7 @@ describe("Group Session Flow Integration Tests", () => {
       expect(useWalletStore.getState().balance).toBe(initial - stake * 3);
     });
 
-    it("complete → complete → surrender nets -1 stake", () => {
+    it("complete → complete → surrender nets +1 stake (wins offset final loss)", () => {
       const initial = useWalletStore.getState().balance;
       const stake = CADENCES.daily.stake;
 
@@ -431,7 +436,9 @@ describe("Group Session Flow Integration Tests", () => {
         .getState()
         .completeGroupSession([{ userId: "user-a", completed: false }]);
 
-      expect(useWalletStore.getState().balance).toBe(initial - stake);
+      // Each win: partner defaults false → user-a wins full pool (+stake net)
+      // Session 1: +stake, Session 2: +stake, Session 3: −stake → net +stake
+      expect(useWalletStore.getState().balance).toBe(initial + stake);
     });
 
     it("totalEarnings accumulates only from completions, not surrenders", () => {

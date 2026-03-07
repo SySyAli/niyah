@@ -8,7 +8,6 @@
  * - Decision table testing for conditional logic
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   formatMoney,
   formatMoneyCompact,

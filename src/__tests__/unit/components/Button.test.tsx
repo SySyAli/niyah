@@ -6,9 +6,8 @@
  * onPress (not onClick), so we test rendering + structure only.
  */
 
-import { describe, it, expect } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react-native";
 import { Button } from "../../../components/Button";
 
 describe("Button Component", () => {

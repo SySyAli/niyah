@@ -8,7 +8,6 @@
  * - State consistency validation
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act } from "react";
 import { useAuthStore } from "../../store/authStore";
 import { useSessionStore } from "../../store/sessionStore";

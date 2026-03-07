@@ -4,10 +4,16 @@
  * Tests time display, progress calculation, and size variants.
  */
 
-import { describe, it, expect } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react-native";
 import { Timer, InlineTimer } from "../../../components/Timer";
+
+// Timer uses Animated.timing internally (400ms + 950ms). Without fake timers
+// those setTimeouts outlive the test environment and cause:
+//   "You are trying to access a property or method of the Jest environment
+//    after it has been torn down."
+beforeEach(() => jest.useFakeTimers());
+afterEach(() => jest.useRealTimers());
 
 describe("Timer Component", () => {
   describe("rendering", () => {

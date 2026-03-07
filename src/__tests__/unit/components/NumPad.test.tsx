@@ -6,10 +6,14 @@
  * onPress (not onClick), so we focus on rendering verification.
  */
 
-import { describe, it, expect } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react-native";
 import { NumPad, AmountDisplay } from "../../../components/NumPad";
+
+// NumPad has an infinite recursive cursor-blink Animated.sequence. Without
+// fake timers its setTimeout callbacks fire after the environment tears down.
+beforeEach(() => jest.useFakeTimers());
+afterEach(() => jest.useRealTimers());
 
 describe("NumPad Component", () => {
   describe("rendering", () => {

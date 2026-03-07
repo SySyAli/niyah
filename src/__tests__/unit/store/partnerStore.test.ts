@@ -4,7 +4,6 @@
  * Tests partner management, duo sessions, settlements, invites, and Venmo links.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import { usePartnerStore } from "../../../store/partnerStore";
 import { useWalletStore } from "../../../store/walletStore";
 import { useAuthStore } from "../../../store/authStore";

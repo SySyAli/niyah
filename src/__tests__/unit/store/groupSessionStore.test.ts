@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import { useGroupSessionStore } from "../../../store/groupSessionStore";
 import { useWalletStore } from "../../../store/walletStore";
 import { useAuthStore } from "../../../store/authStore";
@@ -308,9 +307,9 @@ describe("groupSessionStore", () => {
         { userId: "user-a", completed: true },
         { userId: "user-b", completed: false },
       ]);
-      // even-split payout = stake, so balance is restored
+      // Pool = 2 × stake; user-a is the sole completer and wins the full pool
       expect(useWalletStore.getState().balance).toBe(
-        balanceAfterStake + CADENCES.daily.stake,
+        balanceAfterStake + 2 * CADENCES.daily.stake,
       );
     });
 
@@ -396,15 +395,19 @@ describe("groupSessionStore", () => {
       expect(useAuthStore.getState().user!.completedSessions).toBe(1);
     });
 
-    it("with even-split placeholder: produces empty transfers array", () => {
+    it("produces transfer from surrendering partner to completer", () => {
       start();
       useGroupSessionStore.getState().completeGroupSession([
         { userId: "user-a", completed: true },
         { userId: "user-b", completed: false },
       ]);
-      expect(
-        useGroupSessionStore.getState().groupSessionHistory[0].transfers,
-      ).toHaveLength(0);
+      const { transfers } =
+        useGroupSessionStore.getState().groupSessionHistory[0];
+      // user-b loses their stake to user-a: 1 transfer expected
+      expect(transfers).toHaveLength(1);
+      expect(transfers[0].fromUserId).toBe("user-b");
+      expect(transfers[0].toUserId).toBe("user-a");
+      expect(transfers[0].amount).toBe(CADENCES.daily.stake);
     });
 
     it("attaches payout to each participant", () => {

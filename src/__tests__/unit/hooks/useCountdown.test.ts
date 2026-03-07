@@ -2,20 +2,18 @@
  * Unit Tests for useCountdown hook
  *
  * Tests timer behavior: start, stop, reset, completion callback.
- * Uses @testing-library/react's renderHook since we run in jsdom.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react-native";
 import { useCountdown } from "../../../hooks/useCountdown";
 
 describe("useCountdown hook", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    jest.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    jest.useRealTimers();
   });
 
   describe("initial state", () => {
@@ -97,7 +95,7 @@ describe("useCountdown hook", () => {
 
   describe("completion callback", () => {
     it("calls onComplete when timer reaches 0", () => {
-      const onComplete = vi.fn();
+      const onComplete = jest.fn();
       const { result } = renderHook(() => useCountdown({ onComplete }));
 
       const endTime = new Date(Date.now() + 2000);
@@ -107,7 +105,7 @@ describe("useCountdown hook", () => {
       });
 
       act(() => {
-        vi.advanceTimersByTime(3000);
+        jest.advanceTimersByTime(3000);
       });
 
       expect(onComplete).toHaveBeenCalled();

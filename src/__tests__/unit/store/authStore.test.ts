@@ -3,34 +3,30 @@
  *
  * Testing Strategy:
  * - Tests state management and store actions
- * - Firebase calls are mocked at the module level (vitest.setup.ts)
+ * - Firebase calls are mocked at the module level (jest.setup.ts)
  * - Focus on state transitions and consistency
  * - Login flows (Google, Apple, Email) test that state is set synchronously
  *   before returning, avoiding race conditions with onAuthStateChanged
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act } from "react";
 import { useAuthStore } from "../../../store/authStore";
 
 // We mock the firebase config module (what authStore actually imports)
 // rather than the low-level native modules.
-vi.mock("../../../config/firebase", async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    signInWithGoogle: vi.fn(),
-    signInWithApple: vi.fn(),
-    signInWithEmailLink: vi.fn(),
-    isEmailSignInLink: vi.fn(),
-    sendMagicLink: vi.fn(),
-    checkProfileComplete: vi.fn(),
-    fetchUserProfile: vi.fn(),
-    saveUserProfile: vi.fn(),
-    signOut: vi.fn(),
-    onAuthStateChanged: vi.fn(() => vi.fn()), // returns unsubscribe
-  };
-});
+// Note: jest.mock is hoisted by babel-jest to run before imports.
+jest.mock("../../../config/firebase", () => ({
+  signInWithGoogle: jest.fn(),
+  signInWithApple: jest.fn(),
+  signInWithEmailLink: jest.fn(),
+  isEmailSignInLink: jest.fn(),
+  sendMagicLink: jest.fn(),
+  checkProfileComplete: jest.fn(),
+  fetchUserProfile: jest.fn(),
+  saveUserProfile: jest.fn(),
+  signOut: jest.fn(),
+  onAuthStateChanged: jest.fn(() => jest.fn()), // returns unsubscribe
+}));
 
 import {
   signInWithGoogle,
@@ -281,9 +277,9 @@ describe("authStore", () => {
     };
 
     it("should set firebaseUser, user, and isAuthenticated before returning", async () => {
-      vi.mocked(signInWithGoogle).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(signInWithGoogle).mockResolvedValueOnce(mockFirebaseUser);
       // No Firestore profile → new user
-      vi.mocked(fetchUserProfile).mockResolvedValueOnce(null);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
 
       await act(async () => {
         await useAuthStore.getState().loginWithGoogle();
@@ -298,9 +294,9 @@ describe("authStore", () => {
     });
 
     it("should set profileComplete=true for returning user with Firestore profile", async () => {
-      vi.mocked(signInWithGoogle).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(signInWithGoogle).mockResolvedValueOnce(mockFirebaseUser);
       // Firestore has a complete profile
-      vi.mocked(fetchUserProfile).mockResolvedValueOnce({
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce({
         __id: "google-uid-123",
         firstName: "Google",
         lastName: "User",
@@ -324,12 +320,12 @@ describe("authStore", () => {
     });
 
     it("should set profileComplete=false and isNewUser=true for new user", async () => {
-      vi.mocked(signInWithGoogle).mockResolvedValueOnce({
+      jest.mocked(signInWithGoogle).mockResolvedValueOnce({
         ...mockFirebaseUser,
         isNewUser: true,
       });
       // No Firestore doc exists yet
-      vi.mocked(fetchUserProfile).mockResolvedValueOnce(null);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
 
       await act(async () => {
         await useAuthStore.getState().loginWithGoogle();
@@ -343,11 +339,13 @@ describe("authStore", () => {
     });
 
     it("should still set auth state if Firestore fetch fails", async () => {
-      vi.mocked(signInWithGoogle).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(signInWithGoogle).mockResolvedValueOnce(mockFirebaseUser);
       // Firestore fails (e.g. offline)
-      vi.mocked(fetchUserProfile).mockRejectedValueOnce(
-        new Error("Failed to get document because the client is offline."),
-      );
+      jest
+        .mocked(fetchUserProfile)
+        .mockRejectedValueOnce(
+          new Error("Failed to get document because the client is offline."),
+        );
 
       await act(async () => {
         await useAuthStore.getState().loginWithGoogle();
@@ -364,9 +362,9 @@ describe("authStore", () => {
     });
 
     it("should propagate errors from signInWithGoogle and reset isLoading", async () => {
-      vi.mocked(signInWithGoogle).mockRejectedValueOnce(
-        new Error("Google Sign-In was cancelled"),
-      );
+      jest
+        .mocked(signInWithGoogle)
+        .mockRejectedValueOnce(new Error("Google Sign-In was cancelled"));
 
       await expect(
         act(async () => {
@@ -392,8 +390,8 @@ describe("authStore", () => {
     };
 
     it("should set firebaseUser, user, and isAuthenticated before returning", async () => {
-      vi.mocked(signInWithApple).mockResolvedValueOnce(mockFirebaseUser);
-      vi.mocked(fetchUserProfile).mockResolvedValueOnce(null);
+      jest.mocked(signInWithApple).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
 
       await act(async () => {
         await useAuthStore
@@ -409,8 +407,8 @@ describe("authStore", () => {
     });
 
     it("should set profileComplete=true for returning user with Firestore profile", async () => {
-      vi.mocked(signInWithApple).mockResolvedValueOnce(mockFirebaseUser);
-      vi.mocked(fetchUserProfile).mockResolvedValueOnce({
+      jest.mocked(signInWithApple).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce({
         __id: "apple-uid-456",
         firstName: "Apple",
         lastName: "User",
@@ -434,8 +432,8 @@ describe("authStore", () => {
     });
 
     it("should handle Firestore failure gracefully", async () => {
-      vi.mocked(signInWithApple).mockResolvedValueOnce(mockFirebaseUser);
-      vi.mocked(fetchUserProfile).mockRejectedValueOnce(new Error("offline"));
+      jest.mocked(signInWithApple).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(fetchUserProfile).mockRejectedValueOnce(new Error("offline"));
 
       await act(async () => {
         await useAuthStore
@@ -462,10 +460,10 @@ describe("authStore", () => {
     };
 
     it("should set full auth state before returning", async () => {
-      vi.mocked(isEmailSignInLink).mockReturnValueOnce(true);
-      vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce("user@email.com");
-      vi.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
-      vi.mocked(fetchUserProfile).mockResolvedValueOnce(null);
+      jest.mocked(isEmailSignInLink).mockReturnValueOnce(true);
+      jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce("user@email.com");
+      jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
 
       await act(async () => {
         await useAuthStore
@@ -483,10 +481,10 @@ describe("authStore", () => {
     });
 
     it("should clean up stored email after successful sign-in", async () => {
-      vi.mocked(isEmailSignInLink).mockReturnValueOnce(true);
-      vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce("user@email.com");
-      vi.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
-      vi.mocked(fetchUserProfile).mockResolvedValueOnce(null);
+      jest.mocked(isEmailSignInLink).mockReturnValueOnce(true);
+      jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce("user@email.com");
+      jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
 
       await act(async () => {
         await useAuthStore
@@ -500,7 +498,7 @@ describe("authStore", () => {
     });
 
     it("should throw if link is not a valid sign-in link", async () => {
-      vi.mocked(isEmailSignInLink).mockReturnValueOnce(false);
+      jest.mocked(isEmailSignInLink).mockReturnValueOnce(false);
 
       await expect(
         act(async () => {
@@ -512,8 +510,8 @@ describe("authStore", () => {
     });
 
     it("should throw if stored email is missing", async () => {
-      vi.mocked(isEmailSignInLink).mockReturnValueOnce(true);
-      vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(null);
+      jest.mocked(isEmailSignInLink).mockReturnValueOnce(true);
+      jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce(null);
 
       await expect(
         act(async () => {
@@ -543,8 +541,8 @@ describe("authStore", () => {
       });
 
       // Mock saveUserProfile and subsequent fetchUserProfile
-      vi.mocked(saveUserProfile).mockResolvedValueOnce(undefined);
-      vi.mocked(fetchUserProfile).mockResolvedValueOnce({
+      jest.mocked(saveUserProfile).mockResolvedValueOnce(undefined);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce({
         __id: "test-uid",
         firstName: "Test",
         lastName: "User",

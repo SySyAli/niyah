@@ -8,7 +8,6 @@
  * - Balance calculation testing
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act } from "react";
 import { useWalletStore } from "../../../store/walletStore";
 import { useAuthStore } from "../../../store/authStore";

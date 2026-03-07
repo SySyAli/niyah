@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // users/{uid}
+    // -------------------------------------------------------------------------
+    // Any signed-in user can read any user doc (public profiles, partner
+    // lookup, referral flows all need cross-user reads).
+    //
+    // Full write access is owner-only. The one exception is awardReferralToUser()
+    // in firebase.ts, which writes another user's `reputation` map client-side —
+    // constrained here to reputation-only updates. TODO: move to Cloud Function.
+    match /users/{uid} {
+      allow read: if request.auth != null;
+
+      // Owner: full write access (profile setup, profile updates)
+      allow write: if request.auth != null && request.auth.uid == uid;
+
+      // Any authenticated user may update the `reputation` map only.
+      // Used by the referral award flow (awardReferralToUser).
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['reputation']);
+    }
+
+    // -------------------------------------------------------------------------
+    // wallets/{uid}
+    // -------------------------------------------------------------------------
+    // Owner-read-only. Client writes are restricted to initial creation with a
+    // zero balance (saveUserProfile initializes the wallet once on first signup).
+    // All balance mutations happen server-side via Cloud Functions, which use
+    // the admin SDK and bypass these rules entirely.
+    match /wallets/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      // Allow initial wallet creation only — balance must start at zero.
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.balance == 0
+        && request.resource.data.pendingBalance == 0;
+
+      // No client-side updates or deletes — handled exclusively by Cloud Functions.
+      allow update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // userFollows/{uid}
+    // -------------------------------------------------------------------------
+    // Any signed-in user can read follows docs (social graph is public).
+    //
+    // follow/unfollow writes to two documents per operation: the follower's
+    // `following` array (own doc) and the target's `followers` array (other's doc).
+    // Own doc: full write. Other's doc: constrained to `followers` field only.
+    // TODO: move follow/unfollow to a Cloud Function to allow tighter rules.
+    match /userFollows/{uid} {
+      allow read: if request.auth != null;
+
+      // Owner can write their own follows doc freely.
+      allow write: if request.auth != null && request.auth.uid == uid;
+
+      // Any authenticated user may update only the `followers` array on
+      // another user's doc (the target side of a follow/unfollow operation).
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['followers']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Default deny
+    // -------------------------------------------------------------------------
+    // Any collection not explicitly matched above is denied by default.
+    // This covers future collections (sessions, transfers, etc.) until
+    // explicit rules are added for them.
+  }
+}

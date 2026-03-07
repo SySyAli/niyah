@@ -1,5 +1,5 @@
 import React from "react";
-import { Tabs } from "../../src/components/bottom-tabs";
+import { Tabs } from "../../src/components/BottomTabs";
 import { useColors } from "../../src/hooks/useColors";
 import { useThemeStore } from "../../src/store/themeStore";
 

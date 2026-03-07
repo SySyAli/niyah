@@ -18,7 +18,7 @@ NIYAH is a focus app with financial stakes. Users deposit money, stake it on foc
 - **Build**: EAS Build (production), `expo-dev-client` (development) -- NOT Expo Go
 - **Backend**: Firebase Auth + Firestore via custom native Swift Expo module (`modules/niyah-firebase/`)
 - **Auth**: Google Sign-In, Apple Sign-In, Email magic link (passwordless)
-- **Testing**: Vitest (unit + integration)
+- **Testing**: Jest + jest-expo (unit + integration)
 - **Linting**: ESLint 9 + Prettier
 - **Package Manager**: pnpm
 - **Payments**: Trust model (virtual balances, Venmo/PayPal settlement outside app). Stripe planned but not integrated.
@@ -163,11 +163,12 @@ niyah/
 ├── app.json                    # Expo config
 ├── package.json
 ├── tsconfig.json
-├── vitest.config.ts
+├── jest.config.js
+├── jest.setup.ts
 └── eslint.config.mjs
 ```
 
-**Note**: `coverage/` directory and `.ipa` build artifacts should not be committed. `GoogleService-Info.plist` and `google-services.json` exist in the repo root (needed by config plugins) -- do not expose in public repos.
+**Note**: `coverage/` directory and `.ipa` build artifacts should not be committed. `GoogleService-Info.plist` and `google-services.json` live in `firebase/` (needed by config plugins) -- do not expose in public repos.
 
 ## Development Commands
 
@@ -198,7 +199,6 @@ pnpm typecheck
 # Run tests
 pnpm test              # Run all tests once
 pnpm test:watch        # Watch mode
-pnpm test:ui           # Vitest UI
 pnpm test:coverage     # Coverage report
 pnpm test:integration  # Integration tests only
 pnpm test:unit         # Unit tests only

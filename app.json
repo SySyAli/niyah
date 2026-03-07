@@ -70,6 +70,7 @@
       ],
       "./plugins/withFollyCoroutinesFix",
       "./plugins/withGoogleServicesPlist",
+      "./plugins/withGoogleServicesJson",
       "./plugins/withFirebaseStaticFrameworks",
       "./plugins/withScreenTimeEntitlement",
       "./plugins/withDeviceActivityMonitor"

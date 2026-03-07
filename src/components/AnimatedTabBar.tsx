@@ -19,7 +19,7 @@ import Animated, {
 import type { SharedValue } from "react-native-reanimated";
 import { Typography, Spacing, FontWeight, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
-import { useScrollContext } from "../context/ScrollContext";
+import { useScrollContext } from "../hooks/ScrollContext";
 
 // ────────────────────────────────────────────────────────────────────
 // Tab configuration

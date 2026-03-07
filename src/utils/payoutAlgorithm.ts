@@ -1,4 +1,4 @@
-import { SessionParticipant, SessionTransfer } from "../types";
+import { SessionParticipant } from "../types";
 import { SOLO_COMPLETION_MULTIPLIER } from "../constants/config";
 
 export interface ParticipantResult {

@@ -51,6 +51,7 @@ const FloatingCoin: React.FC<{
         true,
       ),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const style = useAnimatedStyle(() => {
@@ -137,6 +138,7 @@ export const StakeScene: React.FC<SceneProps> = ({
       -1,
       true,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const phoneStyle = useAnimatedStyle(() => ({

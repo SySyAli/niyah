@@ -2,12 +2,7 @@
 // Classifies phone usage context using temporal and behavioral features.
 // Updated over time by human feedback corrections.
 
-import type {
-  UsageContext,
-  ContextFeatures,
-  UsageEpisode,
-  AppCategory,
-} from "./types";
+import type { UsageContext, ContextFeatures, UsageEpisode } from "./types";
 
 // ── Feature Extraction ───────────────────────────────────────────────────
 

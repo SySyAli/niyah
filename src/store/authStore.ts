@@ -8,7 +8,6 @@ import {
   sendMagicLink,
   signInWithEmailLink,
   isEmailSignInLink,
-  checkProfileComplete,
   saveUserProfile,
   fetchUserProfile,
   type FirebaseUser,

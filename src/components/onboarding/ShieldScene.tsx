@@ -47,6 +47,7 @@ const Ripple: React.FC<{
         false,
       ),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const style = useAnimatedStyle(() => {
@@ -114,6 +115,7 @@ const DeflectedIcon: React.FC<{
         true,
       ),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const style = useAnimatedStyle(() => {
@@ -199,6 +201,7 @@ export const ShieldScene: React.FC<SceneProps> = ({
       -1,
       false,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const shieldStyle = useAnimatedStyle(() => ({

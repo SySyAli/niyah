@@ -47,6 +47,7 @@ const Sparkle: React.FC<{
         false,
       ),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const style = useAnimatedStyle(() => {
@@ -182,6 +183,7 @@ export const GrowthScene: React.FC<SceneProps> = ({
       -1,
       true,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const trunkStyle = useAnimatedStyle(() => ({

@@ -299,7 +299,7 @@ export default function ProfileScreen() {
                         "You can enable Screen Time access in Settings > NIYAH > Screen Time.",
                       );
                     }
-                  } catch (error) {
+                  } catch {
                     Alert.alert(
                       "Error",
                       "Could not request Screen Time permission. Make sure you're on a physical device with iOS 16+.",
@@ -320,7 +320,7 @@ export default function ProfileScreen() {
                     try {
                       const selection = await presentAppPicker();
                       setAppSelectionCount(selection.appCount);
-                    } catch (error) {
+                    } catch {
                       // User cancelled the picker — that's fine
                     }
                   }}

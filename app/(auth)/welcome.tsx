@@ -27,7 +27,6 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
   Font,
   type ThemeColors,
 } from "../../src/constants/colors";

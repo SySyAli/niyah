@@ -49,8 +49,6 @@ export default function PublicProfileScreen() {
   const { partners, selectPartner } = usePartnerStore();
   const {
     profiles,
-    following,
-    isLoading,
     loadMyFollows,
     loadProfile,
     followUser,
@@ -101,7 +99,7 @@ export default function PublicProfileScreen() {
     };
 
     init();
-  }, [myUid, uid, hasFallbackProfile]);
+  }, [myUid, uid, hasFallbackProfile, loadMyFollows, loadProfile]);
 
   const handleToggleFollow = async () => {
     setFollowLoading(true);

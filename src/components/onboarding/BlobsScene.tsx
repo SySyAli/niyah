@@ -335,6 +335,7 @@ const BlobCharacter: React.FC<BlobProps> = ({
     timeout = setTimeout(scheduleBlink, 2500 + index * 900);
 
     return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Staggered entrance: each blob fades in 80ms after the previous
@@ -343,6 +344,7 @@ const BlobCharacter: React.FC<BlobProps> = ({
       index * 80,
       withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) }),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const triggerTap = () => {
@@ -533,14 +535,6 @@ const BlobCharacter: React.FC<BlobProps> = ({
   const h = size * blob.h;
 
   // Derive highlight ellipse position from viewBox
-  const vbParts = blob.viewBox.split(" ");
-  const vbW = Number(vbParts[2]);
-  const vbH = Number(vbParts[3]);
-  const hlCx = vbW * 0.38;
-  const hlCy = vbH * 0.28;
-  const hlRx = vbW * 0.22;
-  const hlRy = vbH * 0.18;
-
   return (
     <Animated.View
       style={[
@@ -699,6 +693,7 @@ export const BlobsScene: React.FC<BlobsSceneProps> = ({
       -1,
       true,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

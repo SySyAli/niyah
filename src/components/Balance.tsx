@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
-import { Typography, Spacing, FontWeight, Font } from "../constants/colors";
+import { Typography, Spacing, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 import { formatMoney } from "../utils/format";
 

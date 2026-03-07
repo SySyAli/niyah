@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, Text, TextInput, Platform } from "react-native";
+import { Text, TextInput, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -25,13 +25,16 @@ const StripeWrapper =
 
 // Apply SF Pro Rounded globally as the default font family
 if (Platform.OS === "ios" && BaseFontFamily) {
+  type WithDefaultStyle = {
+    defaultProps?: { style?: { fontFamily?: string } };
+  };
   const textStyle = { fontFamily: BaseFontFamily };
-  (Text as any).defaultProps = {
-    ...((Text as any).defaultProps || {}),
+  (Text as unknown as WithDefaultStyle).defaultProps = {
+    ...((Text as unknown as WithDefaultStyle).defaultProps || {}),
     style: textStyle,
   };
-  (TextInput as any).defaultProps = {
-    ...((TextInput as any).defaultProps || {}),
+  (TextInput as unknown as WithDefaultStyle).defaultProps = {
+    ...((TextInput as unknown as WithDefaultStyle).defaultProps || {}),
     style: textStyle,
   };
 }

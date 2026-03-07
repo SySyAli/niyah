@@ -30,7 +30,7 @@ export default function Index() {
       unsubscribe();
       clearTimeout(timer);
     };
-  }, []);
+  }, [initialize]);
 
   if (!isInitialized || !ready) {
     return (

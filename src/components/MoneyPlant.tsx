@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import { Typography, Spacing, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";

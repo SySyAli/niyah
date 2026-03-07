@@ -405,7 +405,7 @@ export default function FriendsScreen() {
     if (myUid) {
       loadMyFollows(myUid);
     }
-  }, [myUid]);
+  }, [myUid, loadMyFollows]);
 
   useEffect(() => {
     if (requestedTab === "following" || requestedTab === "partners") {
@@ -419,7 +419,7 @@ export default function FriendsScreen() {
         loadProfile(uid).catch(() => {});
       }
     });
-  }, [following]);
+  }, [following, profiles, loadProfile]);
 
   const getFallbackProfile = (uid: string): PublicProfile | null => {
     const partner = partners.find((p) => p.oderId === uid);
@@ -503,7 +503,9 @@ export default function FriendsScreen() {
                   <FollowingRow
                     key={uid}
                     profile={profile}
-                    onPress={() => router.push(`/user/${uid}` as any)}
+                    onPress={() =>
+                      router.push(`/user/${uid}` as `/user/${string}`)
+                    }
                     onUnfollow={() => handleUnfollow(uid)}
                     unfollowLoading={!!loadingUids[uid]}
                   />
@@ -526,7 +528,9 @@ export default function FriendsScreen() {
                 reputationLevel={partner.reputation.level}
                 reputationScore={partner.reputation.score}
                 isFollowing={isFollowing(partner.oderId)}
-                onPress={() => router.push(`/user/${partner.oderId}` as any)}
+                onPress={() =>
+                  router.push(`/user/${partner.oderId}` as `/user/${string}`)
+                }
                 onToggleFollow={() => handleToggleFollow(partner.oderId)}
                 followLoading={!!loadingUids[partner.oderId]}
               />

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { View, Pressable, StyleSheet, Platform, Text } from "react-native";
+import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { SymbolView } from "expo-symbols";
 import type { SFSymbol } from "sf-symbols-typescript";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,7 +17,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
-import { Typography, Spacing, FontWeight, Font } from "../constants/colors";
+import { Typography, Spacing, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 import { useScrollContext } from "../hooks/ScrollContext";
 
@@ -255,7 +255,7 @@ const TabItem: React.FC<TabItemProps> = ({
 
 export const AnimatedTabBar: React.FC<AnimatedTabBarProps> = ({
   state,
-  descriptors,
+  descriptors: _descriptors,
   navigation,
   accessory,
 }) => {

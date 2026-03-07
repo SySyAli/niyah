@@ -18,13 +18,7 @@ import Animated, {
   FadeIn,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import {
-  Spacing,
-  Radius,
-  Typography,
-  FontWeight,
-  Font,
-} from "../constants/colors";
+import { Spacing, Radius, Typography, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 
 interface OTPInputProps {

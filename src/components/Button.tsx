@@ -9,7 +9,7 @@ import {
   Animated,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Radius, Typography, FontWeight, Font } from "../constants/colors";
+import { Radius, Typography, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 
 interface ButtonProps {

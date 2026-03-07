@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Animated } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-import { Typography, Spacing, FontWeight, Font } from "../constants/colors";
+import { Typography, Spacing, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 import { formatTime } from "../utils/format";
 

@@ -300,10 +300,7 @@ export default function WithdrawScreen() {
                         ? "Check Status"
                         : "Set Up Bank Payouts"
                     }
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onPress={() =>
-                      router.push("/session/stripe-onboarding" as any)
-                    }
+                    onPress={() => router.push("/session/stripe-onboarding")}
                     size="large"
                     style={styles.setupButton}
                   />

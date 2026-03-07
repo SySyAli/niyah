@@ -4,7 +4,7 @@
  * Stripe Express handles the KYC flow via a browser redirect.
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import * as WebBrowser from "expo-web-browser";
 import {
   Typography,
   Spacing,
-  Radius,
   Font,
   type ThemeColors,
 } from "../../src/constants/colors";
@@ -44,11 +43,7 @@ export default function StripeOnboardingScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
 
-  useEffect(() => {
-    checkStatus();
-  }, []);
-
-  const checkStatus = async () => {
+  const checkStatus = useCallback(async () => {
     setIsLoading(true);
     try {
       if (!user?.stripeAccountId) {
@@ -68,7 +63,11 @@ export default function StripeOnboardingScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.stripeAccountId, user?.stripeAccountStatus, updateUser]);
+
+  useEffect(() => {
+    checkStatus();
+  }, [checkStatus]);
 
   const handleStartOnboarding = async () => {
     setIsStarting(true);

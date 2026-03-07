@@ -7,7 +7,6 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,7 +18,6 @@ import {
   Typography,
   Spacing,
   Radius,
-  FontWeight,
   Font,
   type ThemeColors,
 } from "../../src/constants/colors";
@@ -61,13 +59,8 @@ export default function AuthEntryScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
-  const {
-    loginWithGoogle,
-    loginWithApple,
-    sendEmailLink,
-    isLoading,
-    isNewUser,
-  } = useAuthStore();
+  const { loginWithGoogle, loginWithApple, sendEmailLink, isLoading } =
+    useAuthStore();
 
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");

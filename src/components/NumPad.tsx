@@ -8,13 +8,7 @@ import {
   Animated,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import {
-  Typography,
-  Spacing,
-  Radius,
-  FontWeight,
-  Font,
-} from "../constants/colors";
+import { Typography, Spacing, Radius, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");

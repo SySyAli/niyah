@@ -26,7 +26,7 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
-import Svg, { Circle, Path, Rect, Ellipse } from "react-native-svg";
+import Svg, { Circle, Path, Rect } from "react-native-svg";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -80,6 +80,7 @@ export const ContinuousScene: React.FC<ContinuousSceneProps> = ({
       -1,
       false,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cx = size / 2;

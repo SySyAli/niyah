@@ -16,14 +16,7 @@ import React, {
   useMemo,
   PropsWithChildren,
 } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Dimensions,
-} from "react-native";
+import { View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -90,7 +83,7 @@ interface ProviderProps {
 
 export const DebugLayoutProvider: React.FC<
   PropsWithChildren<ProviderProps>
-> = ({ enabled, sf, figmaYOff, children }) => {
+> = ({ enabled, sf, figmaYOff: _figmaYOff, children }) => {
   const [elements, setElements] = useState<Record<string, ElementState>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lockedIds, setLockedIds] = useState<Set<string>>(new Set());
@@ -124,33 +117,33 @@ export const DebugLayoutProvider: React.FC<
   }, []);
 
   const logAll = useCallback(() => {
-    console.log("\n╔══════════════════════════════════════════╗");
-    console.log("║   DEBUG LAYOUT — ELEMENT POSITIONS       ║");
-    console.log("╚══════════════════════════════════════════╝\n");
+    console.warn("\n╔══════════════════════════════════════════╗");
+    console.warn("║   DEBUG LAYOUT — ELEMENT POSITIONS       ║");
+    console.warn("╚══════════════════════════════════════════╝\n");
     Object.values(elements).forEach((el) => {
       const fxOffset = el.dx / sf;
       const fyOffset = el.dy / sf;
-      console.log(`── ${el.label} (${el.id}) ──`);
-      console.log(
+      console.warn(`── ${el.label} (${el.id}) ──`);
+      console.warn(
         `   dx: ${el.dx.toFixed(1)}px  →  ${fxOffset.toFixed(1)} Figma units`,
       );
-      console.log(
+      console.warn(
         `   dy: ${el.dy.toFixed(1)}px  →  ${fyOffset.toFixed(1)} Figma units`,
       );
-      console.log(`   zIndex: ${el.zIndex}`);
-      console.log(`   scale: ${el.scale.toFixed(2)}`);
-      console.log(`   rotate: ${el.rotate.toFixed(1)}°`);
-      console.log("");
+      console.warn(`   zIndex: ${el.zIndex}`);
+      console.warn(`   scale: ${el.scale.toFixed(2)}`);
+      console.warn(`   rotate: ${el.rotate.toFixed(1)}°`);
+      console.warn("");
     });
-    console.log("── Copy-paste offsets ──");
+    console.warn("── Copy-paste offsets ──");
     Object.values(elements).forEach((el) => {
       const fxOff = (el.dx / sf).toFixed(1);
       const fyOff = (el.dy / sf).toFixed(1);
-      console.log(
+      console.warn(
         `${el.id}: { fx: ${fxOff}, fy: ${fyOff}, z: ${el.zIndex}, scale: ${el.scale.toFixed(2)}, rotate: ${el.rotate.toFixed(1)} }`,
       );
     });
-    console.log("");
+    console.warn("");
   }, [elements, sf]);
 
   const ctx = useMemo<DebugContextValue>(
@@ -213,7 +206,7 @@ export const DraggableGroup: React.FC<DraggableGroupProps> = ({
     if (ctx.enabled && ctx._register) {
       ctx._register(id, label);
     }
-  }, [ctx.enabled]);
+  }, [ctx, id, label]);
 
   if (!ctx.enabled) return <>{children}</>;
 

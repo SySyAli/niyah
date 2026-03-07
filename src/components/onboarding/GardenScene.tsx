@@ -43,6 +43,7 @@ export const GardenScene: React.FC<SceneProps> = ({
       -1,
       true,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     pulse.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.ease) }),

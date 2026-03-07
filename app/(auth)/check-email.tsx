@@ -19,8 +19,6 @@ import * as Haptics from "expo-haptics";
 import {
   Typography,
   Spacing,
-  Radius,
-  FontWeight,
   Font,
   type ThemeColors,
 } from "../../src/constants/colors";
@@ -38,14 +36,6 @@ export default function CheckEmailScreen() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Start cooldown on mount
-  useEffect(() => {
-    startCooldown();
-    return () => {
-      if (cooldownTimer.current) clearInterval(cooldownTimer.current);
-    };
-  }, []);
-
   const startCooldown = useCallback(() => {
     setResendCooldown(60);
     if (cooldownTimer.current) clearInterval(cooldownTimer.current);
@@ -59,6 +49,14 @@ export default function CheckEmailScreen() {
       });
     }, 1000);
   }, []);
+
+  // Start cooldown on mount
+  useEffect(() => {
+    startCooldown();
+    return () => {
+      if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+    };
+  }, [startCooldown]);
 
   const handleOpenMail = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

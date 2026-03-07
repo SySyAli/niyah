@@ -58,16 +58,16 @@ export const AppleSignInButton: React.FC<AppleSignInButtonProps> = ({
         credential.email || undefined,
       );
       onSuccess?.();
-    } catch (error: any) {
+    } catch (e: unknown) {
+      const error = e as { code?: string; message?: string };
       if (error?.code === "ERR_REQUEST_CANCELED") {
         // User cancelled — do nothing
       } else {
-        console.error("Apple Sign-In failed:", error);
-        Alert.alert(
-          "Sign In Failed",
-          error.message || "Unable to sign in with Apple. Please try again.",
-        );
-        onError?.(error);
+        console.error("Apple Sign-In failed:", e);
+        const message =
+          error?.message || "Unable to sign in with Apple. Please try again.";
+        Alert.alert("Sign In Failed", message);
+        onError?.(e instanceof Error ? e : new Error(message));
       }
     } finally {
       setIsLoading(false);

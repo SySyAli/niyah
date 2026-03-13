@@ -17,11 +17,11 @@ import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
 import {
   CADENCES,
-  CadenceId,
   DEMO_MODE,
   REPUTATION_LEVELS,
   SOLO_COMPLETION_MULTIPLIER,
 } from "../../src/constants/config";
+import type { CadenceType } from "../../src/types";
 import { formatMoney } from "../../src/utils/format";
 import {
   isScreenTimeAvailable,
@@ -286,7 +286,7 @@ export default function ConfirmSessionScreen() {
   const { startGroupSession } = useGroupSessionStore();
   const user = useAuthStore((state) => state.user);
 
-  const cadence = (params.cadence as CadenceId) || "daily";
+  const cadence = (params.cadence as CadenceType) || "daily";
   const config = CADENCES[cadence];
 
   const handleConfirm = async () => {

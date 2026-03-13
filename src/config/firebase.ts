@@ -5,7 +5,6 @@ import {
 } from "../../modules/niyah-firebase";
 import {
   GoogleSignin,
-  statusCodes,
   isSuccessResponse,
 } from "@react-native-google-signin/google-signin";
 import * as Linking from "expo-linking";
@@ -109,10 +108,6 @@ export const signOut = async (): Promise<void> => {
   await NiyahFirebaseAuth.signOut();
 };
 
-export const getCurrentUser = (): FirebaseUser | null => {
-  return NiyahFirebaseAuth.getCurrentUser();
-};
-
 export const onAuthStateChanged = (
   callback: (user: FirebaseUser | null) => void,
 ): (() => void) => {
@@ -136,20 +131,6 @@ export const getUserDoc = async (
   const doc = await NiyahFirestore.getDoc("users", uid);
   if (!doc) return null;
   return doc as Record<string, unknown>;
-};
-
-export const getWalletDoc = async (
-  uid: string,
-): Promise<Record<string, unknown> | null> => {
-  const doc = await NiyahFirestore.getDoc("wallets", uid);
-  if (!doc) return null;
-  return doc as Record<string, unknown>;
-};
-
-export const checkProfileComplete = async (uid: string): Promise<boolean> => {
-  const doc = await NiyahFirestore.getDoc("users", uid);
-  if (!doc) return false;
-  return doc.profileComplete === true;
 };
 
 export const saveUserProfile = async (
@@ -345,6 +326,4 @@ export const getPublicProfile = async (
   };
 };
 
-// Re-export for convenience
-export { statusCodes };
 export type { FirebaseUser };

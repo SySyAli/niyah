@@ -37,7 +37,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   deposit: (amount: number, syncedBalance?: number) => {
     const transaction: Transaction = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       type: "deposit",
       amount,
       description: "Deposit",
@@ -60,7 +60,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     if (amount > balance) return;
 
     const transaction: Transaction = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       type: "withdrawal",
       amount: -amount,
       description: "Withdrawal (pending)",
@@ -79,8 +79,15 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   deductStake: (amount: number, sessionId: string) => {
+    const { balance } = get();
+    if (amount > balance) {
+      throw new Error(
+        `Insufficient balance: need ${amount} cents but have ${balance}`,
+      );
+    }
+
     const transaction: Transaction = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       type: "stake",
       amount: -amount,
       description: "Session stake",
@@ -100,7 +107,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   creditPayout: (amount: number, sessionId: string) => {
     const transaction: Transaction = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       type: "payout",
       amount,
       description: "Session completed - Payout",
@@ -120,7 +127,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   recordForfeit: (amount: number, sessionId: string) => {
     const transaction: Transaction = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       type: "forfeit",
       amount: 0, // Already deducted when session started
       description: "Session surrendered - Stake forfeited",
@@ -140,7 +147,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     description: string,
   ) => {
     const transaction: Transaction = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       type: amount > 0 ? "settlement_received" : "settlement_paid",
       amount,
       description,

@@ -14,6 +14,7 @@ import {
   calculateTransfers,
   ParticipantResult,
 } from "../utils/payoutAlgorithm";
+import { getVenmoPayLink } from "../utils/format";
 
 // Participants are provided without the fields the store sets internally.
 type NewParticipant = Omit<
@@ -58,6 +59,13 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
   // ─── Lifecycle ──────────────────────────────────────────────────────────────
 
   startGroupSession: (cadence, participants) => {
+    const { activeGroupSession } = get();
+    if (activeGroupSession) {
+      throw new Error(
+        "A group session is already active. Complete or surrender it first.",
+      );
+    }
+
     const config = CADENCES[cadence];
     const duration = DEMO_MODE ? config.demoDuration : config.duration;
 
@@ -67,7 +75,7 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
     }));
 
     const session: GroupSession = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       cadence,
       stakePerParticipant: config.stake,
       poolTotal: config.stake * fullParticipants.length,
@@ -117,7 +125,7 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
     const drafts = calculateTransfers(finalParticipants, payouts);
     const transfers: SessionTransfer[] = drafts.map((d) => ({
       ...d,
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       status: (d.amount === 0 ? "none" : "pending") as TransferStatus,
       createdAt: new Date(),
     }));
@@ -314,6 +322,16 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
 
   markTransferDisputed: (sessionId, transferId) => {
     const { groupSessionHistory } = get();
+    const session = groupSessionHistory.find((s) => s.id === sessionId);
+    const transfer = session?.transfers.find((t) => t.id === transferId);
+
+    // Prevent disputing already-settled transfers
+    if (
+      !transfer ||
+      transfer.status === "settled" ||
+      transfer.status === "none"
+    )
+      return;
 
     const updatedHistory = groupSessionHistory.map((s) =>
       s.id !== sessionId
@@ -375,10 +393,5 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
 
   // ─── Utilities ──────────────────────────────────────────────────────────────
 
-  getVenmoPayLink: (amount, recipientHandle, note) => {
-    const handle = recipientHandle.replace("@", "");
-    const dollars = (amount / 100).toFixed(2);
-    const encodedNote = encodeURIComponent(note);
-    return `venmo://paycharge?txn=pay&recipients=${handle}&amount=${dollars}&note=${encodedNote}`;
-  },
+  getVenmoPayLink,
 }));

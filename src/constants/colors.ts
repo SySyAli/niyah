@@ -130,9 +130,6 @@ export const LightColors = {
   white: "#FFFFFF",
 } as const;
 
-// Backward-compatible default export (dark theme)
-export const Colors = DarkColors;
-
 export type Theme = "dark" | "light";
 
 // ThemeColors is a widened type so both DarkColors and LightColors satisfy it
@@ -183,15 +180,6 @@ export const Typography = {
   labelSmall: 11,
 } as const;
 
-// Font weights - bolder across the board
-export const FontWeight = {
-  regular: "500" as const,
-  medium: "600" as const,
-  semibold: "700" as const,
-  bold: "800" as const,
-  heavy: "900" as const,
-} as const;
-
 const ROUNDED = Platform.OS === "ios" ? "ui-rounded" : undefined;
 
 export const Font = {
@@ -213,5 +201,3 @@ export const Radius = {
   xl: 24,
   full: 9999,
 } as const;
-
-export type ColorName = keyof typeof DarkColors;

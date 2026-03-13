@@ -33,7 +33,6 @@ export interface User {
   zelleHandle?: string; // Email or phone for Zelle settlements
   profileImage?: string;
   phoneNumber?: string;
-  phoneVerified?: boolean;
   authProvider?: "email" | "google" | "apple";
   // Firebase-backed profile
   profileComplete?: boolean;
@@ -92,19 +91,17 @@ export interface DuoSession {
   amountOwed?: number; // Positive = user owes partner, negative = partner owes user
 }
 
-// Legacy solo session (keeping for backwards compatibility)
+// Solo session (Phase 2 — stickK model for now; will use SOLO_COMPLETION_MULTIPLIER later)
 export interface Session {
   id: string;
   cadence: CadenceType;
   stakeAmount: number; // in cents
-  potentialPayout: number; // in cents (deprecated - now equals stake)
+  potentialPayout: number; // in cents — currently equals stake (stickK); Phase 2: stake × multiplier
   startedAt: Date;
   endsAt: Date;
   status: SessionStatus;
   completedAt?: Date;
   actualPayout?: number; // in cents
-  // New: link to duo session if applicable
-  duoSessionId?: string;
 }
 
 export interface Transaction {
@@ -123,20 +120,6 @@ export interface Transaction {
   duoSessionId?: string;
   partnerId?: string; // For settlement transactions
   createdAt: Date;
-}
-
-export interface WalletState {
-  balance: number;
-  transactions: Transaction[];
-  pendingWithdrawal: number;
-}
-
-// Money Plant visualization data
-export interface MoneyPlantData {
-  growthStage: number; // 1-5 based on network size and reputation
-  totalLeaves: number; // Number of coin leaves (completed sessions)
-  partners: Partner[];
-  totalEarned: number; // Lifetime earnings from duo sessions
 }
 
 // ─── Group Session (N-person generalization of DuoSession) ──────────────────

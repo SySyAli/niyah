@@ -258,13 +258,11 @@ describe("Session Flow Integration Tests", () => {
         useSessionStore.getState().completeSession();
       });
 
-      // stickK model: payout = stake, net gain = 0
-      const dailyNet = CADENCES.daily.stake - CADENCES.daily.stake;
+      // Net profit: payout = stake, so net = 0 for stickK model
+      const dailyNet = 0;
 
       expect(useWalletStore.getState().balance).toBe(initialBalance + dailyNet);
-      expect(useAuthStore.getState().user?.totalEarnings).toBe(
-        CADENCES.daily.stake,
-      );
+      expect(useAuthStore.getState().user?.totalEarnings).toBe(0);
 
       // Complete weekly session
       act(() => {
@@ -274,13 +272,11 @@ describe("Session Flow Integration Tests", () => {
         useSessionStore.getState().completeSession();
       });
 
-      const weeklyNet = CADENCES.weekly.stake - CADENCES.weekly.stake;
+      const weeklyNet = 0;
       const totalNet = dailyNet + weeklyNet;
 
       expect(useWalletStore.getState().balance).toBe(initialBalance + totalNet);
-      expect(useAuthStore.getState().user?.totalEarnings).toBe(
-        CADENCES.daily.stake + CADENCES.weekly.stake,
-      );
+      expect(useAuthStore.getState().user?.totalEarnings).toBe(0);
     });
 
     it("should correctly calculate loss from surrendered session", async () => {
@@ -288,6 +284,8 @@ describe("Session Flow Integration Tests", () => {
         simulateLogin("finance@test.com");
       });
 
+      // Monthly requires 10000 cents; ensure wallet has enough
+      useWalletStore.getState().deposit(10000);
       const initialBalance = useWalletStore.getState().balance;
 
       // Start and surrender
@@ -405,18 +403,16 @@ describe("Session Flow Integration Tests", () => {
         useSessionStore.getState().startSession("daily");
       });
 
-      // Try to start another
-      act(() => {
-        useSessionStore.getState().startSession("weekly");
-      });
+      // Try to start another — should throw
+      expect(() => {
+        act(() => {
+          useSessionStore.getState().startSession("weekly");
+        });
+      }).toThrow("A session is already active");
 
-      // The implementation actually allows this - a new session replaces the old
-      // In a real app, you might want to prevent this
-      // This test documents current behavior
+      // Original session should be unchanged
       const sessionAfter = useSessionStore.getState().currentSession;
-
-      // Session changed
-      expect(sessionAfter?.cadence).toBe("weekly");
+      expect(sessionAfter?.cadence).toBe("daily");
     });
 
     it("should handle surrender when no session exists", () => {

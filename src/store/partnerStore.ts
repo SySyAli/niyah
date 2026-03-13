@@ -4,6 +4,7 @@ import { CADENCES, DEMO_MODE } from "../constants/config";
 import { useAuthStore } from "./authStore";
 import { useWalletStore } from "./walletStore";
 import { fetchUserProfile, awardReferralToUser } from "../config/firebase";
+import { getVenmoPayLink } from "../utils/format";
 
 interface PartnerState {
   currentPartner: Partner | null;
@@ -80,7 +81,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   addPartner: (partnerData) => {
     const partner: Partner = {
       ...partnerData,
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       connectedAt: new Date(),
       totalSessionsTogether: 0,
       isActive: false,
@@ -113,7 +114,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const duration = DEMO_MODE ? config.demoDuration : config.duration;
 
     const duoSession: DuoSession = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       cadence,
       stakeAmount: config.stake,
       startedAt: new Date(),
@@ -268,7 +269,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   sendInvite: (email: string, name: string) => {
     const authStore = useAuthStore.getState();
     const invite: PartnerInvite = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       fromUserId: authStore.user?.id || "",
       fromUserName: authStore.user?.name || "",
       toEmail: email,
@@ -287,10 +288,12 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const invite = pendingInvites.find((i) => i.id === inviteId);
 
     if (invite) {
+      // Use the inviter's name/ID. The invite's toEmail is the *invitee's* email,
+      // so we don't use it as the partner's email — leave blank until fetched.
       addPartner({
         oderId: invite.fromUserId,
         name: invite.fromUserName,
-        email: invite.toEmail,
+        email: "",
         reputation: {
           score: 50,
           level: "sapling",
@@ -330,7 +333,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     }
 
     const newPartner: Partner = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       oderId: referrerUid,
       name: referrerName,
       tag: "Your Referrer",
@@ -359,10 +362,5 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     awardReferralToUser(referrerUid);
   },
 
-  getVenmoPayLink: (amount: number, recipientHandle: string, note: string) => {
-    const handle = recipientHandle.replace("@", "");
-    const amountInDollars = (amount / 100).toFixed(2);
-    const encodedNote = encodeURIComponent(note);
-    return `venmo://paycharge?txn=pay&recipients=${handle}&amount=${amountInDollars}&note=${encodedNote}`;
-  },
+  getVenmoPayLink,
 }));

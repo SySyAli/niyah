@@ -1,12 +1,14 @@
 import { Stack } from "expo-router";
-import { Colors } from "../../src/constants/colors";
+import { useColors } from "../../src/hooks/useColors";
 
 export default function SessionLayout() {
+  const colors = useColors();
+
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: Colors.background },
+        contentStyle: { backgroundColor: colors.background },
         animation: "slide_from_bottom",
       }}
     >
@@ -16,6 +18,7 @@ export default function SessionLayout() {
       <Stack.Screen name="active" options={{ gestureEnabled: false }} />
       <Stack.Screen name="surrender" options={{ presentation: "modal" }} />
       <Stack.Screen name="complete" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="partner" />
       <Stack.Screen name="deposit" options={{ presentation: "modal" }} />
       <Stack.Screen name="withdraw" options={{ presentation: "modal" }} />
       <Stack.Screen

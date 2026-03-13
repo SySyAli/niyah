@@ -11,17 +11,6 @@ export const formatMoney = (
   }).format(dollars);
 };
 
-export const formatMoneyCompact = (cents: number): string => {
-  const dollars = cents / 100;
-  if (dollars >= 1000000) {
-    return `$${(dollars / 1000000).toFixed(1)}M`;
-  }
-  if (dollars >= 1000) {
-    return `$${(dollars / 1000).toFixed(1)}K`;
-  }
-  return formatMoney(cents, false);
-};
-
 export const formatTime = (ms: number): string => {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -73,30 +62,19 @@ export const formatRelativeTime = (date: Date): string => {
   return formatDate(date);
 };
 
-export const getStreakMultiplier = (
-  streak: number,
-  cadence: "daily" | "weekly" | "monthly",
-): number => {
-  if (cadence === "daily") {
-    if (streak >= 10) return 1.5;
-    if (streak >= 5) return 1.25;
-  } else if (cadence === "weekly") {
-    if (streak >= 8) return 2.0;
-    if (streak >= 4) return 1.5;
-  } else if (cadence === "monthly") {
-    if (streak >= 6) return 3.0;
-    if (streak >= 3) return 2.0;
-  }
-  return 1.0;
-};
-
-export const formatPercentage = (
-  value: number,
-  decimals: number = 0,
+/**
+ * Generate a Venmo deep link for paying a recipient.
+ * @param amount Amount in cents
+ * @param recipientHandle Venmo handle (with or without @)
+ * @param note Payment note
+ */
+export const getVenmoPayLink = (
+  amount: number,
+  recipientHandle: string,
+  note: string,
 ): string => {
-  return `${value.toFixed(decimals)}%`;
-};
-
-export const formatMultiplier = (value: number): string => {
-  return `${value.toFixed(1)}x`;
+  const handle = recipientHandle.replace("@", "");
+  const dollars = (amount / 100).toFixed(2);
+  const encodedNote = encodeURIComponent(note);
+  return `venmo://paycharge?txn=pay&recipients=${handle}&amount=${dollars}&note=${encodedNote}`;
 };

@@ -25,14 +25,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   isBlocking: false,
 
   startSession: (cadence: CadenceType) => {
+    const { currentSession } = get();
+    if (currentSession) {
+      throw new Error(
+        "A session is already active. Complete or surrender it first.",
+      );
+    }
+
     const config = CADENCES[cadence];
     const duration = DEMO_MODE ? config.demoDuration : config.duration;
 
     const session: Session = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       cadence,
       stakeAmount: config.stake,
-      potentialPayout: config.stake, // stickK model: payout = stake (no 2x bonus)
+      potentialPayout: config.stake,
       startedAt: new Date(),
       endsAt: new Date(Date.now() + duration),
       status: "active",
@@ -97,7 +104,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       longestStreak: Math.max(newStreak, authStore.user?.longestStreak || 0),
       totalSessions: (authStore.user?.totalSessions || 0) + 1,
       completedSessions: (authStore.user?.completedSessions || 0) + 1,
-      totalEarnings: (authStore.user?.totalEarnings || 0) + payout,
+      // Net profit: payout minus stake already deducted at session start
+      totalEarnings:
+        (authStore.user?.totalEarnings || 0) +
+        (payout - currentSession.stakeAmount),
     });
     useWalletStore.getState().creditPayout(payout, currentSession.id);
 

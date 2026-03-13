@@ -24,15 +24,15 @@ export interface TransferDraft {
 /**
  * Calculate payouts for a completed session.
  *
- * Solo (1 participant):
+ * Solo (1 participant) — Phase 2, not yet used by sessionStore:
  *   NIYAH is the counterparty. Complete → stake × SOLO_COMPLETION_MULTIPLIER.
  *   Surrender → 0 (NIYAH keeps the stake).
  *
- * Group (N > 1 participants):
+ * Group (N > 1 participants) — Phase 1, primary mode:
  *   Peer-to-peer pool. NIYAH takes no cut.
  *   Completers split the entire pool (all stakes) equally.
  *   Surrenderers get 0.
- *   Edge case: if all surrender, nobody gets anything.
+ *   Edge case: if all surrender, pool goes to NIYAH (nobody receives anything).
  *   Edge case: if all complete, each gets their stake back (net $0 change).
  */
 export const calculatePayouts = (

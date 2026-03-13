@@ -20,7 +20,8 @@ import { useColors } from "../../src/hooks/useColors";
 import { Card, Button } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../../src/store/walletStore";
-import { CADENCES, CadenceId, DEMO_MODE } from "../../src/constants/config";
+import { CADENCES, DEMO_MODE } from "../../src/constants/config";
+import type { CadenceType } from "../../src/types";
 import { formatMoney } from "../../src/utils/format";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -214,8 +215,8 @@ const makeStyles = (Colors: ThemeColors) =>
   });
 
 interface CadenceOptionProps {
-  cadenceKey: CadenceId;
-  config: (typeof CADENCES)[CadenceId];
+  cadenceKey: CadenceType;
+  config: (typeof CADENCES)[CadenceType];
   isSelected: boolean;
   canAfford: boolean;
   onSelect: () => void;
@@ -306,8 +307,8 @@ export default function SelectCadenceScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const balance = useWalletStore((state) => state.balance);
-  const [selectedCadence, setSelectedCadence] = useState<CadenceId>(
-    (params.cadence as CadenceId) || "daily",
+  const [selectedCadence, setSelectedCadence] = useState<CadenceType>(
+    (params.cadence as CadenceType) || "daily",
   );
 
   const config = CADENCES[selectedCadence];
@@ -339,7 +340,7 @@ export default function SelectCadenceScreen() {
 
         {/* Options */}
         <View style={styles.options}>
-          {(Object.keys(CADENCES) as CadenceId[]).map((key) => (
+          {(Object.keys(CADENCES) as CadenceType[]).map((key) => (
             <CadenceOption
               key={key}
               cadenceKey={key}

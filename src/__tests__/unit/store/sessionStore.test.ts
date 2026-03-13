@@ -140,6 +140,8 @@ describe("sessionStore", () => {
 
     describe("monthly cadence", () => {
       it("should create session with correct stake and payout", () => {
+        // Monthly requires 10000 cents; ensure wallet has enough
+        useWalletStore.getState().deposit(10000);
         const store = useSessionStore.getState();
 
         act(() => {
@@ -446,10 +448,11 @@ describe("sessionStore", () => {
       );
     });
 
-    it("should add payout to totalEarnings", () => {
+    it("should add net profit to totalEarnings", () => {
       const initialEarnings = useAuthStore.getState().user?.totalEarnings || 0;
-      const payout =
-        useSessionStore.getState().currentSession?.potentialPayout || 0;
+      const session = useSessionStore.getState().currentSession!;
+      // Net profit = payout - stake (both equal for stickK model, so net = 0)
+      const netProfit = session.potentialPayout - session.stakeAmount;
 
       const store = useSessionStore.getState();
 
@@ -458,7 +461,7 @@ describe("sessionStore", () => {
       });
 
       expect(useAuthStore.getState().user?.totalEarnings).toBe(
-        initialEarnings + payout,
+        initialEarnings + netProfit,
       );
     });
 

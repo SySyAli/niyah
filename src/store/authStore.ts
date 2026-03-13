@@ -90,7 +90,9 @@ const buildUser = (
       totalSessions: stats.totalSessions || 0,
       completedSessions: stats.completedSessions || 0,
       totalEarnings: stats.totalEarnings || 0,
-      createdAt: new Date(),
+      createdAt: firestoreData.createdAt
+        ? new Date(firestoreData.createdAt as string | number)
+        : new Date(),
       reputation: {
         score: rep.score ?? 50,
         level: rep.level || "sapling",
@@ -341,6 +343,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+
+    // Clear local state after signOut so state stays consistent if signOut fails
     set({
       user: null,
       firebaseUser: null,
@@ -348,12 +357,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       profileComplete: false,
       isNewUser: false,
     });
-
-    try {
-      await signOut();
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
   },
 
   updateUser: (updates: Partial<User>) => {

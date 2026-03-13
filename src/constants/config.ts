@@ -1,9 +1,14 @@
 // Session configurations
-// Solo sessions: NIYAH is the counterparty. Complete = earn SOLO_COMPLETION_MULTIPLIER × stake.
-// Surrender = lose stake (NIYAH keeps it). Expected to profit via law of large numbers.
-// Group sessions: peer-to-peer pool. Completers split surrenderers' stakes. NIYAH takes no cut.
+//
+// Phase 1 (App Store launch): GROUP SESSIONS ONLY
+//   Peer-to-peer pool. Completers split surrenderers' stakes. NIYAH takes no cut.
+//   All money comes from participants — no Niyah treasury involvement.
+//
+// Phase 2 (future): SOLO SESSIONS
+//   NIYAH is the counterparty. Complete = earn SOLO_COMPLETION_MULTIPLIER × stake.
+//   Surrender = lose stake (NIYAH keeps it). Requires Niyah to fund payouts.
 
-// Payout multiplier for solo sessions on completion (demo value; real value set by risk engine).
+// Payout multiplier for solo sessions (Phase 2, not yet active in sessionStore).
 // Stake $5, complete → earn $10. NIYAH profits if >50% of users surrender.
 export const SOLO_COMPLETION_MULTIPLIER = 2;
 export const CADENCES = {
@@ -30,8 +35,6 @@ export const CADENCES = {
   },
 } as const;
 
-export type CadenceId = keyof typeof CADENCES;
-
 // Demo mode settings
 export const DEMO_MODE = true;
 export const INITIAL_BALANCE = 5000; // $50.00 in cents
@@ -54,20 +57,6 @@ export const REPUTATION_LEVELS = {
     description: "Pillar of the community",
   },
 } as const;
-
-// Venmo deep link format
-// venmo://paycharge?txn=pay&recipients=USERNAME&amount=AMOUNT&note=NOTE
-export const VENMO_DEEP_LINK = {
-  base: "venmo://paycharge",
-  webFallback: "https://venmo.com/",
-};
-
-// Trust model payment info (for deposits to NIYAH)
-export const PAYMENT_INFO = {
-  venmo: "@niyah-focus",
-  paypal: "payments@niyah.app",
-  note: "Deposit for NIYAH focus session",
-};
 
 // Referral system
 // Each accepted referral permanently boosts the new user's social credit score by this amount.

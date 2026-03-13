@@ -133,13 +133,3 @@ export async function requestWithdrawal(
     method,
   });
 }
-
-export async function distributeGroupPayouts(
-  sessionId: string,
-  payouts: { userId: string; amount: number }[],
-): Promise<{ success: boolean; transfers: string[] }> {
-  return callFunction<{ success: boolean; transfers: string[] }>(
-    "distributeGroupPayouts",
-    { sessionId, payouts },
-  );
-}

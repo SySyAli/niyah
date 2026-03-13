@@ -167,10 +167,13 @@ describe("sessionStore — cloud sync (DEMO_MODE=false)", () => {
     });
 
     it("stake amount passed to cloudForfeit matches what was deducted from wallet", async () => {
+      // Monthly requires 10000 cents; ensure wallet has enough
+      useWalletStore.getState().deposit(10000);
+      const balanceBeforeStake = useWalletStore.getState().balance;
       useSessionStore.getState().startSession("monthly");
       const expectedStake = CADENCES.monthly.stake;
       const walletAfterStart = useWalletStore.getState().balance;
-      expect(walletAfterStart).toBe(INITIAL_BALANCE - expectedStake);
+      expect(walletAfterStart).toBe(balanceBeforeStake - expectedStake);
 
       useSessionStore.getState().surrenderSession();
       await Promise.resolve();

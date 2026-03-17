@@ -1,6 +1,8 @@
-import { NiyahFirebaseAuth } from "../../modules/niyah-firebase";
+import { getAuth } from "@react-native-firebase/auth";
 
-const FUNCTIONS_BASE = "https://us-central1-niyah-b972d.cloudfunctions.net";
+const FUNCTIONS_BASE =
+  process.env.EXPO_PUBLIC_FUNCTIONS_URL ||
+  "https://us-central1-niyah-b972d.cloudfunctions.net";
 
 // ─── Core fetch wrapper ──────────────────────────────────────────────────────
 
@@ -10,7 +12,7 @@ async function callFunction<T>(
 ): Promise<T> {
   let idToken: string | null = null;
   try {
-    idToken = await NiyahFirebaseAuth.getIdToken();
+    idToken = (await getAuth().currentUser?.getIdToken()) ?? null;
   } catch {
     // unauthenticated — server will reject if auth is required
   }

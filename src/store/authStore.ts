@@ -10,10 +10,29 @@ import {
   isEmailSignInLink,
   saveUserProfile,
   fetchUserProfile,
+  updateUserDoc,
   type FirebaseUser,
 } from "../config/firebase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { REFERRAL_REPUTATION_BOOST } from "../constants/config";
+
+// Lazy import to break circular dependency (walletStore imports authStore)
+const hydrateWallet = (uid: string) => {
+  const { useWalletStore } = require("./walletStore") as {
+    useWalletStore: { getState: () => { hydrate: (uid: string) => void } };
+  };
+  useWalletStore.getState().hydrate(uid);
+};
+
+// Lazy import for session recovery on login
+const recoverSession = (uid: string) => {
+  const { useSessionStore } = require("./sessionStore") as {
+    useSessionStore: {
+      getState: () => { recoverActiveSession: (uid: string) => void };
+    };
+  };
+  useSessionStore.getState().recoverActiveSession(uid);
+};
 
 const MAGIC_LINK_EMAIL_KEY = "@niyah/magic_link_email";
 
@@ -165,6 +184,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             profileComplete,
             isLoading: false,
           });
+
+          // Hydrate wallet and recover any active session (non-blocking)
+          hydrateWallet(firebaseUser.uid);
+          recoverSession(firebaseUser.uid);
         } catch (error) {
           console.error("Error fetching user profile:", error);
           // Still mark as authenticated even if Firestore fetch fails
@@ -177,6 +200,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             profileComplete: false,
             isLoading: false,
           });
+
+          // Still try to hydrate wallet even if profile fetch failed
+          hydrateWallet(firebaseUser.uid);
+          recoverSession(firebaseUser.uid);
         }
       } else {
         set({
@@ -216,6 +243,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isNewUser: !profileComplete,
         isLoading: false,
       });
+
+      // Hydrate wallet and recover session (non-blocking)
+      hydrateWallet(firebaseUser.uid);
+      recoverSession(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -249,6 +280,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isNewUser: !profileComplete,
         isLoading: false,
       });
+
+      // Hydrate wallet and recover session (non-blocking)
+      hydrateWallet(firebaseUser.uid);
+      recoverSession(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -269,7 +304,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   completeEmailLink: async (url: string) => {
-    if (!isEmailSignInLink(url)) {
+    if (!(await isEmailSignInLink(url))) {
       throw new Error("Invalid email sign-in link");
     }
 
@@ -300,6 +335,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isNewUser: !profileComplete,
         isLoading: false,
       });
+
+      // Hydrate wallet and recover session (non-blocking)
+      hydrateWallet(firebaseUser.uid);
+      recoverSession(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -363,6 +402,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (user) {
       set({ user: { ...user, ...updates } });
+
+      // Sync stat fields to Firestore (fire-and-forget).
+      // Only syncs recognized stat/profile fields to avoid writing transient UI state.
+      const statsFields = [
+        "currentStreak",
+        "longestStreak",
+        "totalSessions",
+        "completedSessions",
+        "totalEarnings",
+      ] as const;
+      const statsUpdate: Record<string, number> = {};
+      for (const key of statsFields) {
+        if (key in updates && typeof updates[key] === "number") {
+          statsUpdate[key] = updates[key];
+        }
+      }
+      if (Object.keys(statsUpdate).length > 0) {
+        updateUserDoc(user.id, { stats: statsUpdate }).catch((err) =>
+          console.error("Failed to sync stats to Firestore:", err),
+        );
+      }
     }
   },
 
@@ -391,6 +451,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       newReputation.level = getReputationLevel(newReputation.score);
       set({ user: { ...user, reputation: newReputation } });
+
+      // Sync reputation to Firestore (fire-and-forget)
+      updateUserDoc(user.id, { reputation: newReputation }).catch((err) =>
+        console.error("Failed to sync reputation to Firestore:", err),
+      );
     }
   },
 
@@ -398,6 +463,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (user) {
       set({ user: { ...user, venmoHandle: handle } });
+
+      // Sync to Firestore (fire-and-forget)
+      updateUserDoc(user.id, { venmoHandle: handle }).catch((err) =>
+        console.error("Failed to sync venmoHandle to Firestore:", err),
+      );
     }
   },
 
@@ -405,6 +475,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (user) {
       set({ user: { ...user, zelleHandle: handle } });
+
+      // Sync to Firestore (fire-and-forget)
+      updateUserDoc(user.id, { zelleHandle: handle }).catch((err) =>
+        console.error("Failed to sync zelleHandle to Firestore:", err),
+      );
     }
   },
 }));

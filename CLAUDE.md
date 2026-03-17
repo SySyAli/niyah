@@ -16,7 +16,7 @@ NIYAH is a focus app with financial stakes. Users deposit money, stake it on foc
 - **State Management**: Zustand
 - **Styling**: React Native StyleSheet, SF Pro Rounded (iOS), dark/light theme system
 - **Build**: EAS Build (production), `expo-dev-client` (development) -- NOT Expo Go
-- **Backend**: Firebase Auth + Firestore via custom native Swift Expo module (`modules/niyah-firebase/`)
+- **Backend**: Firebase Auth + Firestore via `@react-native-firebase/app`, `@react-native-firebase/auth`, `@react-native-firebase/firestore`
 - **Auth**: Google Sign-In, Apple Sign-In, Email magic link (passwordless)
 - **Testing**: Jest + jest-expo (unit + integration)
 - **Linting**: ESLint 9 + Prettier
@@ -60,20 +60,23 @@ niyah/
 ├── src/
 │   ├── components/             # Reusable UI components
 │   │   ├── index.ts            # Barrel export
-│   │   ├── AnimatedTabBar.tsx   # Custom animated tab bar
-│   │   ├── AppleSignInButton.tsx
 │   │   ├── Balance.tsx         # Balance display
 │   │   ├── BottomTabs.tsx      # Bottom tab navigation wrapper
 │   │   ├── BlobsBackground.tsx  # Animated SVG blob background (3 variants)
 │   │   ├── Button.tsx          # Primary button component
 │   │   ├── Card.tsx            # Card container
 │   │   ├── Confetti.tsx        # Celebration animation
-│   │   ├── GoogleSignInButton.tsx
 │   │   ├── MoneyPlant.tsx      # Money plant visualization (partner network)
 │   │   ├── NumPad.tsx          # Numeric input pad
-│   │   ├── OTPInput.tsx        # OTP/code input
 │   │   ├── PeachAvatar.tsx     # Standalone peach blob avatar
 │   │   ├── Timer.tsx           # Countdown timer with SVG ring
+│   │   ├── profile/            # Profile screen sub-components
+│   │   │   ├── index.ts
+│   │   │   ├── ProfileHeader.tsx
+│   │   │   ├── ReputationCard.tsx
+│   │   │   ├── ScreenTimeCard.tsx
+│   │   │   ├── PaymentHandlesCard.tsx
+│   │   │   └── TransactionHistory.tsx
 │   │   └── onboarding/         # Onboarding scene components
 │   │       ├── index.ts
 │   │       ├── BlobsScene.tsx       # SVG blob characters
@@ -121,19 +124,6 @@ niyah/
 │       ├── integration/        # Integration tests (session flows)
 │       └── unit/               # Unit tests (components, hooks, store, utils)
 ├── modules/
-│   ├── niyah-firebase/         # Custom native Expo module for Firebase
-│   │   ├── expo-module.config.json
-│   │   ├── package.json
-│   │   ├── NiyahFirebase.podspec
-│   │   ├── index.ts
-│   │   ├── src/
-│   │   │   ├── index.ts
-│   │   │   ├── types.ts
-│   │   │   ├── NiyahFirebaseAuthModule.ts
-│   │   │   └── NiyahFirestoreModule.ts
-│   │   └── ios/
-│   │       ├── NiyahFirebaseAuthModule.swift   # Firebase Auth bridge
-│   │       └── NiyahFirestoreModule.swift       # Firestore bridge
 │   └── niyah-screentime/       # Custom native Expo module for Screen Time API
 │       ├── expo-module.config.json
 │       ├── package.json
@@ -216,9 +206,11 @@ pnpm format:check
 pnpm ci                # lint + typecheck + test
 
 # Build dev client (required before first `pnpm start`)
-pnpm build:dev          # iOS dev build via EAS
-pnpm build:dev:android  # Android dev build via EAS
-pnpm build:dev:device   # iOS device-specific dev build
+pnpm build:local        # iOS local build to wired device (fastest, requires Xcode)
+pnpm build:local:sim    # iOS local build to Simulator
+pnpm build:dev          # iOS dev build via EAS (cloud)
+pnpm build:dev:android  # Android dev build via EAS (cloud)
+pnpm build:dev:device   # iOS device-specific dev build via EAS
 pnpm build:preview      # Preview build (all platforms)
 pnpm build:production   # Production build (all platforms)
 ```
@@ -255,7 +247,9 @@ pnpm build:production   # Production build (all platforms)
 - One store per domain: `authStore`, `sessionStore`, `walletStore`, `partnerStore`, `groupSessionStore`, `socialStore`, `themeStore`
 - Keep stores flat, avoid nesting
 - Stores call each other directly (e.g., `useWalletStore.getState().deductStake()`)
-- Persist critical state to AsyncStorage
+- Persist critical state to AsyncStorage and/or Firestore
+- Firestore writes are fire-and-forget (local state is source of truth; cloud sync is non-blocking)
+- Lazy `require()` used to break circular dependencies between stores (e.g., `authStore` -> `walletStore`)
 
 ### Navigation (Expo Router)
 
@@ -353,31 +347,34 @@ Instead of real payments:
 Currently active (`DEMO_MODE = true` in `src/constants/config.ts`):
 
 - **Auth**: Real Firebase authentication (Google, Apple, Email)
-- **Profile**: Real Firestore persistence
-- **Sessions**: Local mock data, short timer durations (10s daily, 60s weekly, 90s monthly)
-- **Wallet**: Local state with $50 starting balance
+- **Profile**: Real Firestore persistence (reads + writes). Stats, reputation, and payment handles sync to Firestore.
+- **Sessions**: Short timer durations (10s daily, 60s weekly, 90s monthly). Sessions are persisted to Firestore `sessions` collection with crash recovery on app restart. Cloud Function calls skipped in demo mode.
+- **Wallet**: Demo mode starts at $50 (`INITIAL_BALANCE`). Non-demo mode hydrates from Firestore `wallets/{uid}`.
 - **Screen Time blocking**: Module scaffolded (production-quality Swift), NOT yet integrated into session lifecycle
 - **Payments**: Trust model (virtual balances, settle outside app)
 
 ## Native Modules
 
-### `modules/niyah-firebase/`
+### Firebase (RNFB — `@react-native-firebase/*`)
 
-Custom Expo module bridging Firebase to JavaScript:
+Firebase Auth and Firestore are provided by React Native Firebase (RNFB) packages:
 
-- **NiyahFirebaseAuthModule** (Swift): Sign-in with Google/Apple credentials, email magic link, auth state listener, sign-out
-- **NiyahFirestoreModule** (Swift): getDoc, setDoc, updateDoc, deleteDoc with server timestamp support
+- `@react-native-firebase/app` — Core Firebase initialization (registered as Expo plugin in `app.json`)
+- `@react-native-firebase/auth` — Google, Apple, and email magic link sign-in
+- `@react-native-firebase/firestore` — User profiles, wallets, sessions, follows
 
-Firebase is configured via `GoogleService-Info.plist` (iOS) injected by the `withGoogleServicesPlist` plugin.
+Firebase is configured via `GoogleService-Info.plist` (iOS) and `google-services.json` (Android), injected by the `withGoogleServicesPlist` and `withGoogleServicesJson` config plugins. `withFirebaseStaticFrameworks` handles CocoaPods static framework linking.
+
+The JS wrapper layer is `src/config/firebase.ts` (all auth, Firestore CRUD, and social helpers).
 
 ### `modules/niyah-screentime/` (Swift complete, needs device testing + session wiring)
 
 Custom Expo module bridging iOS Screen Time API to JavaScript:
 
-- **NiyahScreenTimeModule** (Swift, 273 lines): FamilyControls authorization, FamilyActivityPicker (app selection), ManagedSettings shield (block/unblock apps). App selection persisted via App Groups shared UserDefaults using `PropertyListEncoder`.
-- **AppPickerHostingController** (Swift, 59 lines): SwiftUI wrapper for `FamilyActivityPicker`, presented modally as `UIHostingController`.
-- **DeviceActivityMonitorExtension** (Swift, 102 lines): App Extension that runs in a separate process. Detects when user opens a blocked app during an active session, records violation timestamps to shared UserDefaults. Handles `intervalDidEnd`, `eventDidReachThreshold`, `intervalWillEndWarning`.
-- **JS wrapper**: `src/config/screentime.ts` (142 lines) provides typed convenience functions for auth, app picker, blocking, and event subscriptions.
+- **NiyahScreenTimeModule** (Swift): FamilyControls authorization, FamilyActivityPicker (app selection), ManagedSettings shield (block/unblock apps). App selection persisted via App Groups shared UserDefaults using `PropertyListEncoder`. Polls shared UserDefaults for violations written by the extension and emits `onShieldViolation` events to JS.
+- **AppPickerHostingController** (Swift): SwiftUI wrapper for `FamilyActivityPicker`, presented modally as `UIHostingController`. Supports both Done and Cancel callbacks.
+- **DeviceActivityMonitorExtension** (Swift): App Extension that runs in a separate process. Detects when user opens a blocked app during an active session, records violation timestamps to shared UserDefaults. Uses the same named `ManagedSettingsStore(.niyahSession)` as the main module.
+- **JS wrapper**: `src/config/screentime.ts` provides typed convenience functions for auth, app picker, blocking, and event subscriptions.
 
 **Config plugins:**
 
@@ -411,17 +408,36 @@ Adaptive smartphone overuse intervention engine (research-oriented):
 
 Currently simulation-only. Will integrate with real Screen Time API data when available.
 
-## Critical Next Steps
+## Development Phases
 
-1. **Group Session Firebase Backend** (HIGH) - `propose.tsx` UI is complete but proposals are not persisted. Need Firebase write for group session creation, real-time listeners, and push notifications for invites.
-2. **Push Notifications** (HIGH) - Required for group session invites. APNs entitlement is configured but push notification sending is not implemented.
-3. **Screen Time: Session Wiring** (HIGH) - Call `startBlocking()`/`stopBlocking()` from `sessionStore` when session starts/ends. Build the custom shield configuration (`ShieldConfigurationDataSource`) and handle button actions in the extension.
-4. **FamilyControls Entitlement** (BLOCKER for Screen Time) - Must enable Development entitlement on App ID in Apple Developer portal before any Screen Time testing.
-5. **Solo Payout Reconciliation** (MEDIUM) - `sessionStore.ts` uses stickK model (`potentialPayout = stake`). Reconcile with `payoutAlgorithm.ts` which applies `SOLO_COMPLETION_MULTIPLIER = 2`. Decide and align on one model.
-6. **Onboarding Polish** (LOW) - Scene components exist, needs animation and transition work.
-7. **Stripe Live Mode** (FUTURE) - Client library, Cloud Functions, and KYC screens are built. Remaining: enable live mode keys, test end-to-end deposit/withdrawal, submit for App Store review.
+See `ROADMAP.md` for the full detailed plan. Summary:
 
-See ROADMAP.md for detailed plan.
+### Phase 1: Group Mode MVP (4-person internal test) -- CURRENT
+
+- Group session Firebase backend (Firestore schema, Cloud Functions, real-time sync)
+- FCM push notifications for invites and session coordination
+- Screen Time **blocking** wired into session lifecycle (not stats yet)
+- FamilyControls entitlement + extension embed phase (BLOCKER)
+- Refactor group store for flexible params (custom stake/duration with presets)
+- New screens: incoming invites, group session dashboard
+
+### Phase 2: Beta Cohort (campus launch, 20-100 users)
+
+- Stripe escrow flow (collect real stakes, auto-distribute payouts)
+- Screen Time statistics (DeviceActivityReport bridging -- architecturally complex)
+- Custom shield UX (ShieldConfigurationDataSource + ShieldActionExtension)
+- Solo payout model decision (stickK 1x vs multiplier 2x)
+- Group settlement dashboard
+
+### Phase 3: Public Launch (App Store)
+
+- Stripe live mode, production security, legal compliance
+- Onboarding animation polish, performance optimization
+
+### Blockers
+
+- **FamilyControls Development entitlement** -- Must enable on App ID in Apple Developer portal before any Screen Time testing on device.
+- **Screen Time statistics** -- Apple's `DeviceActivityReport` is a SwiftUI view API, not a data query. Bridging into RN is architecturally non-trivial.
 
 ---
 

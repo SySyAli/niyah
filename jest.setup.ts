@@ -168,45 +168,127 @@ jest.mock("expo", () => ({
   NativeModule: class {},
 }));
 
-// Mock the niyah-firebase Expo modules
-// Path is relative to project root (where jest.setup.ts lives)
-jest.mock("./modules/niyah-firebase", () => ({
-  NiyahFirebaseAuth: {
-    signInWithCredential: jest.fn(() =>
-      Promise.resolve({
-        uid: "mock-uid",
-        email: "test@example.com",
-        displayName: "Test User",
-        photoURL: null,
-        phoneNumber: null,
-        providerId: "google.com",
-        isNewUser: false,
-      }),
-    ),
-    sendSignInLinkToEmail: jest.fn(() => Promise.resolve()),
-    isSignInWithEmailLink: jest.fn(() => false),
-    signInWithEmailLink: jest.fn(() =>
-      Promise.resolve({
-        uid: "mock-uid",
-        email: "test@example.com",
-        displayName: null,
-        photoURL: null,
-        phoneNumber: null,
-        providerId: "password",
-        isNewUser: false,
-      }),
-    ),
-    signOut: jest.fn(() => Promise.resolve()),
-    getCurrentUser: jest.fn(() => null),
-    addListener: jest.fn(() => ({ remove: jest.fn() })),
+// Mock @react-native-firebase/auth (modular API)
+const mockAuthInstance = {
+  currentUser: null,
+};
+const mockSignInResult = (providerId: string, isNewUser = false) => ({
+  user: {
+    uid: "mock-uid",
+    email: "test@example.com",
+    displayName: "Test User",
+    photoURL: null,
+    phoneNumber: null,
+    providerId,
   },
-  NiyahFirestore: {
-    getDoc: jest.fn(() => Promise.resolve(null)),
-    setDoc: jest.fn(() => Promise.resolve()),
-    updateDoc: jest.fn(() => Promise.resolve()),
-    deleteDoc: jest.fn(() => Promise.resolve()),
-    serverTimestamp: jest.fn(() => ({ __type: "serverTimestamp" })),
+  additionalUserInfo: { isNewUser },
+});
+jest.mock("@react-native-firebase/auth", () => ({
+  __esModule: true,
+  // Modular API exports
+  getAuth: jest.fn(() => mockAuthInstance),
+  signInWithCredential: jest.fn(() =>
+    Promise.resolve(mockSignInResult("google.com")),
+  ),
+  sendSignInLinkToEmail: jest.fn(() => Promise.resolve()),
+  isSignInWithEmailLink: jest.fn(() => Promise.resolve(false)),
+  signInWithEmailLink: jest.fn(() =>
+    Promise.resolve(mockSignInResult("password")),
+  ),
+  signOut: jest.fn(() => Promise.resolve()),
+  onAuthStateChanged: jest.fn(() => jest.fn()), // returns unsubscribe
+  GoogleAuthProvider: { credential: jest.fn(() => "mock-google-credential") },
+  AppleAuthProvider: { credential: jest.fn(() => "mock-apple-credential") },
+  // Keep default export for any residual namespaced usage in tests
+  default: Object.assign(
+    jest.fn(() => mockAuthInstance),
+    {
+      GoogleAuthProvider: {
+        credential: jest.fn(() => "mock-google-credential"),
+      },
+      AppleAuthProvider: { credential: jest.fn(() => "mock-apple-credential") },
+    },
+  ),
+}));
+
+// Mock @react-native-firebase/firestore (modular API)
+const mockBatch = {
+  set: jest.fn().mockReturnThis(),
+  update: jest.fn().mockReturnThis(),
+  delete: jest.fn().mockReturnThis(),
+  commit: jest.fn(() => Promise.resolve()),
+};
+const mockDocRef = {
+  id: "mock-id",
+};
+const mockDocSnap = {
+  exists: false,
+  id: "mock-id",
+  data: () => null,
+};
+const mockFirestoreInstance = {};
+jest.mock("@react-native-firebase/firestore", () => ({
+  __esModule: true,
+  // Modular API exports
+  getFirestore: jest.fn(() => mockFirestoreInstance),
+  collection: jest.fn(() => ({})),
+  doc: jest.fn(() => mockDocRef),
+  getDoc: jest.fn(() => Promise.resolve(mockDocSnap)),
+  getDocs: jest.fn(() => Promise.resolve({ empty: true, docs: [] })),
+  setDoc: jest.fn(() => Promise.resolve()),
+  updateDoc: jest.fn(() => Promise.resolve()),
+  deleteDoc: jest.fn(() => Promise.resolve()),
+  writeBatch: jest.fn(() => mockBatch),
+  query: jest.fn((..._args: unknown[]) => ({})),
+  where: jest.fn(() => ({})),
+  limit: jest.fn(() => ({})),
+  orderBy: jest.fn(() => ({})),
+  serverTimestamp: jest.fn(() => "mock-server-timestamp"),
+  arrayUnion: jest.fn((...items: unknown[]) => ({
+    __type: "arrayUnion",
+    items,
+  })),
+  arrayRemove: jest.fn((...items: unknown[]) => ({
+    __type: "arrayRemove",
+    items,
+  })),
+  Timestamp: {
+    fromDate: jest.fn((d: Date) => ({
+      toDate: () => d,
+      seconds: Math.floor(d.getTime() / 1000),
+      nanoseconds: 0,
+    })),
+    now: jest.fn(() => ({
+      toDate: () => new Date(),
+      seconds: Math.floor(Date.now() / 1000),
+      nanoseconds: 0,
+    })),
   },
+  // Keep default export for any residual namespaced usage in tests
+  default: Object.assign(
+    jest.fn(() => mockFirestoreInstance),
+    {
+      FieldValue: {
+        serverTimestamp: jest.fn(() => "mock-server-timestamp"),
+        arrayUnion: jest.fn((...items: unknown[]) => ({
+          __type: "arrayUnion",
+          items,
+        })),
+        arrayRemove: jest.fn((...items: unknown[]) => ({
+          __type: "arrayRemove",
+          items,
+        })),
+        increment: jest.fn((n: number) => ({ __type: "increment", value: n })),
+      },
+      Timestamp: {
+        fromDate: jest.fn((d: Date) => ({
+          toDate: () => d,
+          seconds: Math.floor(d.getTime() / 1000),
+          nanoseconds: 0,
+        })),
+      },
+    },
+  ),
 }));
 
 // Mock expo-linking

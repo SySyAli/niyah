@@ -26,6 +26,7 @@ extension ManagedSettingsStore.Name {
 ///   - Use named ManagedSettingsStore for session isolation.
 ///   - Use clearAllSettings() for deterministic cleanup.
 ///   - No DeviceActivitySchedule needed for direct blocking.
+@preconcurrency
 public class NiyahScreenTimeModule: Module {
 
   // ── App Group constants ────────────────────────────────────────────────────
@@ -41,6 +42,11 @@ public class NiyahScreenTimeModule: Module {
     get { sharedDefaults.bool(forKey: Self.blockingKey) }
     set { sharedDefaults.set(newValue, forKey: Self.blockingKey) }
   }
+
+  // ── Violation polling ───────────────────────────────────────────────────────
+  private static let violationsKey = "niyah_shield_violations"
+  private var violationPollTimer: Timer?
+  private var lastViolationCount: Int = 0
 
   // ── iOS 16+ state ─────────────────────────────────────────────────────────
   // Stored as `Any?` because the types don't exist on iOS <16.
@@ -140,20 +146,42 @@ public class NiyahScreenTimeModule: Module {
 
       return try await withCheckedThrowingContinuation { continuation in
         DispatchQueue.main.async {
-          let pickerVC = AppPickerHostingController { selection in
-            // Save in memory AND persist
-            self.savedSelection = selection
+          // Track whether the continuation has already been resumed.
+          // Both onSelection and onCancel dismiss the modal — only the first
+          // one to fire should resume the continuation.
+          var resumed = false
 
-            let appCount = selection.applicationTokens.count
-            let catCount = selection.categoryTokens.count
-            NSLog("[NiyahScreenTime] App picker done: \(appCount) apps, \(catCount) categories")
+          let pickerVC = AppPickerHostingController(
+            onSelection: { selection in
+              guard !resumed else { return }
+              resumed = true
 
-            let summary = self.serializeSelection(selection)
-            continuation.resume(returning: summary)
-          }
+              // Save in memory AND persist
+              self.savedSelection = selection
+
+              let appCount = selection.applicationTokens.count
+              let catCount = selection.categoryTokens.count
+              NSLog("[NiyahScreenTime] App picker done: \(appCount) apps, \(catCount) categories")
+
+              let summary = self.serializeSelection(selection)
+              continuation.resume(returning: summary)
+            },
+            onCancel: {
+              guard !resumed else { return }
+              resumed = true
+
+              NSLog("[NiyahScreenTime] App picker cancelled")
+              continuation.resume(throwing: NSError(
+                domain: "NiyahScreenTime", code: 4,
+                userInfo: [NSLocalizedDescriptionKey: "App picker was cancelled"]
+              ))
+            }
+          )
           pickerVC.modalPresentationStyle = .pageSheet
 
           guard let rootVC = self.findRootViewController() else {
+            guard !resumed else { return }
+            resumed = true
             continuation.resume(throwing: NSError(
               domain: "NiyahScreenTime", code: 2,
               userInfo: [NSLocalizedDescriptionKey: "Could not find root view controller"]
@@ -207,6 +235,12 @@ public class NiyahScreenTimeModule: Module {
         ? nil : selection.webDomainTokens
 
       self.isCurrentlyBlocking = true
+
+      // Clear any stale violations from previous sessions and start polling
+      self.sharedDefaults.removeObject(forKey: Self.violationsKey)
+      self.lastViolationCount = 0
+      self.startViolationPolling()
+
       NSLog("[NiyahScreenTime] startBlocking: shields applied successfully")
     }
 
@@ -218,6 +252,7 @@ public class NiyahScreenTimeModule: Module {
       // individual properties.
       self.managedStore.clearAllSettings()
       self.isCurrentlyBlocking = false
+      self.stopViolationPolling()
       NSLog("[NiyahScreenTime] stopBlocking: all settings cleared")
     }
 
@@ -269,5 +304,38 @@ public class NiyahScreenTimeModule: Module {
       topVC = presented
     }
     return topVC
+  }
+
+  // ================================================================
+  // MARK: - Violation polling & event emission
+  // ================================================================
+  //
+  // The DeviceActivityMonitor extension runs in a separate process and
+  // writes violation timestamps to shared UserDefaults. The main app
+  // polls for new entries and emits "onShieldViolation" events to JS.
+
+  private func startViolationPolling() {
+    stopViolationPolling() // Ensure no duplicate timers
+    violationPollTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+      self?.checkForNewViolations()
+    }
+  }
+
+  private func stopViolationPolling() {
+    violationPollTimer?.invalidate()
+    violationPollTimer = nil
+  }
+
+  private func checkForNewViolations() {
+    let violations = sharedDefaults.array(forKey: Self.violationsKey) as? [Double] ?? []
+    guard violations.count > lastViolationCount else { return }
+
+    // Emit events for each new violation
+    for i in lastViolationCount..<violations.count {
+      let timestamp = violations[i]
+      NSLog("[NiyahScreenTime] Shield violation detected at \(timestamp)")
+      sendEvent("onShieldViolation", ["timestamp": timestamp])
+    }
+    lastViolationCount = violations.count
   }
 }

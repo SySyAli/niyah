@@ -17,6 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.niyah.app",
+      "googleServicesFile": "./firebase/GoogleService-Info.plist",
       "usesAppleSignIn": true,
       "associatedDomains": ["applinks:niyah-b972d.firebaseapp.com"],
       "infoPlist": {
@@ -25,6 +26,7 @@
       }
     },
     "android": {
+      "googleServicesFile": "./firebase/google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1A1714"
@@ -53,6 +55,7 @@
     "plugins": [
       "expo-router",
       "react-native-bottom-tabs",
+      "@react-native-firebase/app",
       [
         "@react-native-google-signin/google-signin",
         {

@@ -73,12 +73,22 @@ function withFirebaseStaticFrameworks(config) {
           podfile.slice(insertAfter);
       }
 
-      // 2. Add CLANG_ALLOW_NON_MODULAR_INCLUDES post_install patch
+      // 2. Add post_install patches for Firebase + RN bridge compatibility
       const postInstallPatch = `
     ${PATCH_MARKER} Allow non-modular includes for Firebase + RN bridge compatibility
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
         config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+      end
+      # RNFB pods: disable auto-generated module maps to prevent
+      # RCTBridgeModule re-export conflicts between RNFBApp and RNFBFirestore.
+      # Without this, Clang enforces module import ordering and fails with:
+      #   "declaration of 'RCTBridgeModule' must be imported from module
+      #    'RNFBApp.RNFBAppModule' before it is required"
+      if target.name.start_with?('RNFB')
+        target.build_configurations.each do |config|
+          config.build_settings['DEFINES_MODULE'] = 'NO'
+        end
       end
     end
 `;

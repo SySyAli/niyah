@@ -13,6 +13,7 @@ import type { UserReputation } from "../../../types";
 jest.mock("../../../config/firebase", () => ({
   fetchUserProfile: jest.fn(),
   awardReferralToUser: jest.fn(),
+  updateUserDoc: jest.fn(() => Promise.resolve()),
 }));
 
 import {

@@ -2,13 +2,15 @@
   "name": "niyah",
   "version": "1.0.0",
   "main": "expo-router/entry",
-  "packageManager": "pnpm@10.29.3",
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
     "start": "node scripts/print-dev-url.js & expo start --dev-client",
     "start:go": "expo start --go",
     "android": "expo start --android --dev-client",
     "ios": "expo start --ios --dev-client",
     "web": "expo start --web",
+    "build:local": "npx expo run:ios --device",
+    "build:local:sim": "npx expo run:ios",
     "build:dev": "eas build --profile development --platform ios",
     "build:dev:android": "eas build --profile development --platform android",
     "build:dev:device": "eas build --profile development-device --platform ios",
@@ -33,6 +35,9 @@
     "@bottom-tabs/react-navigation": "^1.1.0",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-firebase/app": "^23.8.8",
+    "@react-native-firebase/auth": "^23.8.8",
+    "@react-native-firebase/firestore": "^23.8.8",
     "@react-native-google-signin/google-signin": "^14.0.2",
     "@react-navigation/native": "^7.1.33",
     "@stripe/stripe-react-native": "^0.59.2",
@@ -65,7 +70,7 @@
     "react-native-svg": "^15.15.3",
     "react-native-worklets": "^0.7.4",
     "sf-symbols-typescript": "^2.2.0",
-    "zustand": "^5.0.11"
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
@@ -75,7 +80,7 @@
     "@types/react": "~19.1.17",
     "babel-preset-expo": "^54.0.10",
     "eas": "^0.1.0",
-    "eas-cli": "^18.1.0",
+    "eas-cli": "^18.4.0",
     "eslint": "^9.39.4",
     "eslint-config-expo": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
@@ -88,7 +93,7 @@
     "react-native-web": "~0.20.0",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.57.1"
   },
   "private": true,
   "pnpm": {

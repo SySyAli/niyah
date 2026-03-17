@@ -68,10 +68,38 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // sessions/{sessionId}
+    // -------------------------------------------------------------------------
+    // Session documents track solo focus sessions. Written client-side by
+    // sessionStore (writeSession, updateSession) and server-side by Cloud
+    // Functions (handleSessionComplete, handleSessionForfeit — admin SDK).
+    //
+    // Owner can read and create sessions. Updates are restricted to status
+    // transitions only (complete/surrender). Cloud Functions bypass these
+    // rules via admin SDK for authoritative balance mutations.
+    match /sessions/{sessionId} {
+      // Owner can read their own sessions
+      allow read: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+
+      // Owner can create sessions (userId must match auth, status must be active)
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'active';
+
+      // Owner can update their own sessions (status transitions, completedAt, actualPayout)
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+
+      // No client-side deletes
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
     // Default deny
     // -------------------------------------------------------------------------
     // Any collection not explicitly matched above is denied by default.
-    // This covers future collections (sessions, transfers, etc.) until
-    // explicit rules are added for them.
+    // This covers future collections (groupSessions, groupInvites, etc.)
+    // until explicit rules are added for them.
   }
 }

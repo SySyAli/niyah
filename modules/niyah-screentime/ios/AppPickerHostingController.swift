@@ -10,8 +10,11 @@ import FamilyControls
 @available(iOS 16.0, *)
 class AppPickerHostingController: UIHostingController<AppPickerView> {
 
-  init(onSelection: @escaping (FamilyActivitySelection) -> Void) {
-    let view = AppPickerView(onSelection: onSelection)
+  init(
+    onSelection: @escaping (FamilyActivitySelection) -> Void,
+    onCancel: @escaping () -> Void
+  ) {
+    let view = AppPickerView(onSelection: onSelection, onCancel: onCancel)
     super.init(rootView: view)
   }
 
@@ -21,11 +24,12 @@ class AppPickerHostingController: UIHostingController<AppPickerView> {
 }
 
 /// SwiftUI view that wraps FamilyActivityPicker with a navigation bar
-/// and a "Done" button.
+/// and "Done" / "Cancel" buttons.
 @available(iOS 16.0, *)
 struct AppPickerView: View {
   @State private var selection = FamilyActivitySelection()
   let onSelection: (FamilyActivitySelection) -> Void
+  let onCancel: () -> Void
 
   var body: some View {
     NavigationView {
@@ -36,24 +40,24 @@ struct AppPickerView: View {
           ToolbarItem(placement: .confirmationAction) {
             Button("Done") {
               onSelection(selection)
-              // Dismiss the hosting controller
-              if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                 let window = windowScene.windows.first(where: { $0.isKeyWindow }),
-                 let rootVC = window.rootViewController {
-                rootVC.dismiss(animated: true)
-              }
+              dismiss()
             }
           }
           ToolbarItem(placement: .cancellationAction) {
             Button("Cancel") {
-              if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                 let window = windowScene.windows.first(where: { $0.isKeyWindow }),
-                 let rootVC = window.rootViewController {
-                rootVC.dismiss(animated: true)
-              }
+              onCancel()
+              dismiss()
             }
           }
         }
+    }
+  }
+
+  private func dismiss() {
+    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+       let window = windowScene.windows.first(where: { $0.isKeyWindow }),
+       let rootVC = window.rootViewController {
+      rootVC.dismiss(animated: true)
     }
   }
 }

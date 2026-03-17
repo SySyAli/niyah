@@ -21,6 +21,11 @@ import Foundation
 /// IMPORTANT: This extension has no access to the main app's memory, Expo
 /// modules, or React Native runtime. It can only use Foundation, the Screen
 /// Time frameworks, and the shared App Group container.
+
+// ManagedSettingsStore.Name.niyahSession is declared in NiyahScreenTimeModule.swift.
+// When this extension is built as a separate target (Phase 1), this file will need
+// its own copy of that declaration since it won't share the main module's sources.
+
 @available(iOS 16.0, *)
 class NiyahDeviceActivityMonitorExtension: DeviceActivityMonitor {
 
@@ -51,11 +56,10 @@ class NiyahDeviceActivityMonitorExtension: DeviceActivityMonitor {
   override func intervalDidEnd(for activity: DeviceActivityName) {
     super.intervalDidEnd(for: activity)
 
-    // Clear shields when session ends (backup -- main app also calls stopBlocking)
-    let store = ManagedSettingsStore()
-    store.shield.applications = nil
-    store.shield.applicationCategories = nil
-    store.shield.webDomains = nil
+    // Clear shields when session ends (backup -- main app also calls stopBlocking).
+    // MUST use the same named store (.niyahSession) as the main app.
+    let store = ManagedSettingsStore(named: .niyahSession)
+    store.clearAllSettings()
 
     sharedDefaults.set(false, forKey: Self.blockingKey)
   }

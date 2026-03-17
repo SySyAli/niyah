@@ -1,13 +1,17 @@
 import { create } from "zustand";
 import { Transaction } from "../types";
-import { INITIAL_BALANCE } from "../constants/config";
+import { DEMO_MODE, INITIAL_BALANCE } from "../constants/config";
 import { useAuthStore } from "./authStore";
+import { getWalletDoc } from "../config/firebase";
 
 interface WalletState {
   balance: number;
   transactions: Transaction[];
   pendingWithdrawal: number;
+  isHydrated: boolean;
 
+  /** Hydrate balance from Firestore. Call after login. */
+  hydrate: (uid: string) => Promise<void>;
   // syncedBalance: when provided (from server after real Stripe payment), use as authoritative balance
   deposit: (amount: number, syncedBalance?: number) => void;
   withdraw: (amount: number) => void;
@@ -23,17 +27,42 @@ interface WalletState {
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
-  balance: INITIAL_BALANCE,
-  transactions: [
-    {
-      id: "initial",
-      type: "deposit",
-      amount: INITIAL_BALANCE,
-      description: "Welcome bonus",
-      createdAt: new Date(),
-    },
-  ],
+  balance: DEMO_MODE ? INITIAL_BALANCE : 0,
+  transactions: DEMO_MODE
+    ? [
+        {
+          id: "initial",
+          type: "deposit" as const,
+          amount: INITIAL_BALANCE,
+          description: "Welcome bonus",
+          createdAt: new Date(),
+        },
+      ]
+    : [],
   pendingWithdrawal: 0,
+  isHydrated: DEMO_MODE, // In demo mode, we're "hydrated" immediately
+
+  hydrate: async (uid: string) => {
+    if (DEMO_MODE) return; // Demo mode uses INITIAL_BALANCE
+
+    try {
+      const wallet = await getWalletDoc(uid);
+      if (wallet) {
+        set({
+          balance: wallet.balance,
+          pendingWithdrawal: wallet.pendingBalance,
+          isHydrated: true,
+        });
+      } else {
+        // No wallet doc yet (new user); balance is 0
+        set({ balance: 0, isHydrated: true });
+      }
+    } catch (error) {
+      console.error("Failed to hydrate wallet from Firestore:", error);
+      // Still mark as hydrated so UI isn't stuck in loading state
+      set({ isHydrated: true });
+    }
+  },
 
   deposit: (amount: number, syncedBalance?: number) => {
     const transaction: Transaction = {

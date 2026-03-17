@@ -24,6 +24,7 @@ jest.mock("../../../config/firebase", () => ({
   fetchUserProfile: jest.fn(),
   saveUserProfile: jest.fn(),
   awardReferralToUser: jest.fn(),
+  updateUserDoc: jest.fn(() => Promise.resolve()),
   signOut: jest.fn(),
   onAuthStateChanged: jest.fn(() => jest.fn()), // returns unsubscribe
 }));
@@ -460,7 +461,7 @@ describe("authStore", () => {
     };
 
     it("should set full auth state before returning", async () => {
-      jest.mocked(isEmailSignInLink).mockReturnValueOnce(true);
+      jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
       jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce("user@email.com");
       jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
       jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
@@ -481,7 +482,7 @@ describe("authStore", () => {
     });
 
     it("should clean up stored email after successful sign-in", async () => {
-      jest.mocked(isEmailSignInLink).mockReturnValueOnce(true);
+      jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
       jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce("user@email.com");
       jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
       jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
@@ -498,7 +499,7 @@ describe("authStore", () => {
     });
 
     it("should throw if link is not a valid sign-in link", async () => {
-      jest.mocked(isEmailSignInLink).mockReturnValueOnce(false);
+      jest.mocked(isEmailSignInLink).mockResolvedValueOnce(false);
 
       await expect(
         act(async () => {
@@ -510,7 +511,7 @@ describe("authStore", () => {
     });
 
     it("should throw if stored email is missing", async () => {
-      jest.mocked(isEmailSignInLink).mockReturnValueOnce(true);
+      jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
       jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce(null);
 
       await expect(
@@ -791,6 +792,101 @@ describe("authStore", () => {
       });
 
       expect(useAuthStore.getState().user).toBeNull();
+    });
+  });
+
+  // ─── Firestore sync (updateUserDoc assertions) ────────────────────────────
+
+  describe("Firestore sync via updateUserDoc", () => {
+    const { updateUserDoc } = jest.requireMock("../../../config/firebase") as {
+      updateUserDoc: jest.Mock;
+    };
+
+    beforeEach(() => {
+      updateUserDoc.mockClear();
+    });
+
+    it("updateUser syncs stat fields to Firestore", async () => {
+      simulateAuthenticated();
+
+      act(() => {
+        useAuthStore
+          .getState()
+          .updateUser({ currentStreak: 5, totalSessions: 10 });
+      });
+      await Promise.resolve();
+
+      expect(updateUserDoc).toHaveBeenCalledWith("test-uid", {
+        stats: { currentStreak: 5, totalSessions: 10 },
+      });
+    });
+
+    it("updateUser does NOT sync non-stat fields to Firestore", async () => {
+      simulateAuthenticated();
+
+      act(() => {
+        useAuthStore.getState().updateUser({ name: "New Name" });
+      });
+      await Promise.resolve();
+
+      expect(updateUserDoc).not.toHaveBeenCalled();
+    });
+
+    it("updateUser handles Firestore error silently — local state still updated", async () => {
+      simulateAuthenticated();
+      updateUserDoc.mockRejectedValueOnce(new Error("Firestore offline"));
+
+      act(() => {
+        useAuthStore.getState().updateUser({ currentStreak: 3 });
+      });
+      await Promise.resolve();
+
+      // Local state should still reflect the update
+      expect(useAuthStore.getState().user?.currentStreak).toBe(3);
+    });
+
+    it("updateReputation syncs to Firestore", async () => {
+      simulateAuthenticated();
+
+      act(() => {
+        useAuthStore.getState().updateReputation({ paymentsCompleted: 1 });
+      });
+      await Promise.resolve();
+
+      expect(updateUserDoc).toHaveBeenCalledWith(
+        "test-uid",
+        expect.objectContaining({
+          reputation: expect.objectContaining({
+            paymentsCompleted: 1,
+          }),
+        }),
+      );
+    });
+
+    it("setVenmoHandle syncs to Firestore", async () => {
+      simulateAuthenticated();
+
+      act(() => {
+        useAuthStore.getState().setVenmoHandle("@alice");
+      });
+      await Promise.resolve();
+
+      expect(updateUserDoc).toHaveBeenCalledWith("test-uid", {
+        venmoHandle: "@alice",
+      });
+    });
+
+    it("setZelleHandle syncs to Firestore", async () => {
+      simulateAuthenticated();
+
+      act(() => {
+        useAuthStore.getState().setZelleHandle("z@bank.com");
+      });
+      await Promise.resolve();
+
+      expect(updateUserDoc).toHaveBeenCalledWith("test-uid", {
+        zelleHandle: "z@bank.com",
+      });
     });
   });
 });

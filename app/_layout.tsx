@@ -47,7 +47,7 @@ export default function RootLayout() {
   // Handle deep links for email magic link sign-in and referral invites
   useEffect(() => {
     const handleUrl = async (url: string) => {
-      if (isEmailSignInLink(url)) {
+      if (await isEmailSignInLink(url)) {
         try {
           await completeEmailLink(url);
         } catch (error) {

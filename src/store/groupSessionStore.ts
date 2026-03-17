@@ -15,6 +15,9 @@ import {
   ParticipantResult,
 } from "../utils/payoutAlgorithm";
 import { getVenmoPayLink } from "../utils/format";
+import { generateId } from "../utils/id";
+import { distributeGroupPayouts as cloudDistributePayouts } from "../config/functions";
+import { logger } from "../utils/logger";
 
 // Participants are provided without the fields the store sets internally.
 type NewParticipant = Omit<
@@ -75,7 +78,7 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
     }));
 
     const session: GroupSession = {
-      id: Math.random().toString(36).substring(2, 11),
+      id: generateId(),
       cadence,
       stakePerParticipant: config.stake,
       poolTotal: config.stake * fullParticipants.length,
@@ -125,7 +128,7 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
     const drafts = calculateTransfers(finalParticipants, payouts);
     const transfers: SessionTransfer[] = drafts.map((d) => ({
       ...d,
-      id: Math.random().toString(36).substring(2, 11),
+      id: generateId(),
       status: (d.amount === 0 ? "none" : "pending") as TransferStatus,
       createdAt: new Date(),
     }));
@@ -191,6 +194,15 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
       activeGroupSession: null,
       groupSessionHistory: [completedSession, ...groupSessionHistory],
     });
+
+    // Sync to server for real-money payouts (non-blocking in DEMO_MODE)
+    if (!DEMO_MODE) {
+      cloudDistributePayouts(
+        activeGroupSession.id,
+        activeGroupSession.stakePerParticipant,
+        results.map((r) => ({ userId: r.userId, completed: r.completed })),
+      ).catch((err) => logger.error("cloudDistributePayouts failed:", err));
+    }
 
     return completedSession;
   },

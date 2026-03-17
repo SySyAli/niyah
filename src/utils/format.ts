@@ -73,8 +73,10 @@ export const getVenmoPayLink = (
   recipientHandle: string,
   note: string,
 ): string => {
-  const handle = recipientHandle.replace("@", "");
-  const dollars = (amount / 100).toFixed(2);
+  // Strip @ prefix, then URI-encode to prevent query parameter injection
+  // from malicious handle values (e.g. handles containing & or =).
+  const handle = encodeURIComponent(recipientHandle.replace("@", ""));
+  const dollars = encodeURIComponent((amount / 100).toFixed(2));
   const encodedNote = encodeURIComponent(note);
   return `venmo://paycharge?txn=pay&recipients=${handle}&amount=${dollars}&note=${encodedNote}`;
 };

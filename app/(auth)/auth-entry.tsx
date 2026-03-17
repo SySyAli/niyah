@@ -25,6 +25,7 @@ import { useColors } from "../../src/hooks/useColors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { generateNonce, sha256 } from "../../src/config/firebase";
+import { logger } from "../../src/utils/logger";
 
 // ---------------------------------------------------------------------------
 // Icons
@@ -87,7 +88,7 @@ export default function AuthEntryScreen() {
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
       if (err?.code !== "SIGN_IN_CANCELLED") {
-        console.error("Google Sign-In error:", e);
+        logger.error("Google Sign-In error:", e);
         setError(err?.message || "Google Sign-In failed. Please try again.");
       }
     } finally {
@@ -142,7 +143,7 @@ export default function AuthEntryScreen() {
       if (err?.code === "ERR_REQUEST_CANCELED") {
         // User cancelled - do nothing
       } else {
-        console.error("Apple Sign-In error:", e);
+        logger.error("Apple Sign-In error:", e);
         setError(err?.message || "Apple Sign-In failed. Please try again.");
       }
     } finally {
@@ -167,7 +168,7 @@ export default function AuthEntryScreen() {
       });
     } catch (e: unknown) {
       const err = e as { message?: string };
-      console.error("Magic link error:", e);
+      logger.error("Magic link error:", e);
       setError(
         err?.message || "Failed to send sign-in link. Please try again.",
       );

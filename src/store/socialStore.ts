@@ -6,6 +6,7 @@ import {
   unfollowUser as firebaseUnfollowUser,
   getPublicProfile,
 } from "../config/firebase";
+import { logger } from "../utils/logger";
 
 interface SocialState {
   following: string[];
@@ -32,7 +33,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
       const doc = await getFollowsDoc(uid);
       set({ following: doc.following, followers: doc.followers });
     } catch (error) {
-      console.error("loadMyFollows error:", error);
+      logger.error("loadMyFollows error:", error);
     } finally {
       set({ isLoading: false });
     }
@@ -47,7 +48,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
           : [...state.following, targetUid],
       }));
     } catch (error) {
-      console.error("followUser error:", error);
+      logger.error("followUser error:", error);
       throw error;
     }
   },
@@ -59,7 +60,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
         following: state.following.filter((uid) => uid !== targetUid),
       }));
     } catch (error) {
-      console.error("unfollowUser error:", error);
+      logger.error("unfollowUser error:", error);
       throw error;
     }
   },
@@ -75,7 +76,7 @@ export const useSocialStore = create<SocialState>((set, get) => ({
         }));
       }
     } catch (error) {
-      console.error("loadProfile error:", error);
+      logger.error("loadProfile error:", error);
       throw error;
     }
   },

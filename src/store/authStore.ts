@@ -15,6 +15,7 @@ import {
 } from "../config/firebase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { REFERRAL_REPUTATION_BOOST } from "../constants/config";
+import { logger } from "../utils/logger";
 
 // Lazy import to break circular dependency (walletStore imports authStore)
 const hydrateWallet = (uid: string) => {
@@ -189,7 +190,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           hydrateWallet(firebaseUser.uid);
           recoverSession(firebaseUser.uid);
         } catch (error) {
-          console.error("Error fetching user profile:", error);
+          logger.error("Error fetching user profile:", error);
           // Still mark as authenticated even if Firestore fetch fails
           const user = buildUser(firebaseUser, null);
           set({
@@ -385,7 +386,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await signOut();
     } catch (error) {
-      console.error("Logout error:", error);
+      logger.error("Logout error:", error);
     }
 
     // Clear local state after signOut so state stays consistent if signOut fails
@@ -420,7 +421,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       if (Object.keys(statsUpdate).length > 0) {
         updateUserDoc(user.id, { stats: statsUpdate }).catch((err) =>
-          console.error("Failed to sync stats to Firestore:", err),
+          logger.error("Failed to sync stats to Firestore:", err),
         );
       }
     }
@@ -454,7 +455,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Sync reputation to Firestore (fire-and-forget)
       updateUserDoc(user.id, { reputation: newReputation }).catch((err) =>
-        console.error("Failed to sync reputation to Firestore:", err),
+        logger.error("Failed to sync reputation to Firestore:", err),
       );
     }
   },
@@ -466,7 +467,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Sync to Firestore (fire-and-forget)
       updateUserDoc(user.id, { venmoHandle: handle }).catch((err) =>
-        console.error("Failed to sync venmoHandle to Firestore:", err),
+        logger.error("Failed to sync venmoHandle to Firestore:", err),
       );
     }
   },
@@ -478,7 +479,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Sync to Firestore (fire-and-forget)
       updateUserDoc(user.id, { zelleHandle: handle }).catch((err) =>
-        console.error("Failed to sync zelleHandle to Firestore:", err),
+        logger.error("Failed to sync zelleHandle to Firestore:", err),
       );
     }
   },

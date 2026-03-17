@@ -29,6 +29,7 @@ import {
   getSavedAppSelection,
   getScreenTimeAuthStatus,
 } from "../../src/config/screentime";
+import { logger } from "../../src/utils/logger";
 
 const BLOCKED_APPS = [
   "Instagram",
@@ -326,7 +327,7 @@ export default function ConfirmSessionScreen() {
       try {
         await startBlocking();
       } catch (error) {
-        console.warn("Failed to start Screen Time blocking:", error);
+        logger.warn("Failed to start Screen Time blocking:", error);
       }
     }
 

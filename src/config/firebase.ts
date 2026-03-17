@@ -25,14 +25,11 @@ import {
   getDoc,
   setDoc,
   updateDoc as firestoreUpdateDoc,
-  writeBatch,
   query,
   where,
   limit,
   getDocs,
   serverTimestamp,
-  arrayUnion,
-  arrayRemove,
   Timestamp,
 } from "@react-native-firebase/firestore";
 import type { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
@@ -42,6 +39,7 @@ import {
 } from "@react-native-google-signin/google-signin";
 import * as Linking from "expo-linking";
 import * as Crypto from "expo-crypto";
+import { logger } from "../utils/logger";
 
 // ---------------------------------------------------------------------------
 // Firestore collection name constants
@@ -125,7 +123,7 @@ export const signOutGoogle = async () => {
   try {
     await GoogleSignin.signOut();
   } catch (error) {
-    console.error("Google Sign-Out error:", error);
+    logger.error("Google Sign-Out error:", error);
   }
 };
 
@@ -270,48 +268,24 @@ export const fetchUserProfile = async (
   return getUserDoc(uid);
 };
 
-// Fire-and-forget safe — errors are swallowed so the caller's flow is unaffected.
+/**
+ * Awards a referral bonus to the referrer.
+ *
+ * SECURITY: Delegates to the awardReferral Cloud Function, which uses the
+ * admin SDK to write to the referrer's document. The previous client-side
+ * implementation allowed any authenticated user to modify any user's
+ * reputation field directly via a permissive Firestore rule.
+ *
+ * Fire-and-forget safe — errors are swallowed so the caller's flow is unaffected.
+ */
 export const awardReferralToUser = async (
   referrerUid: string,
 ): Promise<void> => {
   try {
-    const snap = await getDoc(doc(db, COLLECTIONS.USERS, referrerUid));
-    if (!snap.exists) return;
-
-    const docData = snap.data() ?? {};
-    const rep = (docData.reputation as Record<string, number>) ?? {};
-
-    const referralCount = (rep.referralCount ?? 0) + 1;
-    const paymentsCompleted = rep.paymentsCompleted ?? 0;
-    const paymentsMissed = rep.paymentsMissed ?? 0;
-    const totalPayments = paymentsCompleted + paymentsMissed;
-
-    let score = 50;
-    if (totalPayments > 0) {
-      const successRate = paymentsCompleted / totalPayments;
-      score = Math.round(50 + (successRate - 0.5) * 100);
-      score = Math.max(0, Math.min(100, score));
-    }
-    score = Math.min(100, score + referralCount * 10);
-
-    const level =
-      score <= 20
-        ? "seed"
-        : score <= 40
-          ? "sprout"
-          : score <= 60
-            ? "sapling"
-            : score <= 80
-              ? "tree"
-              : "oak";
-
-    await setDoc(
-      doc(db, COLLECTIONS.USERS, referrerUid),
-      { reputation: { ...rep, referralCount, score, level } },
-      { merge: true },
-    );
+    const { awardReferral } = require("./functions");
+    await awardReferral(referrerUid);
   } catch (error) {
-    console.warn("awardReferralToUser failed (non-critical):", error);
+    logger.warn("awardReferralToUser failed (non-critical):", error);
   }
 };
 
@@ -334,32 +308,35 @@ export const getFollowsDoc = async (uid: string): Promise<FollowsDoc> => {
   };
 };
 
+/**
+ * Follows a target user via Cloud Function.
+ *
+ * SECURITY: Delegates to the followUserFn Cloud Function, which uses the
+ * admin SDK. The previous client-side batch write allowed any authenticated
+ * user to inject/remove arbitrary UIDs in another user's followers array
+ * via an overly permissive Firestore rule.
+ *
+ * The myUid parameter is kept for API compatibility but is NOT sent to the
+ * server — the Cloud Function uses the authenticated caller's UID.
+ */
 export const followUser = async (
-  myUid: string,
+  _myUid: string,
   targetUid: string,
 ): Promise<void> => {
-  const batch = writeBatch(db);
-  const myRef = doc(db, COLLECTIONS.USER_FOLLOWS, myUid);
-  const targetRef = doc(db, COLLECTIONS.USER_FOLLOWS, targetUid);
-
-  batch.set(myRef, { following: arrayUnion(targetUid) }, { merge: true });
-  batch.set(targetRef, { followers: arrayUnion(myUid) }, { merge: true });
-
-  await batch.commit();
+  const { followUserCF } = require("./functions");
+  await followUserCF(targetUid);
 };
 
+/**
+ * Unfollows a target user via Cloud Function.
+ * See followUser for security rationale.
+ */
 export const unfollowUser = async (
-  myUid: string,
+  _myUid: string,
   targetUid: string,
 ): Promise<void> => {
-  const batch = writeBatch(db);
-  const myRef = doc(db, COLLECTIONS.USER_FOLLOWS, myUid);
-  const targetRef = doc(db, COLLECTIONS.USER_FOLLOWS, targetUid);
-
-  batch.set(myRef, { following: arrayRemove(targetUid) }, { merge: true });
-  batch.set(targetRef, { followers: arrayRemove(myUid) }, { merge: true });
-
-  await batch.commit();
+  const { unfollowUserCF } = require("./functions");
+  await unfollowUserCF(targetUid);
 };
 
 export const getPublicProfile = async (

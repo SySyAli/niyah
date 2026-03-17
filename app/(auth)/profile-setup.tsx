@@ -24,6 +24,7 @@ import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { PENDING_REFERRAL_KEY } from "../../src/constants/config";
+import { logger } from "../../src/utils/logger";
 
 export default function ProfileSetupScreen() {
   const Colors = useColors();
@@ -96,7 +97,7 @@ export default function ProfileSetupScreen() {
       router.replace("/(tabs)");
     } catch (e: unknown) {
       const err = e as { message?: string };
-      console.error("Profile setup error:", e);
+      logger.error("Profile setup error:", e);
       setError(err?.message || "Something went wrong. Please try again.");
     }
   };

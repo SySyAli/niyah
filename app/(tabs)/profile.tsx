@@ -18,6 +18,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
+import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import { useThemeStore } from "../../src/store/themeStore";
 import * as Haptics from "expo-haptics";
 import { Card, Balance } from "../../src/components";
@@ -33,8 +34,10 @@ import {
   PaymentHandlesCard,
   TransactionHistory,
 } from "../../src/components/profile";
+import { logger } from "../../src/utils/logger";
 
 export default function ProfileScreen() {
+  useScreenProtection("profile");
   const Colors = useColors();
   const { theme, toggleTheme } = useThemeStore();
   const router = useRouter();
@@ -60,7 +63,7 @@ export default function ProfileScreen() {
           try {
             await logout();
           } catch (error) {
-            console.error("Logout error:", error);
+            logger.error("Logout error:", error);
           }
           router.replace("/(auth)/welcome");
         },

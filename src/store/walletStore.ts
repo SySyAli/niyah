@@ -3,6 +3,8 @@ import { Transaction } from "../types";
 import { DEMO_MODE, INITIAL_BALANCE } from "../constants/config";
 import { useAuthStore } from "./authStore";
 import { getWalletDoc } from "../config/firebase";
+import { generateId } from "../utils/id";
+import { logger } from "../utils/logger";
 
 interface WalletState {
   balance: number;
@@ -58,7 +60,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         set({ balance: 0, isHydrated: true });
       }
     } catch (error) {
-      console.error("Failed to hydrate wallet from Firestore:", error);
+      logger.error("Failed to hydrate wallet from Firestore:", error);
       // Still mark as hydrated so UI isn't stuck in loading state
       set({ isHydrated: true });
     }
@@ -66,7 +68,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   deposit: (amount: number, syncedBalance?: number) => {
     const transaction: Transaction = {
-      id: Math.random().toString(36).substring(2, 11),
+      id: generateId(),
       type: "deposit",
       amount,
       description: "Deposit",
@@ -89,7 +91,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     if (amount > balance) return;
 
     const transaction: Transaction = {
-      id: Math.random().toString(36).substring(2, 11),
+      id: generateId(),
       type: "withdrawal",
       amount: -amount,
       description: "Withdrawal (pending)",
@@ -116,7 +118,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
 
     const transaction: Transaction = {
-      id: Math.random().toString(36).substring(2, 11),
+      id: generateId(),
       type: "stake",
       amount: -amount,
       description: "Session stake",
@@ -136,7 +138,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   creditPayout: (amount: number, sessionId: string) => {
     const transaction: Transaction = {
-      id: Math.random().toString(36).substring(2, 11),
+      id: generateId(),
       type: "payout",
       amount,
       description: "Session completed - Payout",
@@ -156,7 +158,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   recordForfeit: (amount: number, sessionId: string) => {
     const transaction: Transaction = {
-      id: Math.random().toString(36).substring(2, 11),
+      id: generateId(),
       type: "forfeit",
       amount: 0, // Already deducted when session started
       description: "Session surrendered - Stake forfeited",
@@ -176,7 +178,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     description: string,
   ) => {
     const transaction: Transaction = {
-      id: Math.random().toString(36).substring(2, 11),
+      id: generateId(),
       type: amount > 0 ? "settlement_received" : "settlement_paid",
       amount,
       description,

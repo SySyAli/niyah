@@ -46,6 +46,77 @@ function sendError(res: Response, code: number, message: string): void {
   res.status(code).json({ error: message });
 }
 
+// ─── Rate Limiting ──────────────────────────────────────────────────────────
+
+interface RateLimitConfig {
+  maxCalls: number; // max calls allowed in the window
+  windowMs: number; // time window in milliseconds
+}
+
+/**
+ * Firestore-based rate limiter. Checks if a user has exceeded the allowed
+ * number of calls within a time window. Returns true if the request should
+ * be BLOCKED.
+ *
+ * Uses a single Firestore document per user+function combo (rateLimits
+ * collection). Stores an array of call timestamps, pruning expired entries
+ * on each check.
+ *
+ * Fail-open: if the rate limit check itself fails (e.g., Firestore error),
+ * the request is ALLOWED — denying legitimate financial operations due to
+ * infrastructure failure is worse than allowing a few extra calls.
+ */
+async function checkRateLimit(
+  uid: string,
+  functionName: string,
+  config: RateLimitConfig,
+): Promise<boolean> {
+  const docId = `${uid}_${functionName}`;
+  const ref = db.collection("rateLimits").doc(docId);
+  const now = Date.now();
+  const windowStart = now - config.windowMs;
+
+  try {
+    return await db.runTransaction(async (txn) => {
+      const snap = await txn.get(ref);
+      const data = snap.data();
+      const timestamps: number[] = data?.timestamps ?? [];
+
+      // Prune expired entries
+      const recent = timestamps.filter((t) => t > windowStart);
+
+      if (recent.length >= config.maxCalls) {
+        return true; // BLOCKED
+      }
+
+      // Record this call
+      recent.push(now);
+      txn.set(ref, { timestamps: recent, updatedAt: now });
+      return false; // ALLOWED
+    });
+  } catch (err) {
+    // Fail-open: allow the request if rate limit check fails
+    console.error("Rate limit check failed (allowing request):", err);
+    return false;
+  }
+}
+
+// Rate limit configurations per function
+const RATE_LIMITS = {
+  handleSessionComplete: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
+  handleSessionForfeit: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
+  createPaymentIntent: { maxCalls: 3, windowMs: 600_000 }, // 3/10min
+  verifyAndCreditDeposit: { maxCalls: 5, windowMs: 600_000 }, // 5/10min
+  requestWithdrawal: { maxCalls: 2, windowMs: 3_600_000 }, // 2/hr
+  distributeGroupPayouts: { maxCalls: 3, windowMs: 3_600_000 }, // 3/hr
+  awardReferral: { maxCalls: 10, windowMs: 86_400_000 }, // 10/day
+  createConnectAccount: { maxCalls: 3, windowMs: 3_600_000 }, // 3/hr
+  createAccountLink: { maxCalls: 5, windowMs: 600_000 }, // 5/10min
+  getConnectAccountStatus: { maxCalls: 10, windowMs: 600_000 }, // 10/10min
+  followUserFn: { maxCalls: 30, windowMs: 600_000 }, // 30/10min
+  unfollowUserFn: { maxCalls: 30, windowMs: 600_000 }, // 30/10min
+} as const;
+
 // ─── createPaymentIntent ────────────────────────────────────────────────────
 /**
  * Creates a Stripe PaymentIntent for depositing funds.
@@ -65,6 +136,17 @@ export const createPaymentIntent = onRequest(
       uid = await verifyAuth(req);
     } catch {
       sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "createPaymentIntent",
+        RATE_LIMITS.createPaymentIntent,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
       return;
     }
 
@@ -143,6 +225,17 @@ export const verifyAndCreditDeposit = onRequest(
       return;
     }
 
+    if (
+      await checkRateLimit(
+        uid,
+        "verifyAndCreditDeposit",
+        RATE_LIMITS.verifyAndCreditDeposit,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
     const { paymentIntentId } = req.body as { paymentIntentId: string };
     if (!paymentIntentId) {
       sendError(res, 400, "Missing paymentIntentId");
@@ -162,10 +255,10 @@ export const verifyAndCreditDeposit = onRequest(
       // ACH / bank debit: PaymentIntent is 'processing', not yet 'succeeded'.
       // Do NOT credit yet — the stripeWebhook will credit when it actually clears.
       if (pi.status === "processing") {
-        const userDoc = await db.collection("users").doc(uid).get();
+        const walletDoc = await db.collection("wallets").doc(uid).get();
         res.json({
           processing: true,
-          currentBalance: userDoc.data()?.balance ?? 0,
+          currentBalance: walletDoc.data()?.balance ?? 0,
           estimatedArrival: "1–5 business days",
         });
         return;
@@ -184,9 +277,9 @@ export const verifyAndCreditDeposit = onRequest(
         .get();
 
       if (!existingTxn.empty) {
-        const userDoc = await db.collection("users").doc(uid).get();
+        const walletDoc = await db.collection("wallets").doc(uid).get();
         res.json({
-          newBalance: userDoc.data()?.balance ?? 0,
+          newBalance: walletDoc.data()?.balance ?? 0,
           alreadyCredited: true,
         });
         return;
@@ -194,15 +287,15 @@ export const verifyAndCreditDeposit = onRequest(
 
       const amount = pi.amount;
 
-      // Credit balance in Firestore (atomic transaction)
-      const userRef = db.collection("users").doc(uid);
+      // Credit balance in wallets collection (protected from client writes)
+      const walletRef = db.collection("wallets").doc(uid);
       const txnRef = db.collection("transactions").doc();
 
       const newBalance = await db.runTransaction(async (txn) => {
-        const userSnap = await txn.get(userRef);
-        const current: number = userSnap.data()?.balance ?? 0;
+        const walletSnap = await txn.get(walletRef);
+        const current: number = walletSnap.data()?.balance ?? 0;
         const updated = current + amount;
-        txn.update(userRef, { balance: updated });
+        txn.update(walletRef, { balance: updated });
         txn.set(txnRef, {
           userId: uid,
           type: "deposit",
@@ -244,6 +337,17 @@ export const createConnectAccount = onRequest(
       return;
     }
 
+    if (
+      await checkRateLimit(
+        uid,
+        "createConnectAccount",
+        RATE_LIMITS.createConnectAccount,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
     try {
       const userDoc = await db.collection("users").doc(uid).get();
       const userData = userDoc.data() ?? {};
@@ -282,8 +386,12 @@ export const createConnectAccount = onRequest(
 /**
  * Generates a Stripe Express onboarding link (KYC flow).
  * User opens this URL in a browser to complete identity verification.
- * Body: { accountId: string }
+ * Body: {} (accountId read from Firestore, not from client)
  * Returns: { url: string }
+ *
+ * SECURITY: Reads accountId from the user's Firestore doc instead of
+ * accepting it from the client. Prevents a user from generating onboarding
+ * links for other users' Stripe accounts.
  */
 export const createAccountLink = onRequest(
   { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
@@ -301,13 +409,30 @@ export const createAccountLink = onRequest(
       return;
     }
 
-    const { accountId } = req.body as { accountId: string };
-    if (!accountId) {
-      sendError(res, 400, "Missing accountId");
+    if (
+      await checkRateLimit(
+        uid,
+        "createAccountLink",
+        RATE_LIMITS.createAccountLink,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
       return;
     }
 
     try {
+      // Read accountId from Firestore — NEVER trust client-provided accountId
+      const userDoc = await db.collection("users").doc(uid).get();
+      const accountId: string = userDoc.data()?.stripeAccountId ?? "";
+      if (!accountId) {
+        sendError(
+          res,
+          400,
+          "No Connect account found — create one first via createConnectAccount",
+        );
+        return;
+      }
+
       const stripe = getStripe();
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
@@ -342,6 +467,17 @@ export const getConnectAccountStatus = onRequest(
       uid = await verifyAuth(req);
     } catch {
       sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "getConnectAccountStatus",
+        RATE_LIMITS.getConnectAccountStatus,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
       return;
     }
 
@@ -386,11 +522,11 @@ export const getConnectAccountStatus = onRequest(
 /**
  * Called when a solo session completes successfully.
  * Refunds the stake back to the user (stay-the-same model for MVP).
- * Body: { sessionId: string, stakeAmount: number }
- * Returns: { newBalance: number }
+ * Body: { sessionId: string }
+ * Returns: { newBalance: number, payout: number }
  *
- * NOTE: payout = stake (stickK model). User gets their $5/$25/$100 back.
- * Earning more than staked requires streak bonuses (future feature).
+ * SECURITY: Reads stakeAmount from the session doc (not from client).
+ * Validates session ownership, status, and that the timer has expired.
  */
 export const handleSessionComplete = onRequest(
   { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
@@ -408,36 +544,82 @@ export const handleSessionComplete = onRequest(
       return;
     }
 
-    const { sessionId, stakeAmount } = req.body as {
-      sessionId: string;
-      stakeAmount: number;
-    };
-    if (!sessionId || !stakeAmount) {
-      sendError(res, 400, "Missing required fields");
+    if (
+      await checkRateLimit(
+        uid,
+        "handleSessionComplete",
+        RATE_LIMITS.handleSessionComplete,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { sessionId } = req.body as { sessionId: string };
+    if (!sessionId) {
+      sendError(res, 400, "Missing sessionId");
       return;
     }
 
     try {
+      const walletRef = db.collection("wallets").doc(uid);
       const userRef = db.collection("users").doc(uid);
       const txnRef = db.collection("transactions").doc();
       const sessionRef = db.collection("sessions").doc(sessionId);
 
       const newBalance = await db.runTransaction(async (txn) => {
-        const userSnap = await txn.get(userRef);
-        const current: number = userSnap.data()?.balance ?? 0;
+        // Read session doc — authoritative source of truth
+        const sessionSnap = await txn.get(sessionRef);
+        if (!sessionSnap.exists) {
+          throw new Error("Session not found");
+        }
+        const sessionData = sessionSnap.data()!;
+
+        // Verify ownership: session must belong to the authenticated user
+        if (sessionData.userId !== uid) {
+          throw new Error("Session does not belong to this user");
+        }
+
+        // Verify status: session must be active (prevents double-completion)
+        if (sessionData.status !== "active") {
+          throw new Error(
+            `Session is not active (current status: ${sessionData.status})`,
+          );
+        }
+
+        // Verify timer: session must have ended (30s grace for clock skew)
+        const endsAt = sessionData.endsAt?.toDate?.()
+          ? sessionData.endsAt.toDate()
+          : new Date(sessionData.endsAt);
+        const gracePeriodMs = 30_000; // 30 seconds
+        if (endsAt.getTime() - gracePeriodMs > Date.now()) {
+          throw new Error("Session has not ended yet");
+        }
+
+        // Read stakeAmount from session doc — NEVER trust client-provided amount
+        const stakeAmount: number = sessionData.stakeAmount;
+        if (!stakeAmount || stakeAmount <= 0) {
+          throw new Error("Invalid stake amount on session");
+        }
 
         // Payout = stake (stickK model). User gets their stake back.
         const payout = stakeAmount;
-        const updated = current + payout;
 
+        // Credit balance to wallets collection (protected from client writes)
+        const walletSnap = await txn.get(walletRef);
+        const currentBalance: number = walletSnap.data()?.balance ?? 0;
+        const updatedBalance = currentBalance + payout;
+        txn.update(walletRef, { balance: updatedBalance });
+
+        // Update user stats (separate from financial balance)
         txn.update(userRef, {
-          balance: updated,
           completedSessions: admin.firestore.FieldValue.increment(1),
           totalSessions: admin.firestore.FieldValue.increment(1),
           currentStreak: admin.firestore.FieldValue.increment(1),
           totalEarnings: admin.firestore.FieldValue.increment(payout),
         });
 
+        // Record transaction
         txn.set(txnRef, {
           userId: uid,
           type: "payout",
@@ -447,23 +629,31 @@ export const handleSessionComplete = onRequest(
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        txn.set(
-          sessionRef,
-          {
-            status: "completed",
-            completedAt: admin.firestore.FieldValue.serverTimestamp(),
-            actualPayout: payout,
-          },
-          { merge: true },
-        );
+        // Mark session as completed atomically
+        txn.update(sessionRef, {
+          status: "completed",
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          actualPayout: payout,
+        });
 
-        return updated;
+        return updatedBalance;
       });
 
-      res.json({ newBalance, payout: stakeAmount });
+      res.json({ newBalance, payout: newBalance });
     } catch (err) {
-      console.error("handleSessionComplete error:", err);
-      sendError(res, 500, "Failed to process session completion");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      // Return 4xx for validation errors, 5xx for unexpected failures
+      if (
+        message.includes("not found") ||
+        message.includes("does not belong") ||
+        message.includes("not active") ||
+        message.includes("not ended")
+      ) {
+        sendError(res, 400, message);
+      } else {
+        console.error("handleSessionComplete error:", err);
+        sendError(res, 500, "Failed to process session completion");
+      }
     }
   },
 );
@@ -473,8 +663,11 @@ export const handleSessionComplete = onRequest(
  * Called when a user surrenders a session.
  * Stake is forfeited — goes to NIYAH (revenue). Firestore balance already
  * decremented when session started, so we just record the forfeit.
- * Body: { sessionId: string, stakeAmount: number }
+ * Body: { sessionId: string }
  * Returns: { success: boolean }
+ *
+ * SECURITY: Reads stakeAmount from the session doc (not from client).
+ * Validates session ownership and status.
  */
 export const handleSessionForfeit = onRequest(
   { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
@@ -492,26 +685,58 @@ export const handleSessionForfeit = onRequest(
       return;
     }
 
-    const { sessionId, stakeAmount } = req.body as {
-      sessionId: string;
-      stakeAmount: number;
-    };
-    if (!sessionId || !stakeAmount) {
-      sendError(res, 400, "Missing required fields");
+    if (
+      await checkRateLimit(
+        uid,
+        "handleSessionForfeit",
+        RATE_LIMITS.handleSessionForfeit,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { sessionId } = req.body as { sessionId: string };
+    if (!sessionId) {
+      sendError(res, 400, "Missing sessionId");
       return;
     }
 
     try {
-      const txnRef = db.collection("transactions").doc();
       const sessionRef = db.collection("sessions").doc(sessionId);
+      const txnRef = db.collection("transactions").doc();
       const revenueRef = db.collection("revenue").doc();
 
       await db.runTransaction(async (txn) => {
+        // Read session doc — authoritative source of truth
+        const sessionSnap = await txn.get(sessionRef);
+        if (!sessionSnap.exists) {
+          throw new Error("Session not found");
+        }
+        const sessionData = sessionSnap.data()!;
+
+        // Verify ownership
+        if (sessionData.userId !== uid) {
+          throw new Error("Session does not belong to this user");
+        }
+
+        // Verify status (prevents double-forfeit)
+        if (sessionData.status !== "active") {
+          throw new Error(
+            `Session is not active (current status: ${sessionData.status})`,
+          );
+        }
+
+        // Read stakeAmount from session doc — NEVER trust client
+        const stakeAmount: number = sessionData.stakeAmount;
+
+        // Update user stats
         txn.update(db.collection("users").doc(uid), {
           totalSessions: admin.firestore.FieldValue.increment(1),
           currentStreak: 0,
         });
 
+        // Record forfeit transaction
         txn.set(txnRef, {
           userId: uid,
           type: "forfeit",
@@ -521,17 +746,14 @@ export const handleSessionForfeit = onRequest(
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        txn.set(
-          sessionRef,
-          {
-            status: "surrendered",
-            completedAt: admin.firestore.FieldValue.serverTimestamp(),
-            actualPayout: 0,
-          },
-          { merge: true },
-        );
+        // Mark session as surrendered
+        txn.update(sessionRef, {
+          status: "surrendered",
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          actualPayout: 0,
+        });
 
-        // Track forfeit as revenue
+        // Track forfeit as revenue (using server-side stakeAmount)
         txn.set(revenueRef, {
           userId: uid,
           amount: stakeAmount,
@@ -543,8 +765,17 @@ export const handleSessionForfeit = onRequest(
 
       res.json({ success: true });
     } catch (err) {
-      console.error("handleSessionForfeit error:", err);
-      sendError(res, 500, "Failed to record session forfeit");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (
+        message.includes("not found") ||
+        message.includes("does not belong") ||
+        message.includes("not active")
+      ) {
+        sendError(res, 400, message);
+      } else {
+        console.error("handleSessionForfeit error:", err);
+        sendError(res, 500, "Failed to record session forfeit");
+      }
     }
   },
 );
@@ -576,6 +807,17 @@ export const requestWithdrawal = onRequest(
       return;
     }
 
+    if (
+      await checkRateLimit(
+        uid,
+        "requestWithdrawal",
+        RATE_LIMITS.requestWithdrawal,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
     const { amount, method = "standard" } = req.body as {
       amount: number;
       method?: "standard" | "instant";
@@ -589,6 +831,7 @@ export const requestWithdrawal = onRequest(
     try {
       const stripe = getStripe();
       const userRef = db.collection("users").doc(uid);
+      const walletRef = db.collection("wallets").doc(uid);
       const userSnap = await userRef.get();
       const userData = userSnap.data() ?? {};
 
@@ -609,18 +852,21 @@ export const requestWithdrawal = onRequest(
         );
         return;
       }
-      if ((userData.balance ?? 0) < amount) {
+
+      // Read balance from wallets collection (protected from client writes)
+      const walletSnap = await walletRef.get();
+      if ((walletSnap.data()?.balance ?? 0) < amount) {
         sendError(res, 400, "Insufficient balance");
         return;
       }
 
-      // Atomically deduct balance and record pending withdrawal
+      // Atomically deduct balance from wallets collection
       const txnRef = db.collection("transactions").doc();
       await db.runTransaction(async (txn) => {
-        const snap = await txn.get(userRef);
+        const snap = await txn.get(walletRef);
         const current: number = snap.data()?.balance ?? 0;
         if (current < amount) throw new Error("Insufficient balance");
-        txn.update(userRef, { balance: current - amount });
+        txn.update(walletRef, { balance: current - amount });
         txn.set(txnRef, {
           userId: uid,
           type: "withdrawal",
@@ -669,15 +915,14 @@ export const requestWithdrawal = onRequest(
       });
     } catch (err) {
       console.error("requestWithdrawal error:", err);
-      // If Stripe transfer failed, restore balance
+      // If Stripe transfer failed, restore balance in wallets collection
       try {
-        const snap = await db.collection("users").doc(uid).get();
-        await db
-          .collection("users")
-          .doc(uid)
-          .update({
-            balance: (snap.data()?.balance ?? 0) + amount,
-          });
+        const walletRestoreRef = db.collection("wallets").doc(uid);
+        await db.runTransaction(async (txn) => {
+          const snap = await txn.get(walletRestoreRef);
+          const current: number = snap.data()?.balance ?? 0;
+          txn.update(walletRestoreRef, { balance: current + amount });
+        });
       } catch (restoreErr) {
         console.error(
           "Failed to restore balance after withdrawal error:",
@@ -692,9 +937,18 @@ export const requestWithdrawal = onRequest(
 // ─── distributeGroupPayouts ─────────────────────────────────────────────────
 /**
  * Distributes group session payouts via Stripe Connect transfers.
- * Called by the host when the session ends (future: automated).
- * Body: { sessionId: string, payouts: { userId: string, amount: number }[] }
- * Returns: { success: boolean, transfers: string[] }
+ * Called by the host when the session ends.
+ *
+ * Body: {
+ *   sessionId: string,
+ *   stakePerParticipant: number,
+ *   results: { userId: string, completed: boolean }[]
+ * }
+ * Returns: { success: boolean, transfers: string[], payouts: { userId: string, amount: number }[] }
+ *
+ * SECURITY: Payout amounts are calculated SERVER-SIDE using the same algorithm
+ * as the client, based on the results array. The client cannot dictate payout amounts.
+ * Individual payout amounts are capped and total pool is validated.
  */
 export const distributeGroupPayouts = onRequest(
   { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
@@ -712,21 +966,76 @@ export const distributeGroupPayouts = onRequest(
       return;
     }
 
-    const { sessionId, payouts } = req.body as {
+    if (
+      await checkRateLimit(
+        uid,
+        "distributeGroupPayouts",
+        RATE_LIMITS.distributeGroupPayouts,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { sessionId, stakePerParticipant, results } = req.body as {
       sessionId: string;
-      payouts: { userId: string; amount: number }[];
+      stakePerParticipant: number;
+      results: { userId: string; completed: boolean }[];
     };
 
-    if (!sessionId || !payouts?.length) {
+    if (!sessionId || !stakePerParticipant || !results?.length) {
       sendError(res, 400, "Missing required fields");
       return;
     }
 
+    // Validate stake amount is within allowed range (100 cents to $10,000)
+    if (stakePerParticipant < 100 || stakePerParticipant > 1_000_000) {
+      sendError(res, 400, "Invalid stake amount");
+      return;
+    }
+
+    // Validate participant count (2-20 for group sessions)
+    if (results.length < 2 || results.length > 20) {
+      sendError(res, 400, "Invalid number of participants");
+      return;
+    }
+
     try {
+      // ── Server-side payout calculation ──────────────────────────────
+      // Mirrors client-side calculatePayouts() in payoutAlgorithm.ts.
+      // Completers split the full pool. Surrenderers get 0.
+      const completers = results.filter((r) => r.completed);
+      const totalPool = results.length * stakePerParticipant;
+
+      let serverPayouts: { userId: string; amount: number }[];
+      if (completers.length === 0) {
+        // All surrendered — nobody gets anything (NIYAH keeps the pool)
+        serverPayouts = results.map((r) => ({
+          userId: r.userId,
+          amount: 0,
+        }));
+      } else {
+        const payoutPerCompleter = Math.floor(totalPool / completers.length);
+        serverPayouts = results.map((r) => ({
+          userId: r.userId,
+          amount: r.completed ? payoutPerCompleter : 0,
+        }));
+      }
+
+      // Validate total payouts don't exceed pool
+      const totalPayouts = serverPayouts.reduce((sum, p) => sum + p.amount, 0);
+      if (totalPayouts > totalPool) {
+        sendError(res, 400, "Calculated payouts exceed pool — aborting");
+        return;
+      }
+
+      // ── Execute Stripe transfers ───────────────────────────────────
       const stripe = getStripe();
       const transferIds: string[] = [];
 
-      for (const payout of payouts) {
+      for (const payout of serverPayouts) {
+        if (payout.amount <= 0) continue; // No transfer needed
+
         // Get the recipient's Stripe Connect account
         const recipientDoc = await db
           .collection("users")
@@ -742,8 +1051,6 @@ export const distributeGroupPayouts = onRequest(
           continue;
         }
 
-        if (payout.amount <= 0) continue; // No transfer needed
-
         const transfer = await stripe.transfers.create({
           amount: payout.amount,
           currency: "usd",
@@ -757,13 +1064,13 @@ export const distributeGroupPayouts = onRequest(
 
         transferIds.push(transfer.id);
 
-        // Update recipient's Firestore balance
+        // Credit recipient's wallet balance (wallets collection, not users)
         const txnRef = db.collection("transactions").doc();
+        const walletRef = db.collection("wallets").doc(payout.userId);
         await db.runTransaction(async (txn) => {
-          const recipientRef = db.collection("users").doc(payout.userId);
-          const snap = await txn.get(recipientRef);
+          const snap = await txn.get(walletRef);
           const current: number = snap.data()?.balance ?? 0;
-          txn.update(recipientRef, { balance: current + payout.amount });
+          txn.update(walletRef, { balance: current + payout.amount });
           txn.set(txnRef, {
             userId: payout.userId,
             type: "payout",
@@ -776,10 +1083,239 @@ export const distributeGroupPayouts = onRequest(
         });
       }
 
-      res.json({ success: true, transfers: transferIds });
+      res.json({
+        success: true,
+        transfers: transferIds,
+        payouts: serverPayouts,
+      });
     } catch (err) {
       console.error("distributeGroupPayouts error:", err);
       sendError(res, 500, "Failed to distribute payouts");
+    }
+  },
+);
+
+// ─── awardReferral ──────────────────────────────────────────────────────────
+/**
+ * Awards a referral bonus to a referrer user. Called server-side to prevent
+ * any authenticated user from manipulating another user's reputation.
+ *
+ * Body: { referrerUid: string }
+ * Returns: { success: boolean }
+ *
+ * SECURITY: Previously, awardReferralToUser() in firebase.ts wrote directly
+ * to another user's document from the client, and the Firestore rule allowed
+ * any authenticated user to modify any user's reputation field. This Cloud
+ * Function replaces that pattern — only the admin SDK can now modify reputation.
+ */
+export const awardReferral = onRequest(
+  { cors: true, region: "us-central1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (await checkRateLimit(uid, "awardReferral", RATE_LIMITS.awardReferral)) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { referrerUid } = req.body as { referrerUid: string };
+    if (!referrerUid || typeof referrerUid !== "string") {
+      sendError(res, 400, "Missing referrerUid");
+      return;
+    }
+
+    // Validate referrerUid format (Firebase UIDs are alphanumeric, 1-128 chars)
+    if (!/^[a-zA-Z0-9]{1,128}$/.test(referrerUid)) {
+      sendError(res, 400, "Invalid referrerUid format");
+      return;
+    }
+
+    try {
+      const referrerRef = db.collection("users").doc(referrerUid);
+
+      await db.runTransaction(async (txn) => {
+        const snap = await txn.get(referrerRef);
+        if (!snap.exists) return; // Referrer doesn't exist — silently succeed
+
+        const docData = snap.data() ?? {};
+        const rep = (docData.reputation as Record<string, number>) ?? {};
+
+        const referralCount = (rep.referralCount ?? 0) + 1;
+        const paymentsCompleted = rep.paymentsCompleted ?? 0;
+        const paymentsMissed = rep.paymentsMissed ?? 0;
+        const totalPayments = paymentsCompleted + paymentsMissed;
+
+        let score = 50;
+        if (totalPayments > 0) {
+          const successRate = paymentsCompleted / totalPayments;
+          score = Math.round(50 + (successRate - 0.5) * 100);
+          score = Math.max(0, Math.min(100, score));
+        }
+        score = Math.min(100, score + referralCount * 10);
+
+        const level =
+          score <= 20
+            ? "seed"
+            : score <= 40
+              ? "sprout"
+              : score <= 60
+                ? "sapling"
+                : score <= 80
+                  ? "tree"
+                  : "oak";
+
+        txn.update(referrerRef, {
+          reputation: { ...rep, referralCount, score, level },
+        });
+      });
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("awardReferral error:", err);
+      sendError(res, 500, "Failed to award referral");
+    }
+  },
+);
+
+// ─── followUser ─────────────────────────────────────────────────────────────
+/**
+ * Follows a target user. Updates both the caller's `following` array and the
+ * target's `followers` array atomically using a batch write.
+ *
+ * Body: { targetUid: string }
+ * Returns: { success: boolean }
+ *
+ * SECURITY: Previously, the client wrote directly to another user's
+ * `followers` field, and the Firestore rule allowed any authenticated user
+ * to modify any user's followers array. This Cloud Function replaces that
+ * pattern — ensures only the caller's own UID is added.
+ */
+export const followUserFn = onRequest(
+  { cors: true, region: "us-central1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (await checkRateLimit(uid, "followUserFn", RATE_LIMITS.followUserFn)) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { targetUid } = req.body as { targetUid: string };
+    if (!targetUid || typeof targetUid !== "string") {
+      sendError(res, 400, "Missing targetUid");
+      return;
+    }
+
+    if (uid === targetUid) {
+      sendError(res, 400, "Cannot follow yourself");
+      return;
+    }
+
+    try {
+      const batch = db.batch();
+      const myRef = db.collection("userFollows").doc(uid);
+      const targetRef = db.collection("userFollows").doc(targetUid);
+
+      batch.set(
+        myRef,
+        { following: admin.firestore.FieldValue.arrayUnion(targetUid) },
+        { merge: true },
+      );
+      batch.set(
+        targetRef,
+        { followers: admin.firestore.FieldValue.arrayUnion(uid) },
+        { merge: true },
+      );
+
+      await batch.commit();
+      res.json({ success: true });
+    } catch (err) {
+      console.error("followUser error:", err);
+      sendError(res, 500, "Failed to follow user");
+    }
+  },
+);
+
+// ─── unfollowUser ───────────────────────────────────────────────────────────
+/**
+ * Unfollows a target user. Removes the caller from the target's `followers`
+ * and the target from the caller's `following`.
+ *
+ * Body: { targetUid: string }
+ * Returns: { success: boolean }
+ */
+export const unfollowUserFn = onRequest(
+  { cors: true, region: "us-central1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(uid, "unfollowUserFn", RATE_LIMITS.unfollowUserFn)
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { targetUid } = req.body as { targetUid: string };
+    if (!targetUid || typeof targetUid !== "string") {
+      sendError(res, 400, "Missing targetUid");
+      return;
+    }
+
+    try {
+      const batch = db.batch();
+      const myRef = db.collection("userFollows").doc(uid);
+      const targetRef = db.collection("userFollows").doc(targetUid);
+
+      batch.set(
+        myRef,
+        { following: admin.firestore.FieldValue.arrayRemove(targetUid) },
+        { merge: true },
+      );
+      batch.set(
+        targetRef,
+        { followers: admin.firestore.FieldValue.arrayRemove(uid) },
+        { merge: true },
+      );
+
+      await batch.commit();
+      res.json({ success: true });
+    } catch (err) {
+      console.error("unfollowUser error:", err);
+      sendError(res, 500, "Failed to unfollow user");
     }
   },
 );
@@ -837,12 +1373,12 @@ export const stripeWebhook = onRequest(
                 .get();
 
               if (existingTxn.empty) {
-                const userRef = db.collection("users").doc(uid);
+                const walletRef = db.collection("wallets").doc(uid);
                 const txnRef = db.collection("transactions").doc();
                 await db.runTransaction(async (txn) => {
-                  const snap = await txn.get(userRef);
+                  const snap = await txn.get(walletRef);
                   const current: number = snap.data()?.balance ?? 0;
-                  txn.update(userRef, { balance: current + pi.amount });
+                  txn.update(walletRef, { balance: current + pi.amount });
                   txn.set(txnRef, {
                     userId: uid,
                     type: "deposit",

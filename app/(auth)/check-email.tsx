@@ -25,6 +25,7 @@ import {
 import { useColors } from "../../src/hooks/useColors";
 import { Button } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
+import { logger } from "../../src/utils/logger";
 
 export default function CheckEmailScreen() {
   const Colors = useColors();
@@ -77,7 +78,7 @@ export default function CheckEmailScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       startCooldown();
     } catch (error) {
-      console.error("Resend error:", error);
+      logger.error("Resend error:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };

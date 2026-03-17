@@ -19,6 +19,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
+import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import * as Haptics from "expo-haptics";
 import { Button, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -28,6 +29,7 @@ import {
   verifyAndCreditDeposit,
 } from "../../src/config/functions";
 import { DEMO_MODE } from "../../src/constants/config";
+import { logger } from "../../src/utils/logger";
 
 // Lazily require Stripe — crashes on dev builds without the native StripeSdk module.
 // In DEMO_MODE the Stripe path is never reached so a no-op stub is fine.
@@ -103,6 +105,7 @@ const QuickAmountButton: React.FC<QuickAmountButtonProps> = ({
 };
 
 export default function DepositScreen() {
+  useScreenProtection("deposit");
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -246,7 +249,7 @@ export default function DepositScreen() {
         );
       }
     } catch (err) {
-      console.error("Deposit error:", err);
+      logger.error("Deposit error:", err);
       Alert.alert("Deposit Failed", "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);

@@ -41,19 +41,28 @@ jest.mock("react-native-svg", () => ({
 }));
 
 // Mock expo-crypto
-jest.mock("expo-crypto", () => ({
-  getRandomBytesAsync: jest.fn((byteCount: number) =>
-    Promise.resolve(new Uint8Array(byteCount).fill(0xab)),
-  ),
-  digestStringAsync: jest.fn((_algorithm: string, _data: string) =>
-    Promise.resolve(
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+jest.mock("expo-crypto", () => {
+  let callCounter = 0;
+  return {
+    getRandomBytes: jest.fn((byteCount: number) => {
+      callCounter++;
+      return new Uint8Array(byteCount).map(
+        (_, i) => (callCounter * 37 + i * 17 + 0xab) & 0xff,
+      );
+    }),
+    getRandomBytesAsync: jest.fn((byteCount: number) =>
+      Promise.resolve(new Uint8Array(byteCount).fill(0xab)),
     ),
-  ),
-  CryptoDigestAlgorithm: {
-    SHA256: "SHA-256",
-  },
-}));
+    digestStringAsync: jest.fn((_algorithm: string, _data: string) =>
+      Promise.resolve(
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      ),
+    ),
+    CryptoDigestAlgorithm: {
+      SHA256: "SHA-256",
+    },
+  };
+});
 
 // Mock expo-haptics
 jest.mock("expo-haptics", () => ({

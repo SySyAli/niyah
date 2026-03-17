@@ -23,6 +23,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
+import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import * as Haptics from "expo-haptics";
 import { Button, Card } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
@@ -31,10 +32,12 @@ import {
   createAccountLink,
   getConnectAccountStatus,
 } from "../../src/config/functions";
+import { logger } from "../../src/utils/logger";
 
 type AccountStatus = "none" | "pending" | "active" | "restricted";
 
 export default function StripeOnboardingScreen() {
+  useScreenProtection("stripe-onboarding");
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -59,7 +62,7 @@ export default function StripeOnboardingScreen() {
         updateUser({ stripeAccountStatus: result.status });
       }
     } catch (err) {
-      console.error("Failed to check Stripe status:", err);
+      logger.error("Failed to check Stripe status:", err);
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +89,7 @@ export default function StripeOnboardingScreen() {
       }
 
       // Get onboarding URL
-      const { url } = await createAccountLink(accountId);
+      const { url } = await createAccountLink();
 
       // Open Stripe's KYC flow in browser
       const result = await WebBrowser.openBrowserAsync(url, {
@@ -99,7 +102,7 @@ export default function StripeOnboardingScreen() {
         await checkStatus();
       }
     } catch (err) {
-      console.error("Onboarding error:", err);
+      logger.error("Onboarding error:", err);
       Alert.alert(
         "Setup Error",
         "Could not start payout setup. Please try again.",

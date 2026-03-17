@@ -11,6 +11,8 @@ import { useThemeStore } from "../src/store/themeStore";
 import { useAuthStore } from "../src/store/authStore";
 import { isEmailSignInLink } from "../src/config/firebase";
 import { DEMO_MODE, PENDING_REFERRAL_KEY } from "../src/constants/config";
+import { logger } from "../src/utils/logger";
+import { initializeSslPinning } from "../src/config/sslPinning";
 
 // Set in .env as EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
 // Use pk_test_... for development, pk_live_... for production
@@ -44,6 +46,11 @@ export default function RootLayout() {
   const theme = useThemeStore((s) => s.theme);
   const { completeEmailLink } = useAuthStore();
 
+  // Initialize SSL certificate pinning (no-op in __DEV__ mode)
+  useEffect(() => {
+    initializeSslPinning();
+  }, []);
+
   // Handle deep links for email magic link sign-in and referral invites
   useEffect(() => {
     const handleUrl = async (url: string) => {
@@ -51,14 +58,21 @@ export default function RootLayout() {
         try {
           await completeEmailLink(url);
         } catch (error) {
-          console.error("Error completing email link sign-in:", error);
+          logger.error("Error completing email link sign-in:", error);
         }
         return;
       }
 
       const parsed = Linking.parse(url);
       const referrerUid = parsed.queryParams?.ref;
-      if (referrerUid && typeof referrerUid === "string") {
+      // Validate referrer UID: must be a non-empty string matching Firebase
+      // UID format (alphanumeric, 1-128 chars). Prevents storing arbitrary
+      // data from malicious deep links.
+      if (
+        referrerUid &&
+        typeof referrerUid === "string" &&
+        /^[a-zA-Z0-9]{1,128}$/.test(referrerUid)
+      ) {
         await AsyncStorage.setItem(PENDING_REFERRAL_KEY, referrerUid);
       }
     };

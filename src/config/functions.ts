@@ -71,24 +71,28 @@ export async function verifyAndCreditDeposit(
 
 // ─── Session functions ───────────────────────────────────────────────────────
 
+/**
+ * Completes a session server-side. The Cloud Function reads the stakeAmount
+ * from the session doc, validates ownership, timer, and status.
+ * stakeAmount param is accepted for backwards compatibility but ignored by server.
+ */
 export async function handleSessionComplete(
   sessionId: string,
-  stakeAmount: number,
+  _stakeAmount?: number,
 ): Promise<{ newBalance: number; payout: number }> {
   return callFunction<{ newBalance: number; payout: number }>(
     "handleSessionComplete",
-    { sessionId, stakeAmount },
+    { sessionId },
   );
 }
 
-/** Stake is retained as NIYAH revenue. */
+/** Stake is retained as NIYAH revenue. Server reads amount from session doc. */
 export async function handleSessionForfeit(
   sessionId: string,
-  stakeAmount: number,
+  _stakeAmount?: number,
 ): Promise<{ success: boolean }> {
   return callFunction<{ success: boolean }>("handleSessionForfeit", {
     sessionId,
-    stakeAmount,
   });
 }
 
@@ -98,10 +102,12 @@ export async function createConnectAccount(): Promise<{ accountId: string }> {
   return callFunction<{ accountId: string }>("createConnectAccount", {});
 }
 
-export async function createAccountLink(
-  accountId: string,
-): Promise<{ url: string }> {
-  return callFunction<{ url: string }>("createAccountLink", { accountId });
+/**
+ * Generates a Stripe onboarding link. The Cloud Function reads the accountId
+ * from the user's Firestore doc (not from the client) to prevent spoofing.
+ */
+export async function createAccountLink(): Promise<{ url: string }> {
+  return callFunction<{ url: string }>("createAccountLink", {});
 }
 
 export async function getConnectAccountStatus(): Promise<{
@@ -133,5 +139,60 @@ export async function requestWithdrawal(
   return callFunction<WithdrawalResult>("requestWithdrawal", {
     amount,
     method,
+  });
+}
+
+// ─── Social functions ────────────────────────────────────────────────────────
+
+/**
+ * Awards a referral bonus to the referrer. Runs server-side to prevent
+ * clients from manipulating any user's reputation directly.
+ */
+export async function awardReferral(
+  referrerUid: string,
+): Promise<{ success: boolean }> {
+  return callFunction<{ success: boolean }>("awardReferral", { referrerUid });
+}
+
+/**
+ * Follows a target user. The Cloud Function ensures only the caller's UID
+ * is added to the target's followers array (prevents spoofing).
+ */
+export async function followUserCF(
+  targetUid: string,
+): Promise<{ success: boolean }> {
+  return callFunction<{ success: boolean }>("followUserFn", { targetUid });
+}
+
+/**
+ * Unfollows a target user via Cloud Function.
+ */
+export async function unfollowUserCF(
+  targetUid: string,
+): Promise<{ success: boolean }> {
+  return callFunction<{ success: boolean }>("unfollowUserFn", { targetUid });
+}
+
+// ─── Group session functions ─────────────────────────────────────────────────
+
+export interface GroupPayoutResult {
+  success: boolean;
+  transfers: string[];
+  payouts: { userId: string; amount: number }[];
+}
+
+/**
+ * Distributes group session payouts. The Cloud Function recalculates payouts
+ * server-side — clients cannot dictate payout amounts.
+ */
+export async function distributeGroupPayouts(
+  sessionId: string,
+  stakePerParticipant: number,
+  results: { userId: string; completed: boolean }[],
+): Promise<GroupPayoutResult> {
+  return callFunction<GroupPayoutResult>("distributeGroupPayouts", {
+    sessionId,
+    stakePerParticipant,
+    results,
   });
 }

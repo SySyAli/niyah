@@ -21,6 +21,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
+import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import * as Haptics from "expo-haptics";
 import { Button, Card, NumPad, AmountDisplay } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -36,6 +37,7 @@ function calcInstantFee(amountCents: number): number {
 }
 
 export default function WithdrawScreen() {
+  useScreenProtection("withdraw");
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -121,18 +123,35 @@ export default function WithdrawScreen() {
     }
   };
 
-  // Opens a Venmo REQUEST (not payment) to @niyah-focus. Balance is NOT deducted
-  // here — Niyah confirms and processes each request within 24 hours.
-  const handleVenmoWithdraw = () => {
-    const venmoUrl = `venmo://paycharge?txn=request&recipients=niyah-focus&amount=${(amountInCents / 100).toFixed(2)}&note=NIYAH%20withdrawal`;
-    Linking.openURL(venmoUrl).catch(() =>
-      Linking.openURL("https://venmo.com/niyah-focus"),
-    );
-    Alert.alert(
-      "Withdrawal Requested",
-      `We'll send you ${formatMoney(amountInCents)} via Venmo within 24 hours. Your balance will update once confirmed.`,
-      [{ text: "OK", onPress: () => router.back() }],
-    );
+  // Opens a Venmo REQUEST to @niyah-focus AFTER server-side validation.
+  // Balance is deducted server-side via requestWithdrawal to prevent unlimited
+  // withdrawal requests without balance impact.
+  const handleVenmoWithdraw = async () => {
+    setIsLoading(true);
+    try {
+      // Validate and deduct balance server-side first
+      await requestWithdrawal(amountInCents, "standard");
+      withdraw(amountInCents);
+
+      // Only open Venmo after server confirms balance deduction
+      const venmoUrl = `venmo://paycharge?txn=request&recipients=niyah-focus&amount=${encodeURIComponent((amountInCents / 100).toFixed(2))}&note=${encodeURIComponent("NIYAH withdrawal")}`;
+      Linking.openURL(venmoUrl).catch(() =>
+        Linking.openURL("https://venmo.com/niyah-focus"),
+      );
+      Alert.alert(
+        "Withdrawal Requested",
+        `We'll send you ${formatMoney(amountInCents)} via Venmo within 24 hours.`,
+        [{ text: "OK", onPress: () => router.back() }],
+      );
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.";
+      Alert.alert("Withdrawal Failed", message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getAmountError = () => {

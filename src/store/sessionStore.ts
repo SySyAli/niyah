@@ -12,6 +12,8 @@ import {
   updateSession,
   getActiveSession,
 } from "../config/firebase";
+import { generateId } from "../utils/id";
+import { logger } from "../utils/logger";
 
 interface SessionState {
   currentSession: Session | null;
@@ -43,7 +45,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const duration = DEMO_MODE ? config.demoDuration : config.duration;
 
     const session: Session = {
-      id: Math.random().toString(36).substring(2, 11),
+      id: generateId(),
       cadence,
       stakeAmount: config.stake,
       potentialPayout: config.stake,
@@ -68,7 +70,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         endsAt: session.endsAt,
         status: "active",
       }).catch((err) =>
-        console.error("Failed to persist session to Firestore:", err),
+        logger.error("Failed to persist session to Firestore:", err),
       );
     }
   },
@@ -106,13 +108,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       completedAt,
       actualPayout: 0,
     }).catch((err) =>
-      console.error("Failed to update session in Firestore:", err),
+      logger.error("Failed to update session in Firestore:", err),
     );
 
     // Sync to server (non-blocking — local state is source of truth in DEMO_MODE)
     if (!DEMO_MODE) {
       cloudForfeit(currentSession.id, currentSession.stakeAmount).catch((err) =>
-        console.error("cloudForfeit failed:", err),
+        logger.error("cloudForfeit failed:", err),
       );
     }
   },
@@ -157,13 +159,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       completedAt,
       actualPayout: payout,
     }).catch((err) =>
-      console.error("Failed to update session in Firestore:", err),
+      logger.error("Failed to update session in Firestore:", err),
     );
 
     // Sync to server (non-blocking — local state is source of truth in DEMO_MODE)
     if (!DEMO_MODE) {
       cloudComplete(currentSession.id, currentSession.stakeAmount).catch(
-        (err) => console.error("cloudComplete failed:", err),
+        (err) => logger.error("cloudComplete failed:", err),
       );
     }
   },
@@ -228,12 +230,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           completedAt,
           actualPayout: payout,
         }).catch((err) =>
-          console.error("Failed to auto-complete expired session:", err),
+          logger.error("Failed to auto-complete expired session:", err),
         );
 
         if (!DEMO_MODE) {
           cloudComplete(activeSession.id, activeSession.stakeAmount).catch(
-            (err) => console.error("cloudComplete (recovery) failed:", err),
+            (err) => logger.error("cloudComplete (recovery) failed:", err),
           );
         }
         return;
@@ -252,7 +254,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
       set({ currentSession: restoredSession, isBlocking: true });
     } catch (error) {
-      console.error("Failed to recover active session:", error);
+      logger.error("Failed to recover active session:", error);
     }
   },
 }));

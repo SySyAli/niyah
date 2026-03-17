@@ -9,20 +9,18 @@ service cloud.firestore {
     // Any signed-in user can read any user doc (public profiles, partner
     // lookup, referral flows all need cross-user reads).
     //
-    // Full write access is owner-only. The one exception is awardReferralToUser()
-    // in firebase.ts, which writes another user's `reputation` map client-side —
-    // constrained here to reputation-only updates. TODO: move to Cloud Function.
+    // Full write access is owner-only. Cross-user reputation updates are
+    // handled exclusively by Cloud Functions (awardReferral) using the
+    // admin SDK, which bypasses these rules entirely.
     match /users/{uid} {
       allow read: if request.auth != null;
 
       // Owner: full write access (profile setup, profile updates)
       allow write: if request.auth != null && request.auth.uid == uid;
 
-      // Any authenticated user may update the `reputation` map only.
-      // Used by the referral award flow (awardReferralToUser).
-      allow update: if request.auth != null
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['reputation']);
+      // Cross-user reputation updates REMOVED — now handled by Cloud Function.
+      // The previous rule allowed any authenticated user to modify any user's
+      // reputation field, enabling score manipulation. See awardReferral CF.
     }
 
     // -------------------------------------------------------------------------
@@ -50,21 +48,18 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
     // Any signed-in user can read follows docs (social graph is public).
     //
-    // follow/unfollow writes to two documents per operation: the follower's
-    // `following` array (own doc) and the target's `followers` array (other's doc).
-    // Own doc: full write. Other's doc: constrained to `followers` field only.
-    // TODO: move follow/unfollow to a Cloud Function to allow tighter rules.
+    // follow/unfollow operations are handled by Cloud Functions (followUser,
+    // unfollowUser) using the admin SDK, which bypasses these rules.
+    // Owner can still write their own doc for backwards compatibility.
     match /userFollows/{uid} {
       allow read: if request.auth != null;
 
       // Owner can write their own follows doc freely.
       allow write: if request.auth != null && request.auth.uid == uid;
 
-      // Any authenticated user may update only the `followers` array on
-      // another user's doc (the target side of a follow/unfollow operation).
-      allow update: if request.auth != null
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['followers']);
+      // Cross-user followers updates REMOVED — now handled by Cloud Functions.
+      // The previous rule allowed any authenticated user to manipulate any
+      // user's followers array. See followUser/unfollowUser CFs.
     }
 
     // -------------------------------------------------------------------------
@@ -87,12 +82,45 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.status == 'active';
 
-      // Owner can update their own sessions (status transitions, completedAt, actualPayout)
+      // Owner can update their own sessions — restricted to status transition
+      // fields only. Financial fields (stakeAmount, potentialPayout, endsAt)
+      // are immutable after creation. Cloud Functions use admin SDK for
+      // authoritative balance mutations and can write any field.
       allow update: if request.auth != null
-        && resource.data.userId == request.auth.uid;
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'completedAt', 'actualPayout', 'updatedAt']);
 
       // No client-side deletes
       allow delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // rateLimits/{docId}
+    // -------------------------------------------------------------------------
+    // Written exclusively by Cloud Functions (admin SDK) for server-side
+    // rate limiting. No client access — explicit deny for defense-in-depth.
+    match /rateLimits/{docId} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // revenue/{docId}
+    // -------------------------------------------------------------------------
+    // Written by Cloud Functions when sessions are forfeited. No client access.
+    match /revenue/{docId} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // transactions/{docId}
+    // -------------------------------------------------------------------------
+    // Written by Cloud Functions for deposit/withdrawal/payout records.
+    // Owner can read their own transactions.
+    match /transactions/{docId} {
+      allow read: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow write: if false;
     }
 
     // -------------------------------------------------------------------------

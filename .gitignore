@@ -32,9 +32,9 @@ yarn-error.*
 .env*.local
 .env
 
-# Firebase config (client-side configs, safe to commit - needed for EAS builds)
-# GoogleService-Info.plist
-# google-services.json
+# Firebase config (not committed — obtain from team or Firebase Console)
+firebase/GoogleService-Info.plist
+firebase/google-services.json
 
 # TypeScript
 *.tsbuildinfo

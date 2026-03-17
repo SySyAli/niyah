@@ -9,9 +9,10 @@
  * Pinned to intermediate CA (WE2) and root CA (GTS Root R4), NOT the leaf
  * cert, since Google rotates leaf certs frequently.
  *
- * To refresh pin hashes if Google rotates their CA chain:
- *    openssl s_client -showcerts -connect us-central1-niyah-b972d.cloudfunctions.net:443 \
- *      -servername us-central1-niyah-b972d.cloudfunctions.net 2>/dev/null \
+ * To refresh pin hashes if Google rotates their CA chain, replace
+ * <YOUR_PROJECT_ID> with the Firebase project ID and run:
+ *    openssl s_client -showcerts -connect us-central1-<YOUR_PROJECT_ID>.cloudfunctions.net:443 \
+ *      -servername us-central1-<YOUR_PROJECT_ID>.cloudfunctions.net 2>/dev/null \
  *      | openssl x509 -pubkey -noout \
  *      | openssl pkey -pubin -outform der \
  *      | openssl dgst -sha256 -binary \
@@ -32,6 +33,8 @@ import { Platform } from "react-native";
 // In __DEV__ mode, pinning interferes with debugging tools and proxies.
 declare const __DEV__: boolean;
 
+const FUNCTIONS_HOST = `us-central1-${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
+
 /**
  * Initialize SSL pinning for the Cloud Functions endpoint.
  * Call this once at app startup, BEFORE any fetch() calls to the endpoint.
@@ -51,7 +54,7 @@ export async function initializeSslPinning(): Promise<void> {
     } = require("react-native-ssl-public-key-pinning");
 
     await init({
-      "us-central1-niyah-b972d.cloudfunctions.net": {
+      [FUNCTIONS_HOST]: {
         includeSubdomains: false,
         publicKeyHashes: [
           // Pin to intermediate + root CAs (NOT the leaf cert, which Google rotates).

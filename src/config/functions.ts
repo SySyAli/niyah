@@ -2,7 +2,7 @@ import { getAuth } from "@react-native-firebase/auth";
 
 const FUNCTIONS_BASE =
   process.env.EXPO_PUBLIC_FUNCTIONS_URL ||
-  "https://us-central1-niyah-b972d.cloudfunctions.net";
+  `https://us-central1-${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
 // ─── Core fetch wrapper ──────────────────────────────────────────────────────
 

@@ -434,10 +434,11 @@ export const createAccountLink = onRequest(
       }
 
       const stripe = getStripe();
+      const projectId = process.env.GCLOUD_PROJECT ?? process.env.GCP_PROJECT;
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `https://niyah-b972d.firebaseapp.com/stripe-refresh?uid=${uid}`,
-        return_url: `https://niyah-b972d.firebaseapp.com/stripe-return?uid=${uid}`,
+        refresh_url: `https://${projectId}.firebaseapp.com/stripe-refresh?uid=${uid}`,
+        return_url: `https://${projectId}.firebaseapp.com/stripe-return?uid=${uid}`,
         type: "account_onboarding",
       });
 

@@ -26,6 +26,8 @@ const APP_GROUP_ID = "group.com.niyah.app";
 function withDeviceActivityMonitor(config) {
   const mainBundleId = config.ios?.bundleIdentifier ?? "com.niyah.app";
   const extensionBundleId = mainBundleId + EXTENSION_BUNDLE_ID_SUFFIX;
+  // Extension version MUST match the main app or Xcode rejects the build
+  const appVersion = config.version ?? "1.0.0";
 
   // Step 1: Copy extension source files into ios/ build directory
   config = withDangerousMod(config, [
@@ -74,8 +76,8 @@ function withDeviceActivityMonitor(config) {
 \t<string>$(PRODUCT_NAME)</string>
 \t<key>CFBundlePackageType</key>
 \t<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
-\t<key>CFBundleShortVersionString</key>
-\t<string>1.0</string>
+	<key>CFBundleShortVersionString</key>
+\t<string>${appVersion}</string>
 \t<key>CFBundleVersion</key>
 \t<string>1</string>
 \t<key>NSExtension</key>
@@ -162,7 +164,7 @@ function withDeviceActivityMonitor(config) {
           GENERATE_INFOPLIST_FILE: "NO",
           INFOPLIST_FILE: `${EXTENSION_NAME}/Info.plist`,
           CURRENT_PROJECT_VERSION: "1",
-          MARKETING_VERSION: "1.0",
+          MARKETING_VERSION: appVersion,
           // Ensure the extension can import DeviceActivity etc.
           LD_RUNPATH_SEARCH_PATHS:
             '"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"',

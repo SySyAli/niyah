@@ -1,0 +1,119 @@
+# Features
+
+> Core app features and their implementation.
+> See also: [Architecture](./architecture.md) | [Payments](./payments.md) | [Native Modules](./native-modules.md)
+
+## Authentication
+
+Three sign-in methods, all backed by Firebase Auth:
+
+1. **Google Sign-In** -- native dialog via `@react-native-google-signin/google-signin`
+2. **Apple Sign-In** -- native via `expo-apple-authentication` with nonce
+3. **Email Magic Link** -- passwordless email link via Firebase
+
+**Flow**: `auth-entry.tsx` -> (if new user) `profile-setup.tsx` -> tabs
+
+Auth state managed by `authStore.ts`, which listens to Firebase `onAuthStateChanged` and hydrates user data from Firestore.
+
+**Key files**: `src/config/firebase.ts` (auth helpers), `src/store/authStore.ts`, `app/(auth)/`
+
+## Session Modes
+
+### Solo Session
+
+**Store**: `sessionStore.ts` | **Screens**: `app/session/`
+
+1. User selects cadence (Daily/Weekly/Monthly)
+2. User confirms stake amount
+3. Session starts, timer counts down
+4. User can "surrender" early (lose stake) or complete (get stake back)
+
+Sessions persist to Firestore `sessions` collection with crash recovery via `recoverActiveSession`. Cloud Function calls gated behind `DEMO_MODE`.
+
+### Duo Session
+
+**Store**: `partnerStore.ts` | **Screen**: `app/session/partner.tsx`
+
+1. User selects a partner from their partner list
+2. Both stake the same amount
+3. Loser pays winner (settled via Venmo deep links outside app)
+
+### Group Session
+
+**Store**: `groupSessionStore.ts` | **Screen**: `app/session/propose.tsx`
+
+1. N participants each stake the same amount
+2. Payout algorithm distributes pool based on results
+3. Transfer tracking: pending -> payment_indicated -> settled
+4. Venmo deep links for settlement
+
+**Status**: UI complete, backend wiring pending. See [Roadmap > Phase 1](./roadmap.md#phase-1-group-mode-mvp) for the Firebase backend plan.
+
+## Wallet & Transactions
+
+**Store**: `walletStore.ts` | **Screens**: `deposit.tsx`, `withdraw.tsx`
+
+- Virtual balance tracked in cents
+- Transaction types: `deposit`, `withdrawal`, `stake`, `payout`, `forfeit`, `settlement_paid`, `settlement_received`
+- Demo mode starts with $50 balance (`INITIAL_BALANCE`)
+- Non-demo mode hydrates from Firestore `wallets/{uid}`
+
+See [Payments](./payments.md) for Stripe integration and payout formulas.
+
+## Social Features
+
+**Store**: `socialStore.ts` | **Screens**: `app/(tabs)/friends.tsx`, `app/user/[uid].tsx`
+
+- **Following/Followers** -- backed by Firestore `userFollows` collection
+- **Public Profiles** -- view other users' stats and reputation
+- **Contacts Integration** -- `expo-contacts` for friend discovery
+
+### Reputation System
+
+5 tiers based on payment reliability + referral bonuses:
+
+| Tier    | Score Range |
+| ------- | ----------- |
+| Seed    | 0-20        |
+| Sprout  | 21-40       |
+| Sapling | 41-60       |
+| Tree    | 61-80       |
+| Oak     | 81-100      |
+
+### Referral System
+
+- Deep link invites via `app/invite.tsx`
+- Reputation boost for both inviter and invitee
+- Partner auto-connect on referral acceptance
+
+## Theme System
+
+**Store**: `themeStore.ts` | **Hook**: `useColors()`
+
+- Dark/light theme persisted to AsyncStorage
+- Colors defined in `src/constants/colors.ts` (`DarkColors`, `LightColors`)
+- Access via `useColors()` hook which returns `ThemeColors`
+
+## Demo Mode
+
+Currently active (`DEMO_MODE = true` in `src/constants/config.ts`):
+
+| Area        | Behavior                                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Auth        | Real Firebase authentication (Google, Apple, Email)                                                                          |
+| Profile     | Real Firestore persistence (reads + writes)                                                                                  |
+| Sessions    | Short timers (10s daily, 60s weekly, 90s monthly). Persisted to Firestore with crash recovery. Cloud Function calls skipped. |
+| Wallet      | Starts at $50. Non-demo hydrates from Firestore.                                                                             |
+| Screen Time | Module scaffolded, not integrated into session lifecycle                                                                     |
+| Payments    | Trust model (virtual balances, settle outside app)                                                                           |
+
+## Trust Model (Current)
+
+Instead of real payments:
+
+1. Users see virtual balance in-app
+2. Duo/group settlements tracked with transfer status
+3. Venmo deep links generated for actual money transfer
+4. Reputation system tracks payment reliability
+
+Trust model active while `DEMO_MODE = true`. Real Stripe escrow planned for [Phase 2](./roadmap.md#phase-2-beta-cohort).

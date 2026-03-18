@@ -8,26 +8,18 @@ You want to stop doomscrolling. Screen time apps don't work because there's no r
 
 Trap your own money. Rescue it through discipline. Hit streaks and earn even more.
 
-Mode 1: Solo
+**Solo Mode**: Deposit money, block distracting apps, track screen time. More screen time = lose money. Less screen time = earn money.
 
-1. Deposit money, block distracting apps, and track screen time.
-2. More screentime = lose money.
-3. Less screentime = earn money.
-
-Mode 2: Pool
-
-1. Pool money with friend, block distracting apps, and track screen time together.
-2. More screentime = get less from pool.
-3. Less screentime = get more from pool.
+**Pool Mode**: Pool money with friends, block distracting apps, compete on screen time. Lower usage = bigger share of the pool.
 
 ## Development Setup
 
 ### Prerequisites
 
-- **Node.js** (v18+)
+- **Node.js** v18+
 - **pnpm** (`npm install -g pnpm`)
-- **Xcode** (for iOS) — install from Mac App Store, then run `xcode-select --install`
-- **Android SDK** (for Android) — install via [Android Studio](https://developer.android.com/studio) or standalone SDK tools
+- **Xcode** (iOS) -- install from Mac App Store, then `xcode-select --install`
+- **Android SDK** (Android) -- via [Android Studio](https://developer.android.com/studio)
 
 ### Install Dependencies
 
@@ -37,111 +29,88 @@ pnpm install
 
 ### Environment Variables
 
+Copy `.env.example` to `.env` and fill in values:
+
 ```
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=...
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=...
 EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=...
 EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=...
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=...
 ```
 
----
+You also need Firebase config files (not in repo):
 
-### iOS Simulator
+- `firebase/GoogleService-Info.plist` -- download from Firebase Console > Project Settings > iOS
+- `firebase/google-services.json` -- download from Firebase Console > Project Settings > Android
 
-**1. First time:**
+### Build & Run
+
+This project uses `expo-dev-client`, **NOT** Expo Go. You must build a dev client first.
+
+**iOS (physical device via USB):**
 
 ```bash
-npx expo prebuild --platform ios --clean
-npx expo run:ios
+pnpm build:local    # Build + install on device
+pnpm start          # Start dev server (phone on same WiFi)
 ```
 
-**2. Subsequent runs:**
+**iOS Simulator:**
 
 ```bash
+pnpm build:local:sim  # Build for Simulator
 pnpm start
-i
+# Press 'i' to open on iOS Simulator
 ```
 
-If you get a white screen, kill < PID >, then reopen the app.
-
----
-
-### Android Emulator
-
-**1. Set up environment variables** (add to `~/.zshrc` or `~/.bashrc`):
-
-```bash
-export ANDROID_HOME="$HOME/Library/Android/sdk"
-export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
-```
-
-Then restart your terminal or run `source ~/.zshrc`.
-
-**2. Create an AVD:**
-
-Open Android Studio → Virtual Device Manager → Create Device → select Pixel 9 / API 35.
-
-Or via CLI:
-
-```bash
-sdkmanager "system-images;android-35;google_apis;arm64-v8a"
-avdmanager create avd -n Pixel_9_API_35 -k "system-images;android-35;google_apis;arm64-v8a" -d pixel_9
-```
-
-**3. Boot the emulator:**
-
-```bash
-emulator -avd Pixel_9_API_35
-```
-
-**4. First time (generates native project and builds):**
+**Android Emulator:**
 
 ```bash
 npx expo prebuild --platform android --clean
 npx expo run:android
 ```
 
-**5. Subsequent runs:**
+For subsequent runs after building, just start the dev server:
 
 ```bash
 pnpm start
-# Then press 'a' to open on Android emulator
+# Press 'i' for iOS Simulator, 'a' for Android emulator
 ```
 
-**Note:** If the app shows the dev client launcher but doesn't auto-connect, set up port forwarding:
+### Testing & Code Quality
 
 ```bash
-adb reverse tcp:8081 tcp:8081
+pnpm test        # Run all tests (401 tests)
+pnpm typecheck   # TypeScript strict mode check
+pnpm lint        # ESLint
+pnpm ci          # Full CI: lint + typecheck + test
 ```
-
-Then tap `http://10.0.2.2:8081` in the launcher screen.
 
 ---
 
-### iOS Device (no Mac required)
+### iOS Device (team distribution, no Mac required)
 
-1. Apple developer runs this, sends the link to team, and they download the build.
+1. Register device:
 
 ```bash
 eas device:create
 ```
 
-2. After downloading, run:
+2. Build for device:
 
 ```bash
 eas build --profile development-device --platform ios --local
 ```
 
-3. Upload the .ipa file to [diawi.com](https://diawi.com) and share link to team.
+3. Upload the `.ipa` to [diawi.com](https://diawi.com) and share link to team.
 
-4) Run pnpm start, enter the Manual URL at the bottom in the app and it will run.
+4. Run `pnpm start`, enter the Manual URL in the app.
 
-5) The .ts changes update immediately. Any native interaction (swift files, push notifications, screen time, etc), see 2) again.
+5. `.ts` changes update instantly. Native changes (Swift, push notifications, Screen Time) require a new build (step 2).
 
 ---
 
 ### Troubleshooting
-
-These may help with any issues you encounter.
 
 **Clear cache:**
 
@@ -159,8 +128,6 @@ pnpm install
 **iOS rebuild:**
 
 ```bash
-cd ios && pod cache clean --all && rm -rf Pods && pod install && cd ..
-# OR
 rm -rf ios
 npx expo prebuild --platform ios --clean
 npx expo run:ios
@@ -169,8 +136,6 @@ npx expo run:ios
 **Android rebuild:**
 
 ```bash
-cd android && ./gradlew clean && cd ..
-# OR
 rm -rf android
 npx expo prebuild --platform android --clean
 npx expo run:android
@@ -185,18 +150,51 @@ npx expo prebuild --clean
 npx expo run:ios
 ```
 
+### Android Environment Setup
+
+Add to `~/.zshrc` or `~/.bashrc`:
+
+```bash
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+```
+
+Create AVD: Android Studio > Virtual Device Manager > Pixel 9 / API 35.
+
+If the dev client doesn't auto-connect:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+```
+
 ### Windows (WSL) Setup
 
-Run this on every restart of your computer in PowerShell as Administrator:
+Run on every restart in PowerShell as Administrator:
 
 ```powershell
 .\wsl_dev_setup.ps1
 ```
 
-This sets up port forwarding from Windows into WSL2 and ensures the firewall allows your phone to connect. Then start the dev server from inside WSL:
+Then from WSL:
 
 ```bash
 npx expo start --dev-client --host lan
 ```
 
-On your phone, open the app and connect to `http://<YOUR_WIFI_IP>:8081`.
+Connect phone to `http://<YOUR_WIFI_IP>:8081`.
+
+---
+
+## Documentation
+
+Detailed docs are in the [`docs/`](docs/) directory:
+
+- [Architecture](docs/architecture.md) -- project structure, directory tree
+- [Development](docs/development.md) -- full command reference, env vars, Cloud Functions
+- [Features](docs/features.md) -- auth, sessions, wallet, social, demo mode
+- [Native Modules](docs/native-modules.md) -- Firebase, Screen Time, JITAI
+- [Security](docs/security.md) -- SSL pinning, key management, Firestore rules
+- [Roadmap](docs/roadmap.md) -- current status, phases, blockers
+- [Payments](docs/payments.md) -- Stripe, payout formulas, settlement models
+- [Legal](docs/legal.md) -- commitment contract framing, App Store strategy
+- [UI & Animation](docs/ui-animation.md) -- animation libraries, onboarding plans

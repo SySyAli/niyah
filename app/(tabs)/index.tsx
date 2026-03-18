@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
@@ -518,7 +518,7 @@ export default function DashboardScreen() {
           {/* Pending Group Invites Banner */}
           {pendingInvites && pendingInvites.length > 0 && (
             <Pressable
-              onPress={() => router.push("/session/invites")}
+              onPress={() => router.push("/session/invites" as Href)}
               style={{ marginBottom: Spacing.md }}
             >
               <Card variant="elevated">

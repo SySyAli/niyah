@@ -20,7 +20,7 @@ import {
   arrayRemove,
 } from "@react-native-firebase/firestore";
 import { Platform, Alert } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { logger } from "../utils/logger";
 
 const db = getFirestore();
@@ -124,12 +124,12 @@ function handleNotificationNavigation(
 
   switch (type) {
     case "group_invite":
-      router.push("/session/invites");
+      router.push("/session/invites" as Href);
       break;
     case "invite_response":
     case "session_ready":
       if (sessionId)
-        router.push(`/session/waiting-room?sessionId=${sessionId}`);
+        router.push(`/session/waiting-room?sessionId=${sessionId}` as Href);
       break;
     case "session_started":
       router.push("/session/active");

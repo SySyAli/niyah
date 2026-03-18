@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import {
   Typography,
   Spacing,
@@ -417,7 +417,7 @@ export default function ProposeSessionScreen() {
       });
 
       // Navigate to waiting room instead of showing local success
-      router.push(`/session/waiting-room?sessionId=${sessionId}`);
+      router.push(`/session/waiting-room?sessionId=${sessionId}` as Href);
     } catch {
       Alert.alert("Error", "Failed to create group session. Please try again.");
       setLoading(false);

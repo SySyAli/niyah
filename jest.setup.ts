@@ -301,26 +301,30 @@ jest.mock("@react-native-firebase/firestore", () => ({
   ),
 }));
 
-// Mock @react-native-firebase/messaging
-jest.mock("@react-native-firebase/messaging", () => {
-  const mockMessaging: any = jest.fn(() => ({
-    requestPermission: jest.fn(() => Promise.resolve(1)),
-    getToken: jest.fn(() => Promise.resolve("mock-fcm-token")),
-    registerDeviceForRemoteMessages: jest.fn(() => Promise.resolve()),
-    onTokenRefresh: jest.fn(() => jest.fn()),
-    onMessage: jest.fn(() => jest.fn()),
-    onNotificationOpenedApp: jest.fn(() => jest.fn()),
-    setBackgroundMessageHandler: jest.fn(),
-    getInitialNotification: jest.fn(() => Promise.resolve(null)),
-  }));
-  mockMessaging.AuthorizationStatus = {
-    NOT_DETERMINED: -1,
-    DENIED: 0,
-    AUTHORIZED: 1,
-    PROVISIONAL: 2,
-  };
-  return { __esModule: true, default: mockMessaging };
-});
+// Mock @react-native-firebase/messaging (virtual — package not yet installed)
+jest.mock(
+  "@react-native-firebase/messaging",
+  () => {
+    const mockMessaging: any = jest.fn(() => ({
+      requestPermission: jest.fn(() => Promise.resolve(1)),
+      getToken: jest.fn(() => Promise.resolve("mock-fcm-token")),
+      registerDeviceForRemoteMessages: jest.fn(() => Promise.resolve()),
+      onTokenRefresh: jest.fn(() => jest.fn()),
+      onMessage: jest.fn(() => jest.fn()),
+      onNotificationOpenedApp: jest.fn(() => jest.fn()),
+      setBackgroundMessageHandler: jest.fn(),
+      getInitialNotification: jest.fn(() => Promise.resolve(null)),
+    }));
+    mockMessaging.AuthorizationStatus = {
+      NOT_DETERMINED: -1,
+      DENIED: 0,
+      AUTHORIZED: 1,
+      PROVISIONAL: 2,
+    };
+    return { __esModule: true, default: mockMessaging };
+  },
+  { virtual: true },
+);
 
 // Mock expo-linking
 jest.mock("expo-linking", () => ({

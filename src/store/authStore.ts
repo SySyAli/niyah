@@ -35,6 +35,42 @@ const recoverSession = (uid: string) => {
   useSessionStore.getState().recoverActiveSession(uid);
 };
 
+// Lazy import for notification setup on login
+const initNotifications = () => {
+  const { initializeNotifications } = require("../config/notifications") as {
+    initializeNotifications: () => Promise<() => void>;
+  };
+  return initializeNotifications();
+};
+
+// Lazy import for notification cleanup on logout
+const cleanupNotifications = (uid: string) => {
+  const { removeFCMToken } = require("../config/notifications") as {
+    removeFCMToken: (uid: string) => Promise<void>;
+  };
+  return removeFCMToken(uid);
+};
+
+// Lazy import for group session recovery
+const recoverGroupSessions = (uid: string) => {
+  try {
+    const { useGroupSessionStore } = require("./groupSessionStore") as {
+      useGroupSessionStore: {
+        getState: () => {
+          subscribeToInvites: (uid: string) => void;
+          subscribeToActiveSessions: (uid: string) => void;
+        };
+      };
+    };
+    const store = useGroupSessionStore.getState();
+    store.subscribeToInvites(uid);
+    store.subscribeToActiveSessions(uid);
+  } catch (err) {
+    // Non-critical: group session subscriptions can fail without blocking auth
+    logger.warn("Failed to subscribe to group sessions:", err);
+  }
+};
+
 const MAGIC_LINK_EMAIL_KEY = "@niyah/magic_link_email";
 
 interface AuthState {
@@ -189,6 +225,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Hydrate wallet and recover any active session (non-blocking)
           hydrateWallet(firebaseUser.uid);
           recoverSession(firebaseUser.uid);
+
+          // Initialize FCM notifications and subscribe to group session data
+          initNotifications().catch((err) =>
+            logger.error("Failed to init notifications:", err),
+          );
+          recoverGroupSessions(firebaseUser.uid);
         } catch (error) {
           logger.error("Error fetching user profile:", error);
           // Still mark as authenticated even if Firestore fetch fails
@@ -205,6 +247,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Still try to hydrate wallet even if profile fetch failed
           hydrateWallet(firebaseUser.uid);
           recoverSession(firebaseUser.uid);
+
+          // Initialize FCM notifications and subscribe to group session data
+          initNotifications().catch((err) =>
+            logger.error("Failed to init notifications:", err),
+          );
+          recoverGroupSessions(firebaseUser.uid);
         }
       } else {
         set({
@@ -248,6 +296,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Hydrate wallet and recover session (non-blocking)
       hydrateWallet(firebaseUser.uid);
       recoverSession(firebaseUser.uid);
+
+      // Initialize FCM notifications and subscribe to group session data
+      initNotifications().catch((err) =>
+        logger.error("Failed to init notifications:", err),
+      );
+      recoverGroupSessions(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -285,6 +339,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Hydrate wallet and recover session (non-blocking)
       hydrateWallet(firebaseUser.uid);
       recoverSession(firebaseUser.uid);
+
+      // Initialize FCM notifications and subscribe to group session data
+      initNotifications().catch((err) =>
+        logger.error("Failed to init notifications:", err),
+      );
+      recoverGroupSessions(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -340,6 +400,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Hydrate wallet and recover session (non-blocking)
       hydrateWallet(firebaseUser.uid);
       recoverSession(firebaseUser.uid);
+
+      // Initialize FCM notifications and subscribe to group session data
+      initNotifications().catch((err) =>
+        logger.error("Failed to init notifications:", err),
+      );
+      recoverGroupSessions(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -387,6 +453,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await signOut();
     } catch (error) {
       logger.error("Logout error:", error);
+    }
+
+    // Clean up FCM token and group session subscriptions
+    const uid = get().user?.id;
+    if (uid) {
+      cleanupNotifications(uid).catch((err) =>
+        logger.error("Failed to clean up FCM token:", err),
+      );
+    }
+    // Unsubscribe from group session listeners
+    try {
+      const { useGroupSessionStore } = require("./groupSessionStore") as {
+        useGroupSessionStore: {
+          getState: () => { unsubscribeAll: () => void };
+        };
+      };
+      useGroupSessionStore.getState().unsubscribeAll();
+    } catch {
+      // Store may not be initialized
     }
 
     // Clear local state after signOut so state stays consistent if signOut fails

@@ -39,6 +39,7 @@
     "@react-native-firebase/app": "^23.8.8",
     "@react-native-firebase/auth": "^23.8.8",
     "@react-native-firebase/firestore": "^23.8.8",
+    "@react-native-firebase/messaging": "^23.8.8",
     "@react-native-google-signin/google-signin": "^14.0.2",
     "@react-navigation/native": "^7.1.33",
     "@stripe/stripe-react-native": "^0.59.2",

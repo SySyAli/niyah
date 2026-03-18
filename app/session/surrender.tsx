@@ -228,11 +228,14 @@ export default function SurrenderScreen() {
   const router = useRouter();
   const {
     activeGroupSession,
+    activeSession,
     completeGroupSession,
+    reportSurrender,
     getVenmoPayLink,
     markTransferPaid,
   } = useGroupSessionStore();
   const userId = useAuthStore((state) => state.user?.id);
+  const [surrendering, setSurrendering] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [completedSession, setCompletedSession] = useState<GroupSession | null>(
@@ -252,9 +255,25 @@ export default function SurrenderScreen() {
   const amountOwed =
     outboundTransfer?.amount ?? completedSession?.stakePerParticipant ?? 0;
 
-  const handleSurrender = () => {
-    if (canSurrender && activeGroupSession) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  const handleSurrender = async () => {
+    if (!canSurrender) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    setSurrendering(true);
+
+    // If Firestore-backed session, report surrender to server
+    if (activeSession) {
+      try {
+        await reportSurrender(activeSession.id);
+        router.replace("/session/complete");
+        return;
+      } catch (err) {
+        // Fallback to legacy local surrender
+        console.warn("Server surrender failed, using local:", err);
+      }
+    }
+
+    // Legacy local surrender
+    if (activeGroupSession) {
       const results = activeGroupSession.participants.map((p) => ({
         userId: p.userId,
         completed: p.userId !== userId, // current user surrenders, partner assumed complete
@@ -268,6 +287,7 @@ export default function SurrenderScreen() {
         setShowPayment(true);
       }
     }
+    setSurrendering(false);
   };
 
   const activePartner = activeGroupSession?.participants.find(
@@ -496,7 +516,8 @@ export default function SurrenderScreen() {
             <Button
               title={isSoloSession ? "Surrender" : "Surrender and Pay Partner"}
               onPress={handleSurrender}
-              disabled={!canSurrender}
+              disabled={!canSurrender || surrendering}
+              loading={surrendering}
               variant="danger"
               size="large"
             />

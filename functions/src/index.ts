@@ -8,6 +8,7 @@
 
 import * as admin from "firebase-admin";
 import { onRequest, type Request } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import Stripe from "stripe";
 import type { Response } from "express";
@@ -115,6 +116,12 @@ const RATE_LIMITS = {
   getConnectAccountStatus: { maxCalls: 10, windowMs: 600_000 }, // 10/10min
   followUserFn: { maxCalls: 30, windowMs: 600_000 }, // 30/10min
   unfollowUserFn: { maxCalls: 30, windowMs: 600_000 }, // 30/10min
+  createGroupSession: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
+  respondToGroupInvite: { maxCalls: 10, windowMs: 3_600_000 }, // 10/hr
+  markOnlineForSession: { maxCalls: 30, windowMs: 600_000 }, // 30/10min
+  startGroupSession: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
+  reportSessionStatus: { maxCalls: 10, windowMs: 3_600_000 }, // 10/hr
+  cancelGroupSession: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
 } as const;
 
 // ─── createPaymentIntent ────────────────────────────────────────────────────
@@ -1418,6 +1425,1060 @@ export const stripeWebhook = onRequest(
     } catch (err) {
       console.error("Webhook handler error:", err);
       sendError(res, 500, "Webhook handler failed");
+    }
+  },
+);
+
+// ─── createGroupSession ──────────────────────────────────────────────────────
+/**
+ * Creates a new group session and sends invites to participants.
+ * Body: { cadence: string, stakePerParticipant: number, duration: number, inviteeIds: string[], customStake?: boolean }
+ * Returns: { sessionId: string, inviteIds: string[] }
+ *
+ * SECURITY: Validates proposer balance, deducts stake via Firestore transaction.
+ * Fetches invitee profiles server-side to populate participant data.
+ */
+export const createGroupSession = onRequest(
+  { cors: true, region: "us-central1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "createGroupSession",
+        RATE_LIMITS.createGroupSession,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { cadence, stakePerParticipant, duration, inviteeIds, customStake } =
+      req.body as {
+        cadence: string;
+        stakePerParticipant: number;
+        duration: number;
+        inviteeIds: string[];
+        customStake?: boolean;
+      };
+
+    // Validate inputs
+    if (!cadence || !stakePerParticipant || !duration || !inviteeIds?.length) {
+      sendError(res, 400, "Missing required fields");
+      return;
+    }
+
+    if (stakePerParticipant < 100 || stakePerParticipant > 10000) {
+      sendError(res, 400, "Stake must be between $1 and $100");
+      return;
+    }
+
+    const totalParticipants = inviteeIds.length + 1; // +1 for proposer
+    if (totalParticipants < 2 || totalParticipants > 20) {
+      sendError(res, 400, "Group must have 2-20 participants");
+      return;
+    }
+
+    try {
+      // Fetch proposer profile
+      const proposerDoc = await db.collection("users").doc(uid).get();
+      const proposerData = proposerDoc.data() ?? {};
+
+      // Fetch invitee profiles
+      const inviteeDocs = await Promise.all(
+        inviteeIds.map((id) => db.collection("users").doc(id).get()),
+      );
+
+      // Validate all invitees exist
+      for (let i = 0; i < inviteeDocs.length; i++) {
+        if (!inviteeDocs[i].exists) {
+          sendError(res, 400, `Invitee ${inviteeIds[i]} not found`);
+          return;
+        }
+      }
+
+      // Build participants map
+      const participants: Record<
+        string,
+        {
+          name: string;
+          venmoHandle: string;
+          profileImage: string;
+          reputation: Record<string, unknown>;
+          accepted: boolean;
+          online: boolean;
+        }
+      > = {};
+
+      participants[uid] = {
+        name: proposerData.name ?? "",
+        venmoHandle: proposerData.venmoHandle ?? "",
+        profileImage: proposerData.profileImage ?? "",
+        reputation: proposerData.reputation ?? {},
+        accepted: true,
+        online: false,
+      };
+
+      for (let i = 0; i < inviteeIds.length; i++) {
+        const inviteeData = inviteeDocs[i].data() ?? {};
+        participants[inviteeIds[i]] = {
+          name: inviteeData.name ?? "",
+          venmoHandle: inviteeData.venmoHandle ?? "",
+          profileImage: inviteeData.profileImage ?? "",
+          reputation: inviteeData.reputation ?? {},
+          accepted: false,
+          online: false,
+        };
+      }
+
+      const sessionRef = db.collection("groupSessions").doc();
+      const sessionId = sessionRef.id;
+      const poolTotal = stakePerParticipant * totalParticipants;
+
+      // Deduct stake from proposer's wallet via transaction
+      const walletRef = db.collection("wallets").doc(uid);
+      const stakeTxnRef = db.collection("transactions").doc();
+
+      await db.runTransaction(async (txn) => {
+        const walletSnap = await txn.get(walletRef);
+        const currentBalance: number = walletSnap.data()?.balance ?? 0;
+
+        if (currentBalance < stakePerParticipant) {
+          throw new Error("Insufficient balance to stake");
+        }
+
+        txn.update(walletRef, {
+          balance: currentBalance - stakePerParticipant,
+        });
+        txn.set(stakeTxnRef, {
+          userId: uid,
+          type: "stake",
+          amount: -stakePerParticipant,
+          description: "Group session stake",
+          sessionId,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+
+      // Create group session doc
+      await sessionRef.set({
+        id: sessionId,
+        proposerId: uid,
+        status: "pending",
+        cadence,
+        stakePerParticipant,
+        customStake: customStake ?? false,
+        duration,
+        participantIds: [uid, ...inviteeIds],
+        participants,
+        poolTotal,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        autoTimeoutAt: null,
+      });
+
+      // Create invite docs for each invitee
+      const inviteIds: string[] = [];
+      const batch = db.batch();
+
+      for (const inviteeId of inviteeIds) {
+        const inviteRef = db.collection("groupInvites").doc();
+        inviteIds.push(inviteRef.id);
+        batch.set(inviteRef, {
+          sessionId,
+          fromUserId: uid,
+          fromUserName: proposerData.name ?? "",
+          fromUserImage: proposerData.profileImage ?? "",
+          toUserId: inviteeId,
+          stake: stakePerParticipant,
+          cadence,
+          duration,
+          status: "pending",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+
+      console.log(
+        `createGroupSession: session=${sessionId}, proposer=${uid}, invitees=${inviteeIds.length}`,
+      );
+
+      res.json({ sessionId, inviteIds });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (message.includes("Insufficient balance")) {
+        sendError(res, 400, message);
+      } else {
+        console.error("createGroupSession error:", err);
+        sendError(res, 500, "Failed to create group session");
+      }
+    }
+  },
+);
+
+// ─── respondToGroupInvite ────────────────────────────────────────────────────
+/**
+ * Accepts or declines a group session invite.
+ * Body: { inviteId: string, accept: boolean }
+ * Returns: { success: true, sessionStatus: string }
+ *
+ * SECURITY: Validates invite belongs to authenticated user. Deducts stake
+ * via Firestore transaction on accept. Handles cascade logic (cancel if < 2).
+ */
+export const respondToGroupInvite = onRequest(
+  { cors: true, region: "us-central1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "respondToGroupInvite",
+        RATE_LIMITS.respondToGroupInvite,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { inviteId, accept } = req.body as {
+      inviteId: string;
+      accept: boolean;
+    };
+
+    if (!inviteId || typeof accept !== "boolean") {
+      sendError(res, 400, "Missing required fields");
+      return;
+    }
+
+    try {
+      const inviteRef = db.collection("groupInvites").doc(inviteId);
+      const inviteSnap = await inviteRef.get();
+
+      if (!inviteSnap.exists) {
+        sendError(res, 404, "Invite not found");
+        return;
+      }
+
+      const inviteData = inviteSnap.data()!;
+
+      if (inviteData.toUserId !== uid) {
+        sendError(res, 403, "Invite does not belong to this user");
+        return;
+      }
+
+      if (inviteData.status !== "pending") {
+        sendError(res, 400, `Invite already ${inviteData.status}`);
+        return;
+      }
+
+      const sessionRef = db.collection("groupSessions").doc(
+        inviteData.sessionId,
+      );
+      const sessionSnap = await sessionRef.get();
+      const sessionData = sessionSnap.data()!;
+
+      if (accept) {
+        // Deduct stake from user's wallet
+        const walletRef = db.collection("wallets").doc(uid);
+        const stakeTxnRef = db.collection("transactions").doc();
+
+        await db.runTransaction(async (txn) => {
+          const walletSnap = await txn.get(walletRef);
+          const currentBalance: number = walletSnap.data()?.balance ?? 0;
+
+          if (currentBalance < inviteData.stake) {
+            throw new Error("Insufficient balance to stake");
+          }
+
+          txn.update(walletRef, {
+            balance: currentBalance - inviteData.stake,
+          });
+          txn.set(stakeTxnRef, {
+            userId: uid,
+            type: "stake",
+            amount: -inviteData.stake,
+            description: "Group session stake",
+            sessionId: inviteData.sessionId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+
+        // Update invite status
+        await inviteRef.update({
+          status: "accepted",
+          respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Update session participant
+        await sessionRef.update({
+          [`participants.${uid}.accepted`]: true,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Check if all participants accepted
+        const updatedSessionSnap = await sessionRef.get();
+        const updatedSessionData = updatedSessionSnap.data()!;
+        const allAccepted = updatedSessionData.participantIds.every(
+          (pid: string) => updatedSessionData.participants[pid]?.accepted,
+        );
+
+        let sessionStatus = updatedSessionData.status;
+        if (allAccepted) {
+          sessionStatus = "ready";
+          await sessionRef.update({
+            status: "ready",
+            autoTimeoutAt: admin.firestore.Timestamp.fromMillis(
+              Date.now() + 30 * 60 * 1000,
+            ),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+
+        console.log(
+          `respondToGroupInvite: invite=${inviteId}, user=${uid}, accepted=true, allAccepted=${allAccepted}`,
+        );
+
+        res.json({ success: true, sessionStatus });
+      } else {
+        // Decline: update invite
+        await inviteRef.update({
+          status: "declined",
+          respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Remove user from session
+        const updatedParticipantIds = sessionData.participantIds.filter(
+          (pid: string) => pid !== uid,
+        );
+        const updatedParticipants = { ...sessionData.participants };
+        delete updatedParticipants[uid];
+        const updatedPoolTotal =
+          sessionData.stakePerParticipant * updatedParticipantIds.length;
+
+        if (updatedParticipantIds.length < 2) {
+          // Cancel session and refund all accepted participants
+          const refundBatch = db.batch();
+
+          for (const pid of updatedParticipantIds) {
+            if (updatedParticipants[pid]?.accepted) {
+              const refundWalletRef = db.collection("wallets").doc(pid);
+              const refundTxnRef = db.collection("transactions").doc();
+
+              // Note: using batch, not transaction — acceptable for refunds
+              refundBatch.update(refundWalletRef, {
+                balance: admin.firestore.FieldValue.increment(
+                  sessionData.stakePerParticipant,
+                ),
+              });
+              refundBatch.set(refundTxnRef, {
+                userId: pid,
+                type: "refund",
+                amount: sessionData.stakePerParticipant,
+                description: "Group session cancelled — stake refunded",
+                sessionId: inviteData.sessionId,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              });
+            }
+          }
+
+          refundBatch.update(sessionRef, {
+            status: "cancelled",
+            participantIds: updatedParticipantIds,
+            participants: updatedParticipants,
+            poolTotal: updatedPoolTotal,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          await refundBatch.commit();
+
+          console.log(
+            `respondToGroupInvite: session=${inviteData.sessionId} cancelled (< 2 participants)`,
+          );
+
+          res.json({ success: true, sessionStatus: "cancelled" });
+        } else {
+          await sessionRef.update({
+            participantIds: updatedParticipantIds,
+            participants: updatedParticipants,
+            poolTotal: updatedPoolTotal,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          console.log(
+            `respondToGroupInvite: invite=${inviteId}, user=${uid}, declined, remaining=${updatedParticipantIds.length}`,
+          );
+
+          res.json({ success: true, sessionStatus: sessionData.status });
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (message.includes("Insufficient balance")) {
+        sendError(res, 400, message);
+      } else {
+        console.error("respondToGroupInvite error:", err);
+        sendError(res, 500, "Failed to respond to invite");
+      }
+    }
+  },
+);
+
+// ─── markOnlineForSession ────────────────────────────────────────────────────
+/**
+ * Marks a participant as online for a group session lobby.
+ * Body: { sessionId: string }
+ * Returns: { success: true, allOnline: boolean }
+ */
+export const markOnlineForSession = onRequest(
+  { cors: true, region: "us-central1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "markOnlineForSession",
+        RATE_LIMITS.markOnlineForSession,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { sessionId } = req.body as { sessionId: string };
+    if (!sessionId) {
+      sendError(res, 400, "Missing sessionId");
+      return;
+    }
+
+    try {
+      const sessionRef = db.collection("groupSessions").doc(sessionId);
+      const sessionSnap = await sessionRef.get();
+
+      if (!sessionSnap.exists) {
+        sendError(res, 404, "Session not found");
+        return;
+      }
+
+      const sessionData = sessionSnap.data()!;
+
+      if (!sessionData.participantIds.includes(uid)) {
+        sendError(res, 403, "Not a participant in this session");
+        return;
+      }
+
+      if (sessionData.status !== "ready") {
+        sendError(
+          res,
+          400,
+          `Session is not ready (current status: ${sessionData.status})`,
+        );
+        return;
+      }
+
+      // Mark user as online
+      await sessionRef.update({
+        [`participants.${uid}.online`]: true,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Check if all participants are online
+      const updatedSnap = await sessionRef.get();
+      const updatedData = updatedSnap.data()!;
+      const allOnline = updatedData.participantIds.every(
+        (pid: string) => updatedData.participants[pid]?.online,
+      );
+
+      console.log(
+        `markOnlineForSession: session=${sessionId}, user=${uid}, allOnline=${allOnline}`,
+      );
+
+      res.json({ success: true, allOnline });
+    } catch (err) {
+      console.error("markOnlineForSession error:", err);
+      sendError(res, 500, "Failed to mark online status");
+    }
+  },
+);
+
+// ─── startGroupSession ───────────────────────────────────────────────────────
+/**
+ * Starts a group session once all participants are online.
+ * Only the proposer can start the session.
+ * Body: { sessionId: string }
+ * Returns: { success: true, endsAt: number }
+ */
+export const startGroupSession = onRequest(
+  { cors: true, region: "us-central1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "startGroupSession",
+        RATE_LIMITS.startGroupSession,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { sessionId } = req.body as { sessionId: string };
+    if (!sessionId) {
+      sendError(res, 400, "Missing sessionId");
+      return;
+    }
+
+    try {
+      const sessionRef = db.collection("groupSessions").doc(sessionId);
+      const sessionSnap = await sessionRef.get();
+
+      if (!sessionSnap.exists) {
+        sendError(res, 404, "Session not found");
+        return;
+      }
+
+      const sessionData = sessionSnap.data()!;
+
+      if (sessionData.proposerId !== uid) {
+        sendError(res, 403, "Only the proposer can start the session");
+        return;
+      }
+
+      if (sessionData.status !== "ready") {
+        sendError(
+          res,
+          400,
+          `Session is not ready (current status: ${sessionData.status})`,
+        );
+        return;
+      }
+
+      // Verify all participants are online
+      const allOnline = sessionData.participantIds.every(
+        (pid: string) => sessionData.participants[pid]?.online,
+      );
+
+      if (!allOnline) {
+        sendError(res, 400, "Not all participants are online");
+        return;
+      }
+
+      const endsAtMs = Date.now() + sessionData.duration;
+
+      await sessionRef.update({
+        status: "active",
+        startedAt: admin.firestore.FieldValue.serverTimestamp(),
+        endsAt: admin.firestore.Timestamp.fromMillis(endsAtMs),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(
+        `startGroupSession: session=${sessionId}, endsAt=${new Date(endsAtMs).toISOString()}`,
+      );
+
+      res.json({ success: true, endsAt: endsAtMs });
+    } catch (err) {
+      console.error("startGroupSession error:", err);
+      sendError(res, 500, "Failed to start group session");
+    }
+  },
+);
+
+// ─── reportSessionStatus ────────────────────────────────────────────────────
+/**
+ * Reports a participant's completion or surrender for an active group session.
+ * If all participants have reported, finalizes the session and distributes payouts.
+ * Body: { sessionId: string, action: "complete" | "surrender" }
+ * Returns: { success: true, sessionComplete: boolean, payouts?: Record<string, number> }
+ *
+ * SECURITY: Validates timer expiry for completions (60s grace for cold starts).
+ * Payout calculation is done server-side.
+ */
+export const reportSessionStatus = onRequest(
+  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "reportSessionStatus",
+        RATE_LIMITS.reportSessionStatus,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { sessionId, action } = req.body as {
+      sessionId: string;
+      action: "complete" | "surrender";
+    };
+
+    if (!sessionId || !action) {
+      sendError(res, 400, "Missing required fields");
+      return;
+    }
+
+    if (action !== "complete" && action !== "surrender") {
+      sendError(res, 400, "Action must be 'complete' or 'surrender'");
+      return;
+    }
+
+    try {
+      const sessionRef = db.collection("groupSessions").doc(sessionId);
+      const sessionSnap = await sessionRef.get();
+
+      if (!sessionSnap.exists) {
+        sendError(res, 404, "Session not found");
+        return;
+      }
+
+      const sessionData = sessionSnap.data()!;
+
+      if (sessionData.status !== "active") {
+        sendError(
+          res,
+          400,
+          `Session is not active (current status: ${sessionData.status})`,
+        );
+        return;
+      }
+
+      if (!sessionData.participantIds.includes(uid)) {
+        sendError(res, 403, "Not a participant in this session");
+        return;
+      }
+
+      // Check if user has already reported
+      const participant = sessionData.participants[uid];
+      if (participant?.completed || participant?.surrendered) {
+        sendError(res, 400, "Already reported status for this session");
+        return;
+      }
+
+      if (action === "complete") {
+        // Validate timer: endsAt - 60s grace period for cold starts
+        const endsAt = sessionData.endsAt?.toDate?.()
+          ? sessionData.endsAt.toDate()
+          : new Date(sessionData.endsAt);
+        const gracePeriodMs = 60_000; // 60 seconds
+        if (endsAt.getTime() - gracePeriodMs > Date.now()) {
+          sendError(res, 400, "Session has not ended yet");
+          return;
+        }
+
+        await sessionRef.update({
+          [`participants.${uid}.completed`]: true,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Surrender
+        await sessionRef.update({
+          [`participants.${uid}.surrendered`]: true,
+          [`participants.${uid}.surrenderedAt`]:
+            admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Check if all participants have reported
+      const updatedSnap = await sessionRef.get();
+      const updatedData = updatedSnap.data()!;
+      const allReported = updatedData.participantIds.every((pid: string) => {
+        const p = updatedData.participants[pid];
+        return p?.completed || p?.surrendered;
+      });
+
+      if (!allReported) {
+        console.log(
+          `reportSessionStatus: session=${sessionId}, user=${uid}, action=${action}, allReported=false`,
+        );
+        res.json({ success: true, sessionComplete: false });
+        return;
+      }
+
+      // ── Finalize session: calculate and distribute payouts ──────────
+      console.log(
+        `reportSessionStatus: session=${sessionId} — all reported, finalizing`,
+      );
+
+      const completers = updatedData.participantIds.filter(
+        (pid: string) => updatedData.participants[pid]?.completed,
+      );
+      const totalPool =
+        updatedData.participantIds.length * updatedData.stakePerParticipant;
+
+      const payouts: Record<string, number> = {};
+
+      if (completers.length === 0) {
+        // All surrendered — NIYAH keeps the pool
+        for (const pid of updatedData.participantIds) {
+          payouts[pid] = 0;
+        }
+      } else {
+        const payoutPerCompleter = Math.floor(totalPool / completers.length);
+        for (const pid of updatedData.participantIds) {
+          payouts[pid] = updatedData.participants[pid]?.completed
+            ? payoutPerCompleter
+            : 0;
+        }
+      }
+
+      // Execute Stripe transfers and credit wallets
+      const stripe = getStripe();
+
+      for (const pid of updatedData.participantIds) {
+        if (payouts[pid] <= 0) continue;
+
+        const recipientDoc = await db.collection("users").doc(pid).get();
+        const connectAccountId: string =
+          recipientDoc.data()?.stripeAccountId ?? "";
+
+        if (connectAccountId) {
+          try {
+            await stripe.transfers.create({
+              amount: payouts[pid],
+              currency: "usd",
+              destination: connectAccountId,
+              metadata: {
+                sessionId,
+                recipientUid: pid,
+                type: "group_session_payout",
+              },
+            });
+          } catch (transferErr) {
+            console.error(
+              `Stripe transfer failed for user ${pid}:`,
+              transferErr,
+            );
+          }
+        }
+
+        // Credit wallet and record transaction
+        const walletRef = db.collection("wallets").doc(pid);
+        const txnRef = db.collection("transactions").doc();
+        await db.runTransaction(async (txn) => {
+          const snap = await txn.get(walletRef);
+          const current: number = snap.data()?.balance ?? 0;
+          txn.update(walletRef, { balance: current + payouts[pid] });
+          txn.set(txnRef, {
+            userId: pid,
+            type: "payout",
+            amount: payouts[pid],
+            description: "Group session payout",
+            sessionId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+      }
+
+      // Mark session completed
+      await sessionRef.update({
+        status: "completed",
+        payouts,
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(
+        `reportSessionStatus: session=${sessionId} completed, payouts=${JSON.stringify(payouts)}`,
+      );
+
+      res.json({ success: true, sessionComplete: true, payouts });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (
+        message.includes("not found") ||
+        message.includes("not active") ||
+        message.includes("not ended")
+      ) {
+        sendError(res, 400, message);
+      } else {
+        console.error("reportSessionStatus error:", err);
+        sendError(res, 500, "Failed to report session status");
+      }
+    }
+  },
+);
+
+// ─── cancelGroupSession ──────────────────────────────────────────────────────
+/**
+ * Cancels a group session. Only the proposer can cancel.
+ * Cannot cancel active or completed sessions.
+ * Body: { sessionId: string }
+ * Returns: { success: true, refundedCount: number }
+ *
+ * SECURITY: Refunds all accepted participants' stakes.
+ */
+export const cancelGroupSession = onRequest(
+  { cors: true, region: "us-central1" },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "cancelGroupSession",
+        RATE_LIMITS.cancelGroupSession,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { sessionId } = req.body as { sessionId: string };
+    if (!sessionId) {
+      sendError(res, 400, "Missing sessionId");
+      return;
+    }
+
+    try {
+      const sessionRef = db.collection("groupSessions").doc(sessionId);
+      const sessionSnap = await sessionRef.get();
+
+      if (!sessionSnap.exists) {
+        sendError(res, 404, "Session not found");
+        return;
+      }
+
+      const sessionData = sessionSnap.data()!;
+
+      if (sessionData.proposerId !== uid) {
+        sendError(res, 403, "Only the proposer can cancel the session");
+        return;
+      }
+
+      if (sessionData.status === "active" || sessionData.status === "completed") {
+        sendError(
+          res,
+          400,
+          `Cannot cancel session with status: ${sessionData.status}`,
+        );
+        return;
+      }
+
+      // Refund all accepted participants
+      const batch = db.batch();
+      let refundedCount = 0;
+
+      for (const pid of sessionData.participantIds) {
+        if (sessionData.participants[pid]?.accepted) {
+          const walletRef = db.collection("wallets").doc(pid);
+          const txnRef = db.collection("transactions").doc();
+
+          batch.update(walletRef, {
+            balance: admin.firestore.FieldValue.increment(
+              sessionData.stakePerParticipant,
+            ),
+          });
+          batch.set(txnRef, {
+            userId: pid,
+            type: "refund",
+            amount: sessionData.stakePerParticipant,
+            description: "Group session cancelled — stake refunded",
+            sessionId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          refundedCount++;
+        }
+      }
+
+      // Expire all pending invites for this session
+      const invitesSnap = await db
+        .collection("groupInvites")
+        .where("sessionId", "==", sessionId)
+        .where("status", "==", "pending")
+        .get();
+
+      for (const inviteDoc of invitesSnap.docs) {
+        batch.update(inviteDoc.ref, {
+          status: "expired",
+          respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Mark session as cancelled
+      batch.update(sessionRef, {
+        status: "cancelled",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      console.log(
+        `cancelGroupSession: session=${sessionId}, refunded=${refundedCount}`,
+      );
+
+      res.json({ success: true, refundedCount });
+    } catch (err) {
+      console.error("cancelGroupSession error:", err);
+      sendError(res, 500, "Failed to cancel group session");
+    }
+  },
+);
+
+// ─── autoTimeoutGroupSessions ────────────────────────────────────────────────
+/**
+ * Scheduled function that runs every 5 minutes to cancel group sessions
+ * that have been in "ready" state past their autoTimeoutAt deadline.
+ * Refunds all accepted participants and expires pending invites.
+ */
+export const autoTimeoutGroupSessions = onSchedule(
+  { schedule: "every 5 minutes", region: "us-central1" },
+  async () => {
+    const now = admin.firestore.Timestamp.now();
+
+    try {
+      const expiredSessions = await db
+        .collection("groupSessions")
+        .where("status", "==", "ready")
+        .where("autoTimeoutAt", "<", now)
+        .get();
+
+      if (expiredSessions.empty) {
+        console.log("autoTimeoutGroupSessions: no expired sessions found");
+        return;
+      }
+
+      console.log(
+        `autoTimeoutGroupSessions: found ${expiredSessions.size} expired session(s)`,
+      );
+
+      for (const sessionDoc of expiredSessions.docs) {
+        const sessionData = sessionDoc.data();
+        const sessionId = sessionDoc.id;
+
+        try {
+          const batch = db.batch();
+
+          // Refund all accepted participants
+          for (const pid of sessionData.participantIds) {
+            if (sessionData.participants[pid]?.accepted) {
+              const walletRef = db.collection("wallets").doc(pid);
+              const txnRef = db.collection("transactions").doc();
+
+              batch.update(walletRef, {
+                balance: admin.firestore.FieldValue.increment(
+                  sessionData.stakePerParticipant,
+                ),
+              });
+              batch.set(txnRef, {
+                userId: pid,
+                type: "refund",
+                amount: sessionData.stakePerParticipant,
+                description: "Group session timed out — stake refunded",
+                sessionId,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              });
+            }
+          }
+
+          // Expire pending invites
+          const invitesSnap = await db
+            .collection("groupInvites")
+            .where("sessionId", "==", sessionId)
+            .where("status", "==", "pending")
+            .get();
+
+          for (const inviteDoc of invitesSnap.docs) {
+            batch.update(inviteDoc.ref, {
+              status: "expired",
+              respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+
+          // Cancel session
+          batch.update(sessionDoc.ref, {
+            status: "cancelled",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          await batch.commit();
+
+          console.log(
+            `autoTimeoutGroupSessions: cancelled session=${sessionId}, participants=${sessionData.participantIds.length}`,
+          );
+        } catch (sessionErr) {
+          console.error(
+            `autoTimeoutGroupSessions: failed to cancel session=${sessionId}:`,
+            sessionErr,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("autoTimeoutGroupSessions error:", err);
     }
   },
 );

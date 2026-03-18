@@ -196,3 +196,78 @@ export async function distributeGroupPayouts(
     results,
   });
 }
+
+// ─── Group session lifecycle functions ──────────────────────────────────────
+
+export interface CreateGroupSessionResult {
+  sessionId: string;
+  inviteIds: string[];
+}
+
+export async function createGroupSession(
+  cadence: string,
+  stakePerParticipant: number,
+  duration: number,
+  inviteeIds: string[],
+  customStake?: boolean,
+): Promise<CreateGroupSessionResult> {
+  return callFunction<CreateGroupSessionResult>("createGroupSession", {
+    cadence,
+    stakePerParticipant,
+    duration,
+    inviteeIds,
+    customStake: customStake ?? false,
+  });
+}
+
+export async function respondToGroupInvite(
+  inviteId: string,
+  accept: boolean,
+): Promise<{ success: boolean; sessionStatus: string }> {
+  return callFunction<{ success: boolean; sessionStatus: string }>(
+    "respondToGroupInvite",
+    { inviteId, accept },
+  );
+}
+
+export async function markOnlineForSession(
+  sessionId: string,
+): Promise<{ success: boolean; allOnline: boolean }> {
+  return callFunction<{ success: boolean; allOnline: boolean }>(
+    "markOnlineForSession",
+    { sessionId },
+  );
+}
+
+export async function startGroupSessionCF(
+  sessionId: string,
+): Promise<{ success: boolean; endsAt: number }> {
+  return callFunction<{ success: boolean; endsAt: number }>(
+    "startGroupSession",
+    { sessionId },
+  );
+}
+
+export async function reportSessionStatus(
+  sessionId: string,
+  action: "complete" | "surrender",
+): Promise<{
+  success: boolean;
+  sessionComplete: boolean;
+  payouts?: Record<string, number>;
+}> {
+  return callFunction<{
+    success: boolean;
+    sessionComplete: boolean;
+    payouts?: Record<string, number>;
+  }>("reportSessionStatus", { sessionId, action });
+}
+
+export async function cancelGroupSession(
+  sessionId: string,
+): Promise<{ success: boolean; refundedCount: number }> {
+  return callFunction<{ success: boolean; refundedCount: number }>(
+    "cancelGroupSession",
+    { sessionId },
+  );
+}

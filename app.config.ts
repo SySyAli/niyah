@@ -83,6 +83,7 @@ export default {
       "expo-router",
       "react-native-bottom-tabs",
       "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       [
         "@react-native-google-signin/google-signin",
         {

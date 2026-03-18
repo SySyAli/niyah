@@ -32,6 +32,9 @@ importers:
       '@react-native-firebase/firestore':
         specifier: ^23.8.8
         version: 23.8.8(@react-native-firebase/app@23.8.8(@react-native-async-storage/async-storage@2.2.0(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)))(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))
+      '@react-native-firebase/messaging':
+        specifier: ^23.8.8
+        version: 23.8.8(@react-native-firebase/app@23.8.8(@react-native-async-storage/async-storage@2.2.0(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)))(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(expo@54.0.33)
       '@react-native-google-signin/google-signin':
         specifier: ^14.0.2
         version: 14.0.2(expo@54.0.33)(react-dom@19.1.0(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -1720,6 +1723,15 @@ packages:
     resolution: {integrity: sha512-oGD7EN/NHEz/U5GJNJVZtUF17G4hCp36uB4kjdJ6+UCFn+vgfGS/uMio2kXCMVBO6bmgI2qbfClWryirZ3xmcQ==}
     peerDependencies:
       '@react-native-firebase/app': 23.8.8
+
+  '@react-native-firebase/messaging@23.8.8':
+    resolution: {integrity: sha512-7Po3/0M9SjYftWFZDueNqvbYDgycE/p7rYrcPDBjxWXsVPO98woLPIFRDuYIJDlTVFyYFjpCTF8kDIGBWPTFzQ==}
+    peerDependencies:
+      '@react-native-firebase/app': 23.8.8
+      expo: '>=47.0.0'
+    peerDependenciesMeta:
+      expo:
+        optional: true
 
   '@react-native-google-signin/google-signin@14.0.2':
     resolution: {integrity: sha512-L23SBl30VGVjxdX3jb9PZJHuuitsSU/aMGWCNQqSx69PrUqGcP2gkcUeOsK6VPFadPbjh+4ml+0UoAEzZGA3dQ==}
@@ -8548,6 +8560,12 @@ snapshots:
       react-native-url-polyfill: 3.0.0(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))
     transitivePeerDependencies:
       - react-native
+
+  '@react-native-firebase/messaging@23.8.8(@react-native-firebase/app@23.8.8(@react-native-async-storage/async-storage@2.2.0(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)))(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(expo@54.0.33)':
+    dependencies:
+      '@react-native-firebase/app': 23.8.8(@react-native-async-storage/async-storage@2.2.0(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)))(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+    optionalDependencies:
+      expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(graphql@16.8.1)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
 
   '@react-native-google-signin/google-signin@14.0.2(expo@54.0.33)(react-dom@19.1.0(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)':
     dependencies:

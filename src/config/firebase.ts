@@ -31,6 +31,7 @@ import {
   getDocs,
   serverTimestamp,
   Timestamp,
+  onSnapshot,
 } from "@react-native-firebase/firestore";
 import type { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 import {
@@ -50,6 +51,8 @@ const COLLECTIONS = {
   WALLETS: "wallets",
   USER_FOLLOWS: "userFollows",
   SESSIONS: "sessions",
+  GROUP_SESSIONS: "groupSessions",
+  GROUP_INVITES: "groupInvites",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -494,4 +497,83 @@ export const getActiveSession = async (
     endsAt: (data.endsAt as FirebaseFirestoreTypes.Timestamp).toDate(),
     status: data.status as string,
   };
+};
+
+// ---------------------------------------------------------------------------
+// Group session real-time listeners
+// ---------------------------------------------------------------------------
+
+/**
+ * Subscribe to a group session document. Fires callback on every change.
+ * Returns unsubscribe function.
+ */
+export const subscribeToGroupSession = (
+  sessionId: string,
+  callback: (data: Record<string, unknown> | null) => void,
+): (() => void) => {
+  const docRef = doc(db, COLLECTIONS.GROUP_SESSIONS, sessionId);
+  return onSnapshot(docRef, (snap) => {
+    if (!snap.exists) {
+      callback(null);
+      return;
+    }
+    callback({ __id: snap.id, ...snap.data() } as Record<string, unknown>);
+  });
+};
+
+/**
+ * Subscribe to pending invites for a user. Fires callback with full list
+ * on every change. Returns unsubscribe function.
+ */
+export const subscribeToGroupInvites = (
+  userId: string,
+  callback: (invites: Array<Record<string, unknown>>) => void,
+): (() => void) => {
+  const q = query(
+    collection(db, COLLECTIONS.GROUP_INVITES),
+    where("toUserId", "==", userId),
+    where("status", "==", "pending"),
+  );
+  return onSnapshot(q, (snap) => {
+    const invites = snap.docs.map(
+      (d: FirebaseFirestoreTypes.QueryDocumentSnapshot) => ({
+        __id: d.id,
+        ...d.data(),
+      }),
+    ) as Array<Record<string, unknown>>;
+    callback(invites);
+  });
+};
+
+/**
+ * Subscribe to all active/ready group sessions where user is a participant.
+ * Returns unsubscribe function.
+ */
+export const subscribeToActiveGroupSessions = (
+  userId: string,
+  callback: (sessions: Array<Record<string, unknown>>) => void,
+): (() => void) => {
+  const q = query(
+    collection(db, COLLECTIONS.GROUP_SESSIONS),
+    where("participantIds", "array-contains", userId),
+    where("status", "in", ["pending", "ready", "active"]),
+  );
+  return onSnapshot(q, (snap) => {
+    const sessions = snap.docs.map(
+      (d: FirebaseFirestoreTypes.QueryDocumentSnapshot) => ({
+        __id: d.id,
+        ...d.data(),
+      }),
+    ) as Array<Record<string, unknown>>;
+    callback(sessions);
+  });
+};
+
+/** Fetch a single group session by ID (one-off read). */
+export const getGroupSession = async (
+  sessionId: string,
+): Promise<Record<string, unknown> | null> => {
+  const snap = await getDoc(doc(db, COLLECTIONS.GROUP_SESSIONS, sessionId));
+  if (!snap.exists) return null;
+  return { __id: snap.id, ...snap.data() } as Record<string, unknown>;
 };

@@ -1,9 +1,7 @@
 name: EAS Preview Build
 
 on:
-  pull_request:
-    branches: [main, master]
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:  # Manual trigger only — requires EXPO_TOKEN + Firebase env vars as secrets
 
 concurrency:
   group: eas-preview-${{ github.ref }}

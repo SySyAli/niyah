@@ -156,7 +156,8 @@ export default function DashboardScreen() {
   const user = useAuthStore((state) => state.user);
   const balance = useWalletStore((state) => state.balance);
   const { partners } = usePartnerStore();
-  const { activeGroupSession, groupSessionHistory } = useGroupSessionStore();
+  const { activeGroupSession, groupSessionHistory, pendingInvites } =
+    useGroupSessionStore();
 
   const completionRate =
     user && user.totalSessions > 0
@@ -512,6 +513,69 @@ export default function DashboardScreen() {
                 size="large"
               />
             </Card>
+          )}
+
+          {/* Pending Group Invites Banner */}
+          {pendingInvites && pendingInvites.length > 0 && (
+            <Pressable
+              onPress={() => router.push("/session/invites")}
+              style={{ marginBottom: Spacing.md }}
+            >
+              <Card variant="elevated">
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: Spacing.md,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: Colors.primary,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: Colors.background,
+                        fontWeight: "700",
+                        fontSize: 16,
+                      }}
+                    >
+                      {pendingInvites.length}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        color: Colors.text,
+                        fontSize: 16,
+                        fontWeight: "600",
+                      }}
+                    >
+                      Group Session{" "}
+                      {pendingInvites.length === 1 ? "Invite" : "Invites"}
+                    </Text>
+                    <Text
+                      style={{
+                        color: Colors.textSecondary,
+                        fontSize: 13,
+                        marginTop: 2,
+                      }}
+                    >
+                      Tap to view and respond
+                    </Text>
+                  </View>
+                  <Text style={{ color: Colors.textTertiary, fontSize: 20 }}>
+                    ›
+                  </Text>
+                </View>
+              </Card>
+            </Pressable>
           )}
 
           {/* Invite Friends Card */}

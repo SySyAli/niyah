@@ -22,7 +22,12 @@ import { useColors } from "../../src/hooks/useColors";
 import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import { useThemeStore } from "../../src/store/themeStore";
 import * as Haptics from "expo-haptics";
-import { Card, Balance, LegalContentView, InviteCTA } from "../../src/components";
+import {
+  Card,
+  Balance,
+  LegalContentView,
+  InviteCTA,
+} from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { usePartnerStore } from "../../src/store/partnerStore";

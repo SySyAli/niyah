@@ -104,8 +104,7 @@ describe("legal acceptance version comparison", () => {
         // legalAcceptanceVersion is undefined (not set)
       },
       isAuthenticated: true,
-      hasAcceptedCurrentLegal:
-        undefined === CURRENT_LEGAL_VERSION, // evaluates to false
+      hasAcceptedCurrentLegal: undefined === CURRENT_LEGAL_VERSION, // evaluates to false
     });
 
     const state = useAuthStore.getState();

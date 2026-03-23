@@ -1456,13 +1456,10 @@ export const acceptLegalTerms = onRequest(
         return;
       }
 
-      await db
-        .collection("users")
-        .doc(uid)
-        .update({
-          legalAcceptanceVersion: version,
-          legalAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+      await db.collection("users").doc(uid).update({
+        legalAcceptanceVersion: version,
+        legalAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
       res.json({ success: true });
     } catch (err) {

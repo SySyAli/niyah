@@ -70,10 +70,7 @@ describe("SessionScreenScaffold", () => {
   describe("centered header variant", () => {
     it("renders centered header with title", () => {
       render(
-        <SessionScreenScaffold
-          headerVariant="centered"
-          headerTitle="Confirm"
-        >
+        <SessionScreenScaffold headerVariant="centered" headerTitle="Confirm">
           <Text>Content</Text>
         </SessionScreenScaffold>,
       );

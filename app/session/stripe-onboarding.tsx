@@ -5,13 +5,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -23,11 +17,7 @@ import {
 import { useColors } from "../../src/hooks/useColors";
 import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import * as Haptics from "expo-haptics";
-import {
-  Button,
-  Card,
-  SessionScreenScaffold,
-} from "../../src/components";
+import { Button, Card, SessionScreenScaffold } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import {
   createConnectAccount,

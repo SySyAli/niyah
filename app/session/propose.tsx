@@ -1,11 +1,5 @@
 import React, { useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  TextInput,
-} from "react-native";
+import { View, Text, StyleSheet, Pressable, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
@@ -382,8 +376,8 @@ export default function ProposeSessionScreen() {
           .
         </Text>
         <Text style={styles.successDetail}>
-          Once everyone accepts, the {formatMoney(effectiveStake!)} stake
-          locks in.
+          Once everyone accepts, the {formatMoney(effectiveStake!)} stake locks
+          in.
         </Text>
         <Button
           title="Back to Home"

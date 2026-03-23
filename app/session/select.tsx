@@ -1,11 +1,5 @@
 import React, { useState, useRef, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Animated,
-} from "react-native";
+import { View, Text, StyleSheet, Pressable, Animated } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   Typography,

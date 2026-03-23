@@ -10,26 +10,20 @@ import { LegalAcceptanceOverlay } from "../../../components/LegalAcceptanceOverl
 
 describe("LegalAcceptanceOverlay", () => {
   it("renders when visible", () => {
-    render(
-      <LegalAcceptanceOverlay visible={true} onAccept={jest.fn()} />,
-    );
+    render(<LegalAcceptanceOverlay visible={true} onAccept={jest.fn()} />);
 
     expect(screen.getByText("Terms & Privacy")).toBeTruthy();
     expect(
       screen.getByText("Please review and accept to continue"),
     ).toBeTruthy();
     expect(
-      screen.getByText(
-        "I agree to the Terms of Service and Privacy Policy",
-      ),
+      screen.getByText("I agree to the Terms of Service and Privacy Policy"),
     ).toBeTruthy();
     expect(screen.getByText("Continue")).toBeTruthy();
   });
 
   it("checkbox starts unchecked", () => {
-    render(
-      <LegalAcceptanceOverlay visible={true} onAccept={jest.fn()} />,
-    );
+    render(<LegalAcceptanceOverlay visible={true} onAccept={jest.fn()} />);
 
     const checkbox = screen.getByRole("checkbox");
     expect(checkbox.props.accessibilityState.checked).toBe(false);
@@ -37,9 +31,7 @@ describe("LegalAcceptanceOverlay", () => {
 
   it("continue button is disabled when checkbox is unchecked", () => {
     const onAccept = jest.fn();
-    render(
-      <LegalAcceptanceOverlay visible={true} onAccept={onAccept} />,
-    );
+    render(<LegalAcceptanceOverlay visible={true} onAccept={onAccept} />);
 
     // Press Continue while unchecked — onAccept should NOT be called
     fireEvent.press(screen.getByText("Continue"));
@@ -48,9 +40,7 @@ describe("LegalAcceptanceOverlay", () => {
 
   it("ticking checkbox enables continue and pressing it calls onAccept", () => {
     const onAccept = jest.fn();
-    render(
-      <LegalAcceptanceOverlay visible={true} onAccept={onAccept} />,
-    );
+    render(<LegalAcceptanceOverlay visible={true} onAccept={onAccept} />);
 
     const checkbox = screen.getByRole("checkbox");
 

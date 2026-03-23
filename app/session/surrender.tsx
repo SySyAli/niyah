@@ -19,11 +19,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import {
-  Card,
-  Button,
-  SessionScreenScaffold,
-} from "../../src/components";
+import { Card, Button, SessionScreenScaffold } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
@@ -315,9 +311,7 @@ export default function SurrenderScreen() {
           <Text style={styles.paymentAmount}>{formatMoney(amountOwed)}</Text>
           <Text style={styles.paymentTo}>to {settledPartner?.name}</Text>
           {settledPartner?.venmoHandle && (
-            <Text style={styles.venmoHandle}>
-              {settledPartner.venmoHandle}
-            </Text>
+            <Text style={styles.venmoHandle}>{settledPartner.venmoHandle}</Text>
           )}
         </Card>
 
@@ -344,9 +338,7 @@ export default function SurrenderScreen() {
             variant="secondary"
           />
           <Pressable onPress={handleSkipPayment} style={styles.skipButton}>
-            <Text style={styles.skipText}>
-              Skip Payment (hurts reputation)
-            </Text>
+            <Text style={styles.skipText}>Skip Payment (hurts reputation)</Text>
           </Pressable>
         </View>
       </SessionScreenScaffold>

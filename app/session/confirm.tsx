@@ -402,9 +402,7 @@ export default function ConfirmSessionScreen() {
       <Card style={styles.howItWorksCard}>
         <Text style={styles.howItWorksTitle}>How It Works</Text>
         <View style={styles.outcomeRow}>
-          <View
-            style={[styles.outcomeDot, { backgroundColor: Colors.gain }]}
-          />
+          <View style={[styles.outcomeDot, { backgroundColor: Colors.gain }]} />
           <Text style={styles.outcomeText}>
             <Text style={styles.outcomeHighlight}>Complete the session:</Text>{" "}
             {currentPartner
@@ -413,9 +411,7 @@ export default function ConfirmSessionScreen() {
           </Text>
         </View>
         <View style={styles.outcomeRow}>
-          <View
-            style={[styles.outcomeDot, { backgroundColor: Colors.loss }]}
-          />
+          <View style={[styles.outcomeDot, { backgroundColor: Colors.loss }]} />
           <Text style={styles.outcomeText}>
             <Text style={styles.outcomeHighlight}>Surrender early:</Text> You
             forfeit your {formatMoney(config.stake)} stake

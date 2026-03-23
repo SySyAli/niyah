@@ -10,7 +10,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Typography, Spacing, Font, type ThemeColors } from "../constants/colors";
+import {
+  Typography,
+  Spacing,
+  Font,
+  type ThemeColors,
+} from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 
 interface AuthScreenScaffoldProps {

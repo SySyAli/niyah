@@ -86,13 +86,13 @@ The app should compare the stored acceptance version to the current in-app legal
 
 ## Phase Summary
 
-| Phase | Outcome                                                                                         |
-| ----- | ----------------------------------------------------------------------------------------------- |
-| 1     | Shared auth/session scaffolds and legal acceptance flow are in place (Phases 1+2 combined)      |
-| 2     | Auth UX and shared interaction behavior are standardized                                        |
-| 3     | Friends, history, profile, and invite surfaces use scalable and consistent UI patterns          |
-| 4     | Portrait fit, reset coordination, and logout UX are hardened                                    |
-| 5     | QA, regression, and acceptance checks are complete                                              |
+| Phase | Outcome                                                                                    |
+| ----- | ------------------------------------------------------------------------------------------ |
+| 1     | Shared auth/session scaffolds and legal acceptance flow are in place (Phases 1+2 combined) |
+| 2     | Auth UX and shared interaction behavior are standardized                                   |
+| 3     | Friends, history, profile, and invite surfaces use scalable and consistent UI patterns     |
+| 4     | Portrait fit, reset coordination, and logout UX are hardened                               |
+| 5     | QA, regression, and acceptance checks are complete                                         |
 
 ## Phase 1: Shared Scaffolds, Legal Versioning, and Required Acceptance
 
@@ -101,6 +101,7 @@ The app should compare the stored acceptance version to the current in-app legal
 ### Primary files likely touched
 
 **Scaffolds:**
+
 - `app/(auth)/auth-entry.tsx`
 - `app/(auth)/check-email.tsx`
 - `app/(auth)/profile-setup.tsx`
@@ -117,6 +118,7 @@ The app should compare the stored acceptance version to the current in-app legal
 - `src/components/` (new scaffold components, new overlay component)
 
 **Legal acceptance:**
+
 - `src/types/index.ts`
 - `src/store/authStore.ts`
 - `src/constants/config.ts` (legal version constant)
@@ -130,6 +132,7 @@ The app should compare the stored acceptance version to the current in-app legal
 ### Implementation checklist
 
 **Scaffolds:**
+
 - [ ] Create `AuthScreenScaffold` with safe area, header slot, subtitle/footer slots, keyboard-safe layout support, shared spacing rules, and optional legal content slot for flows that include acceptance.
 - [ ] Create `SessionScreenScaffold` with safe area, header/back area, content container, and footer CTA area.
 - [ ] Migrate auth screens (`auth-entry`, `check-email`, `profile-setup`) to `AuthScreenScaffold`.
@@ -138,12 +141,14 @@ The app should compare the stored acceptance version to the current in-app legal
 - [ ] Keep screen-specific form fields, validation, and business logic inside the screens themselves.
 
 **Legal acceptance — data layer:**
+
 - [ ] Add `legalAcceptanceVersion` (string) and `legalAcceptedAt` (Timestamp) fields to the `User` type in `src/types/index.ts`.
 - [ ] Define `CURRENT_LEGAL_VERSION` constant in `src/constants/config.ts`.
 - [ ] Create `acceptLegalTerms` Firebase Cloud Function in `functions/` that validates the request, writes `legalAcceptanceVersion` and `legalAcceptedAt` (server timestamp) to the user document, and returns success.
 - [ ] Update Firestore security rules to allow admin SDK writes for legal fields (no direct client writes for these fields).
 
 **Legal acceptance — UI:**
+
 - [ ] Create a `LegalContentView` component: centered title, scrollable plain-text body, reusable for both acceptance and read-only contexts.
 - [ ] Create a `LegalAcceptanceOverlay` component: custom non-dismissible full-screen overlay using React Native `Modal` or absolute-positioned `View`. Contains `LegalContentView`, a checkbox ("I agree to the terms and conditions") that is enabled immediately, and a confirm button. Checkbox tick triggers haptic feedback. Confirm button press triggers separate haptic feedback. Confirm is disabled until checkbox is ticked.
 - [ ] Add legal version comparison logic in `app/index.tsx` (after auth state is resolved): if the user is authenticated but `legalAcceptanceVersion` does not match `CURRENT_LEGAL_VERSION`, render the `LegalAcceptanceOverlay` before allowing navigation to tabs.
@@ -153,6 +158,7 @@ The app should compare the stored acceptance version to the current in-app legal
 - [ ] Ensure existing users are re-prompted exactly once when this ships, then only again when the legal version changes later.
 
 **Tests:**
+
 - [ ] Unit tests for `AuthScreenScaffold` and `SessionScreenScaffold` rendering.
 - [ ] Unit tests for `LegalAcceptanceOverlay` (checkbox state, haptic triggers, confirm disabled until checked).
 - [ ] Unit tests for `LegalContentView` (renders in acceptance and read-only modes).
@@ -200,6 +206,7 @@ The app should compare the stored acceptance version to the current in-app legal
 - [ ] Review `Card` behavior so interactive cards feel consistent and non-essential default mount animation does not fight dense screens.
 
 **Tests:**
+
 - [ ] Unit tests for `Button` accessibility props (role, label, state, touch target).
 - [ ] Unit tests for Apple sign-in button rendering.
 - [ ] Update existing tests affected by CTA and Card changes.
@@ -238,6 +245,7 @@ The app should compare the stored acceptance version to the current in-app legal
 - [ ] Keep profile legal access read-only and modal-based (using `LegalContentView` from Phase 1).
 
 **Tests:**
+
 - [ ] Unit tests for friends `FlatList` rendering (empty state, loaded state, error state).
 - [ ] Unit tests for shared invite CTA component.
 - [ ] Unit tests for standardized loading/empty/error states.
@@ -272,6 +280,7 @@ The app should compare the stored acceptance version to the current in-app legal
 ### Implementation checklist
 
 **Portrait fit:**
+
 - [ ] Confirm portrait-only configuration in `app.config.ts`.
 - [ ] Audit short-phone fit on 4.7-inch layouts and up.
 - [ ] Replace brittle sizing where it causes clipping, especially in money-entry flows.
@@ -280,6 +289,7 @@ The app should compare the stored acceptance version to the current in-app legal
 - [ ] Review `welcome.tsx` carousel for short-screen fit (standalone, not scaffolded).
 
 **Reset coordination:**
+
 - [ ] Add a `reset()` action to each user-scoped store: `walletStore`, `sessionStore`, `partnerStore`, `groupSessionStore`, `socialStore`.
 - [ ] Do NOT add reset to `themeStore` — theme is a device-level preference that persists across accounts.
 - [ ] Create a non-visual reset coordinator module (e.g., `src/store/resetCoordinator.ts`) that calls `reset()` on all user-scoped stores in sequence.
@@ -288,6 +298,7 @@ The app should compare the stored acceptance version to the current in-app legal
 - [ ] Verify no prior-user wallet/session/social data persists after logout. Firestore retains all data server-side; only the local client-side cache is cleared.
 
 **Tests:**
+
 - [ ] Unit tests for each store's `reset()` action (verify state returns to initial values).
 - [ ] Unit test for reset coordinator (calls all store resets, does not touch theme).
 - [ ] Unit test for logout flow (reset coordinator is invoked, signing-out state is shown).

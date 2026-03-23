@@ -1,11 +1,5 @@
 import React, { useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-} from "react-native";
+import { View, Text, StyleSheet, Modal, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import {
@@ -75,9 +69,7 @@ export const LegalAcceptanceOverlay: React.FC<LegalAcceptanceOverlayProps> = ({
             accessibilityState={{ checked }}
             accessibilityLabel="I agree to the Terms of Service and Privacy Policy"
           >
-            <View
-              style={[styles.checkbox, checked && styles.checkboxChecked]}
-            >
+            <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
               {checked && <Text style={styles.checkmark}>✓</Text>}
             </View>
             <Text style={styles.checkboxLabel}>

@@ -1,11 +1,5 @@
 import React, { useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  TextInput,
-} from "react-native";
+import { View, Text, StyleSheet, Pressable, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -138,8 +132,8 @@ export default function PartnerSelectionScreen() {
         <Card style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>No Partners Yet</Text>
           <Text style={styles.emptyText}>
-            Invite a friend to be your accountability partner. You'll both
-            stake money and keep each other focused.
+            Invite a friend to be your accountability partner. You'll both stake
+            money and keep each other focused.
           </Text>
         </Card>
       )}
@@ -183,10 +177,7 @@ export default function PartnerSelectionScreen() {
           </View>
         </Card>
       ) : (
-        <Pressable
-          style={styles.addButton}
-          onPress={() => setShowInvite(true)}
-        >
+        <Pressable style={styles.addButton} onPress={() => setShowInvite(true)}>
           <Text style={styles.addButtonText}>+ Invite New Partner</Text>
         </Pressable>
       )}
@@ -195,14 +186,12 @@ export default function PartnerSelectionScreen() {
       <Card style={styles.infoCard}>
         <Text style={styles.infoTitle}>About Reputation Scores</Text>
         <Text style={styles.infoText}>
-          Reputation reflects payment reliability. Partners who always pay
-          when they lose have high scores. Flaky payers get low scores and may
-          be excluded from groups.
+          Reputation reflects payment reliability. Partners who always pay when
+          they lose have high scores. Flaky payers get low scores and may be
+          excluded from groups.
         </Text>
         <View style={styles.legendRow}>
-          <View
-            style={[styles.legendDot, { backgroundColor: Colors.gain }]}
-          />
+          <View style={[styles.legendDot, { backgroundColor: Colors.gain }]} />
           <Text style={styles.legendText}>80+ Oak - Highly trusted</Text>
         </View>
         <View style={styles.legendRow}>
@@ -218,9 +207,7 @@ export default function PartnerSelectionScreen() {
           <Text style={styles.legendText}>40+ Sapling - Building trust</Text>
         </View>
         <View style={styles.legendRow}>
-          <View
-            style={[styles.legendDot, { backgroundColor: Colors.loss }]}
-          />
+          <View style={[styles.legendDot, { backgroundColor: Colors.loss }]} />
           <Text style={styles.legendText}>Below 40 - Needs improvement</Text>
         </View>
       </Card>

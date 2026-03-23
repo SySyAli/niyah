@@ -176,9 +176,7 @@ export default function WithdrawScreen() {
         {/* Amount summary */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryLabel}>Withdrawal Amount</Text>
-          <Text style={styles.summaryAmount}>
-            {formatMoney(amountInCents)}
-          </Text>
+          <Text style={styles.summaryAmount}>{formatMoney(amountInCents)}</Text>
         </View>
 
         {hasActiveStripe ? (
@@ -192,8 +190,7 @@ export default function WithdrawScreen() {
               <View
                 style={[
                   styles.methodCard,
-                  selectedMethod === "standard" &&
-                    styles.methodCardSelected,
+                  selectedMethod === "standard" && styles.methodCardSelected,
                 ]}
               >
                 <View style={styles.methodCardHeader}>
@@ -207,9 +204,7 @@ export default function WithdrawScreen() {
                     >
                       Standard
                     </Text>
-                    <Text style={styles.methodSubtitle}>
-                      1–2 business days
-                    </Text>
+                    <Text style={styles.methodSubtitle}>1–2 business days</Text>
                   </View>
                   <View style={styles.methodBadge}>
                     <Text style={styles.methodBadgeText}>Free</Text>
@@ -240,13 +235,9 @@ export default function WithdrawScreen() {
                     >
                       Instant
                     </Text>
-                    <Text style={styles.methodSubtitle}>
-                      Within 30 minutes
-                    </Text>
+                    <Text style={styles.methodSubtitle}>Within 30 minutes</Text>
                   </View>
-                  <View
-                    style={[styles.methodBadge, styles.methodBadgeAccent]}
-                  >
+                  <View style={[styles.methodBadge, styles.methodBadgeAccent]}>
                     <Text style={styles.methodBadgeTextAccent}>
                       {formatMoney(instantFee)} fee
                     </Text>
@@ -276,13 +267,8 @@ export default function WithdrawScreen() {
                 />
               )}
 
-              <Pressable
-                onPress={handleVenmoWithdraw}
-                style={styles.venmoLink}
-              >
-                <Text style={styles.venmoLinkText}>
-                  Send via Venmo instead
-                </Text>
+              <Pressable onPress={handleVenmoWithdraw} style={styles.venmoLink}>
+                <Text style={styles.venmoLinkText}>Send via Venmo instead</Text>
               </Pressable>
             </View>
           </>
@@ -516,7 +502,12 @@ const makeStyles = (Colors: ThemeColors) =>
       lineHeight: Typography.bodyMedium * 1.5,
     },
     setupButton: { marginTop: Spacing.sm },
-    dividerRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md, marginBottom: Spacing.lg },
+    dividerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.md,
+      marginBottom: Spacing.lg,
+    },
     dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
     dividerText: { color: Colors.textMuted, fontSize: Typography.labelMedium },
     venmoSectionLabel: {

@@ -9,7 +9,6 @@ import {
   Animated,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -21,7 +20,12 @@ import {
 import { useColors } from "../../src/hooks/useColors";
 import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import * as Haptics from "expo-haptics";
-import { Button, NumPad, AmountDisplay } from "../../src/components";
+import {
+  Button,
+  NumPad,
+  AmountDisplay,
+  SessionScreenScaffold,
+} from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
 import {
@@ -259,118 +263,80 @@ export default function DepositScreen() {
   const handleDeposit = DEMO_MODE ? handleDemoDeposit : handleStripeDeposit;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.closeButton}
-            hitSlop={20}
-          >
-            <Text style={styles.closeText}>Cancel</Text>
-          </Pressable>
-          <Text style={styles.title}>Add Funds</Text>
-          <View style={styles.closeButton} />
-        </View>
-
-        {/* Balance Info */}
-        <View style={styles.balanceInfo}>
-          <Text style={styles.balanceLabel}>Current Balance</Text>
-          <Text style={styles.balanceAmount}>{formatMoney(balance)}</Text>
-        </View>
-
-        {/* Amount Display */}
-        <AmountDisplay
-          amount={displayAmount}
-          label="Enter amount"
-          placeholder="$0"
-        />
-
-        {/* Quick Amounts */}
-        <View style={styles.quickAmountsContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickAmounts}
-          >
-            {QUICK_AMOUNTS.map((amount) => (
-              <QuickAmountButton
-                key={amount}
-                amount={amount}
-                onPress={handleQuickAmount}
-                isSelected={selectedQuickAmount === amount}
-              />
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* NumPad */}
-        <View style={styles.numPadContainer}>
-          <NumPad
-            onKeyPress={handleKeyPress}
-            onBackspace={handleBackspace}
-            showDecimal={true}
-          />
-        </View>
-
-        {/* CTA */}
-        <View style={styles.footer}>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.loadingText}>Processing payment...</Text>
-            </View>
-          ) : (
-            <Button
-              title={
-                isValidAmount
-                  ? `Add ${formatMoney(selectedQuickAmount ?? amountInCents)}`
-                  : "Enter an amount"
-              }
-              onPress={handleDeposit}
-              disabled={!isValidAmount || isLoading}
-              size="large"
-            />
-          )}
-          {DEMO_MODE && (
-            <Text style={styles.disclaimer}>Demo mode — no real money</Text>
-          )}
-        </View>
+    <SessionScreenScaffold
+      headerVariant="centered"
+      headerTitle="Add Funds"
+      scrollable={false}
+    >
+      {/* Balance Info */}
+      <View style={styles.balanceInfo}>
+        <Text style={styles.balanceLabel}>Current Balance</Text>
+        <Text style={styles.balanceAmount}>{formatMoney(balance)}</Text>
       </View>
-    </SafeAreaView>
+
+      {/* Amount Display */}
+      <AmountDisplay
+        amount={displayAmount}
+        label="Enter amount"
+        placeholder="$0"
+      />
+
+      {/* Quick Amounts */}
+      <View style={styles.quickAmountsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickAmounts}
+        >
+          {QUICK_AMOUNTS.map((amount) => (
+            <QuickAmountButton
+              key={amount}
+              amount={amount}
+              onPress={handleQuickAmount}
+              isSelected={selectedQuickAmount === amount}
+            />
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* NumPad */}
+      <View style={styles.numPadContainer}>
+        <NumPad
+          onKeyPress={handleKeyPress}
+          onBackspace={handleBackspace}
+          showDecimal={true}
+        />
+      </View>
+
+      {/* CTA */}
+      <View style={styles.footer}>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={styles.loadingText}>Processing payment...</Text>
+          </View>
+        ) : (
+          <Button
+            title={
+              isValidAmount
+                ? `Add ${formatMoney(selectedQuickAmount ?? amountInCents)}`
+                : "Enter an amount"
+            }
+            onPress={handleDeposit}
+            disabled={!isValidAmount || isLoading}
+            size="large"
+          />
+        )}
+        {DEMO_MODE && (
+          <Text style={styles.disclaimer}>Demo mode — no real money</Text>
+        )}
+      </View>
+    </SessionScreenScaffold>
   );
 }
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: Spacing.lg,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: Spacing.md,
-    },
-    closeButton: {
-      width: 60,
-    },
-    closeText: {
-      color: Colors.textSecondary,
-      fontSize: Typography.bodyLarge,
-      ...Font.medium,
-    },
-    title: {
-      fontSize: Typography.titleLarge,
-      ...Font.semibold,
-      color: Colors.text,
-    },
     balanceInfo: {
       alignItems: "center",
       paddingVertical: Spacing.md,

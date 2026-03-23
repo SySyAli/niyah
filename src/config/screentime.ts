@@ -106,3 +106,19 @@ export const onAuthorizationChange = (
   );
   return () => subscription.remove();
 };
+
+/**
+ * Subscribe to surrender requests from the custom shield screen.
+ * Fired when the user taps "Surrender Session" on the NiyahShieldAction
+ * extension. The main app should call surrenderSession() in response.
+ * Returns an unsubscribe function.
+ */
+export const onSurrenderRequested = (callback: () => void): (() => void) => {
+  if (!isScreenTimeAvailable) return () => {};
+
+  const subscription = NiyahScreenTime.addListener(
+    "onSurrenderRequested",
+    callback,
+  );
+  return () => subscription.remove();
+};

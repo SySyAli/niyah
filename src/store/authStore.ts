@@ -14,7 +14,10 @@ import {
   type FirebaseUser,
 } from "../config/firebase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { REFERRAL_REPUTATION_BOOST } from "../constants/config";
+import {
+  REFERRAL_REPUTATION_BOOST,
+  CURRENT_LEGAL_VERSION,
+} from "../constants/config";
 import { logger } from "../utils/logger";
 
 // Lazy import to break circular dependency (walletStore imports authStore)
@@ -43,8 +46,10 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   isInitialized: boolean; // true once first onAuthStateChanged fires
+  isSigningOut: boolean;
   profileComplete: boolean;
   isNewUser: boolean;
+  hasAcceptedCurrentLegal: boolean;
 
   initialize: () => () => void; // returns unsubscribe function
   loginWithGoogle: () => Promise<void>;
@@ -66,6 +71,7 @@ interface AuthState {
   updateReputation: (updates: Partial<UserReputation>) => void;
   setVenmoHandle: (handle: string) => void;
   setZelleHandle: (handle: string) => void;
+  acceptLegal: () => Promise<void>;
 }
 
 const createInitialReputation = (): UserReputation => ({
@@ -139,6 +145,12 @@ const buildUser = (
         | "active"
         | "restricted"
         | undefined,
+      legalAcceptanceVersion: firestoreData.legalAcceptanceVersion as
+        | string
+        | undefined,
+      legalAcceptedAt: firestoreData.legalAcceptedAt
+        ? new Date(firestoreData.legalAcceptedAt as string | number)
+        : undefined,
     };
   }
 
@@ -168,6 +180,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
   profileComplete: false,
   isNewUser: false,
+  isSigningOut: false,
+  hasAcceptedCurrentLegal: false,
 
   initialize: () => {
     const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
@@ -183,6 +197,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: true,
             isInitialized: true,
             profileComplete,
+            hasAcceptedCurrentLegal:
+              user.legalAcceptanceVersion === CURRENT_LEGAL_VERSION,
             isLoading: false,
           });
 
@@ -199,6 +215,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: true,
             isInitialized: true,
             profileComplete: false,
+            hasAcceptedCurrentLegal: false,
             isLoading: false,
           });
 
@@ -213,6 +230,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: false,
           isInitialized: true,
           profileComplete: false,
+          hasAcceptedCurrentLegal: false,
           isNewUser: false,
           isLoading: false,
         });
@@ -241,6 +259,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user,
         isAuthenticated: true,
         profileComplete,
+        hasAcceptedCurrentLegal:
+          user.legalAcceptanceVersion === CURRENT_LEGAL_VERSION,
         isNewUser: !profileComplete,
         isLoading: false,
       });
@@ -278,6 +298,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user,
         isAuthenticated: true,
         profileComplete,
+        hasAcceptedCurrentLegal:
+          user.legalAcceptanceVersion === CURRENT_LEGAL_VERSION,
         isNewUser: !profileComplete,
         isLoading: false,
       });
@@ -333,6 +355,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user,
         isAuthenticated: true,
         profileComplete,
+        hasAcceptedCurrentLegal:
+          user.legalAcceptanceVersion === CURRENT_LEGAL_VERSION,
         isNewUser: !profileComplete,
         isLoading: false,
       });
@@ -383,19 +407,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    set({ isSigningOut: true });
+
+    // Clear all user-scoped stores before signing out
+    const { resetAllUserStores } = require("./resetCoordinator") as {
+      resetAllUserStores: () => void;
+    };
+    resetAllUserStores();
+
     try {
       await signOut();
     } catch (error) {
       logger.error("Logout error:", error);
     }
 
-    // Clear local state after signOut so state stays consistent if signOut fails
+    // Clear local auth state after signOut
     set({
       user: null,
       firebaseUser: null,
       isAuthenticated: false,
       profileComplete: false,
+      hasAcceptedCurrentLegal: false,
       isNewUser: false,
+      isSigningOut: false,
     });
   },
 
@@ -482,5 +516,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         logger.error("Failed to sync zelleHandle to Firestore:", err),
       );
     }
+  },
+
+  acceptLegal: async () => {
+    const { user } = get();
+    if (!user) throw new Error("Not authenticated");
+
+    // Lazy import to avoid circular dependency
+    const { acceptLegalTerms } = require("../config/functions") as {
+      acceptLegalTerms: (version: string) => Promise<{ success: boolean }>;
+    };
+
+    await acceptLegalTerms(CURRENT_LEGAL_VERSION);
+
+    set({
+      user: {
+        ...user,
+        legalAcceptanceVersion: CURRENT_LEGAL_VERSION,
+        legalAcceptedAt: new Date(),
+      },
+      hasAcceptedCurrentLegal: true,
+    });
   },
 }));

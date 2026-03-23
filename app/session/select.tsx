@@ -4,10 +4,8 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  ScrollView,
   Animated,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   Typography,
@@ -17,7 +15,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button } from "../../src/components";
+import { Card, Button, SessionScreenScaffold } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../../src/store/walletStore";
 import { CADENCES, DEMO_MODE } from "../../src/constants/config";
@@ -28,36 +26,6 @@ import { formatMoney } from "../../src/utils/format";
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      padding: Spacing.lg,
-      paddingBottom: Spacing.xl,
-    },
-    header: {
-      marginBottom: Spacing.md,
-    },
-    backText: {
-      color: Colors.textSecondary,
-      fontSize: Typography.bodyLarge,
-      ...Font.medium,
-    },
-    title: {
-      fontSize: Typography.headlineMedium,
-      ...Font.bold,
-      color: Colors.text,
-    },
-    subtitle: {
-      fontSize: Typography.bodyMedium,
-      color: Colors.textSecondary,
-      marginTop: Spacing.xs,
-      marginBottom: Spacing.lg,
-    },
     options: {
       gap: Spacing.md,
       marginBottom: Spacing.xl,
@@ -200,13 +168,6 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.medium,
       color: Colors.text,
     },
-    footer: {
-      padding: Spacing.lg,
-      paddingBottom: Spacing.xl,
-      gap: Spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: Colors.border,
-    },
     balanceText: {
       textAlign: "center",
       color: Colors.textSecondary,
@@ -322,74 +283,64 @@ export default function SelectCadenceScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={20}>
-            <Text style={styles.backText}>Cancel</Text>
-          </Pressable>
-        </View>
-
-        <Text style={styles.title}>Choose Your Session</Text>
-        <Text style={styles.subtitle}>Higher stakes, higher rewards</Text>
-
-        {/* Options */}
-        <View style={styles.options}>
-          {(Object.keys(CADENCES) as CadenceType[]).map((key) => (
-            <CadenceOption
-              key={key}
-              cadenceKey={key}
-              config={CADENCES[key]}
-              isSelected={selectedCadence === key}
-              canAfford={balance >= CADENCES[key].stake}
-              onSelect={() => setSelectedCadence(key)}
-            />
-          ))}
-        </View>
-
-        {/* Summary */}
-        <Card style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Session Summary</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Stake</Text>
-            <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.outcomeSection}>
-            <Text style={styles.outcomeTitle}>Outcomes</Text>
-            <View style={styles.outcomeRow}>
-              <Text style={styles.outcomeLabel}>Complete:</Text>
-              <Text style={[styles.outcomeValue, { color: Colors.gain }]}>
-                Keep your {formatMoney(config.stake)} stake
-              </Text>
-            </View>
-            <View style={styles.outcomeRow}>
-              <Text style={styles.outcomeLabel}>Surrender:</Text>
-              <Text style={[styles.outcomeValue, { color: Colors.loss }]}>
-                Lose your {formatMoney(config.stake)} stake
-              </Text>
-            </View>
-          </View>
-        </Card>
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.balanceText}>
-          Available: {formatMoney(balance)}
-        </Text>
-        <Button
-          title={canAfford ? "Continue" : "Insufficient Balance"}
-          onPress={handleContinue}
-          disabled={!canAfford}
-          size="large"
-        />
+    <SessionScreenScaffold
+      headerVariant="back"
+      backLabel="Cancel"
+      title="Choose Your Session"
+      subtitle="Higher stakes, higher rewards"
+      centerTitle={false}
+      footer={
+        <>
+          <Text style={styles.balanceText}>
+            Available: {formatMoney(balance)}
+          </Text>
+          <Button
+            title={canAfford ? "Continue" : "Insufficient Balance"}
+            onPress={handleContinue}
+            disabled={!canAfford}
+            size="large"
+          />
+        </>
+      }
+    >
+      {/* Options */}
+      <View style={styles.options}>
+        {(Object.keys(CADENCES) as CadenceType[]).map((key) => (
+          <CadenceOption
+            key={key}
+            cadenceKey={key}
+            config={CADENCES[key]}
+            isSelected={selectedCadence === key}
+            canAfford={balance >= CADENCES[key].stake}
+            onSelect={() => setSelectedCadence(key)}
+          />
+        ))}
       </View>
-    </SafeAreaView>
+
+      {/* Summary */}
+      <Card style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Session Summary</Text>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Stake</Text>
+          <Text style={styles.summaryValue}>{formatMoney(config.stake)}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.outcomeSection}>
+          <Text style={styles.outcomeTitle}>Outcomes</Text>
+          <View style={styles.outcomeRow}>
+            <Text style={styles.outcomeLabel}>Complete:</Text>
+            <Text style={[styles.outcomeValue, { color: Colors.gain }]}>
+              Keep your {formatMoney(config.stake)} stake
+            </Text>
+          </View>
+          <View style={styles.outcomeRow}>
+            <Text style={styles.outcomeLabel}>Surrender:</Text>
+            <Text style={[styles.outcomeValue, { color: Colors.loss }]}>
+              Lose your {formatMoney(config.stake)} stake
+            </Text>
+          </View>
+        </View>
+      </Card>
+    </SessionScreenScaffold>
   );
 }

@@ -5,11 +5,9 @@ import {
   StyleSheet,
   TextInput,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
+  Modal,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 import * as Haptics from "expo-haptics";
@@ -22,7 +20,11 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Button } from "../../src/components";
+import {
+  Button,
+  AuthScreenScaffold,
+  LegalContentView,
+} from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { generateNonce, sha256 } from "../../src/config/firebase";
 import { logger } from "../../src/utils/logger";
@@ -67,6 +69,7 @@ export default function AuthEntryScreen() {
   const [error, setError] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
+  const [legalModalVisible, setLegalModalVisible] = useState(false);
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -178,126 +181,129 @@ export default function AuthEntryScreen() {
   const anyLoading = isLoading || googleLoading || appleLoading;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.content}
-      >
-        {/* Back button */}
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>{"\u2190"}</Text>
+    <AuthScreenScaffold
+      title={"Welcome to\nNiyah"}
+      subtitle={"Sign in or create an account\nto get started"}
+      footer={
+        <Text style={styles.footerText}>
+          By continuing, you agree to our{" "}
+          <Text
+            style={styles.footerLink}
+            onPress={() => setLegalModalVisible(true)}
+          >
+            Terms of Service
+          </Text>{" "}
+          and{" "}
+          <Text
+            style={styles.footerLink}
+            onPress={() => setLegalModalVisible(true)}
+          >
+            Privacy Policy
+          </Text>
+        </Text>
+      }
+    >
+      {/* Error */}
+      {error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      {/* Social buttons */}
+      <View style={styles.socialSection}>
+        {/* Google */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.socialButton,
+            pressed && styles.socialButtonPressed,
+            anyLoading && styles.socialButtonDisabled,
+          ]}
+          onPress={handleGoogle}
+          disabled={anyLoading}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Google"
+        >
+          {googleLoading ? (
+            <ActivityIndicator size="small" color={Colors.text} />
+          ) : (
+            <>
+              <GoogleIcon />
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </>
+          )}
         </Pressable>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome to{"\n"}Niyah</Text>
-          <Text style={styles.subtitle}>
-            Sign in or create an account{"\n"}to get started
-          </Text>
+        {/* Apple (iOS only) — wrapped so the native control respects our height */}
+        <View style={styles.appleButtonWrapper}>
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={
+              AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+            }
+            buttonStyle={
+              AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+            }
+            cornerRadius={Radius.lg}
+            style={styles.appleButton}
+            onPress={handleApple}
+          />
         </View>
+      </View>
 
-        {/* Error */}
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
+      {/* OR divider */}
+      <View style={styles.orDivider}>
+        <View style={styles.orLine} />
+        <Text style={styles.orText}>or</Text>
+        <View style={styles.orLine} />
+      </View>
 
-        {/* Social buttons */}
-        <View style={styles.socialSection}>
-          {/* Google */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.socialButton,
-              pressed && styles.socialButtonPressed,
-              anyLoading && styles.socialButtonDisabled,
-            ]}
-            onPress={handleGoogle}
-            disabled={anyLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator size="small" color={Colors.text} />
-            ) : (
-              <>
-                <GoogleIcon />
-                <Text style={styles.socialButtonText}>
-                  Continue with Google
-                </Text>
-              </>
-            )}
-          </Pressable>
+      {/* Email input */}
+      <View style={styles.emailSection}>
+        <TextInput
+          style={styles.emailInput}
+          placeholder="your@email.com"
+          placeholderTextColor={Colors.textMuted}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          value={email}
+          onChangeText={(text) => {
+            setEmail(text);
+            setError("");
+          }}
+          editable={!anyLoading}
+          returnKeyType="go"
+          onSubmitEditing={handleEmailContinue}
+        />
 
-          {/* Apple (iOS only) */}
-          {Platform.OS === "ios" && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.socialButton,
-                styles.appleButton,
-                pressed && styles.socialButtonPressed,
-                anyLoading && styles.socialButtonDisabled,
-              ]}
-              onPress={handleApple}
-              disabled={anyLoading}
-            >
-              {appleLoading ? (
-                <ActivityIndicator size="small" color="#000" />
-              ) : (
-                <>
-                  <Text style={styles.appleIcon}>{"\uF8FF"}</Text>
-                  <Text style={styles.appleButtonText}>Sign in with Apple</Text>
-                </>
-              )}
+        <Button
+          title="Continue"
+          onPress={handleEmailContinue}
+          disabled={!isValidEmail || anyLoading}
+          loading={isLoading && !googleLoading && !appleLoading}
+          size="large"
+        />
+      </View>
+
+      {/* Read-only legal modal */}
+      <Modal
+        visible={legalModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setLegalModalVisible(false)}
+      >
+        <View style={styles.legalModal}>
+          <View style={styles.legalModalHeader}>
+            <Pressable onPress={() => setLegalModalVisible(false)}>
+              <Text style={styles.legalModalClose}>Done</Text>
             </Pressable>
-          )}
+          </View>
+          <LegalContentView section="both" />
         </View>
-
-        {/* OR divider */}
-        <View style={styles.orDivider}>
-          <View style={styles.orLine} />
-          <Text style={styles.orText}>or</Text>
-          <View style={styles.orLine} />
-        </View>
-
-        {/* Email input */}
-        <View style={styles.emailSection}>
-          <TextInput
-            style={styles.emailInput}
-            placeholder="your@email.com"
-            placeholderTextColor={Colors.textMuted}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="email"
-            textContentType="emailAddress"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setError("");
-            }}
-            editable={!anyLoading}
-            returnKeyType="go"
-            onSubmitEditing={handleEmailContinue}
-          />
-
-          <Button
-            title="Continue"
-            onPress={handleEmailContinue}
-            disabled={!isValidEmail || anyLoading}
-            loading={isLoading && !googleLoading && !appleLoading}
-            size="large"
-          />
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            By continuing, you agree to our{" "}
-            <Text style={styles.footerLink}>Terms of Service</Text> and{" "}
-            <Text style={styles.footerLink}>Privacy Policy</Text>
-          </Text>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </Modal>
+    </AuthScreenScaffold>
   );
 }
 
@@ -307,41 +313,6 @@ export default function AuthEntryScreen() {
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.md,
-    },
-    backButton: {
-      marginBottom: Spacing.lg,
-      width: 44,
-      height: 44,
-      justifyContent: "center",
-    },
-    backText: {
-      color: Colors.text,
-      fontSize: 24,
-    },
-    header: {
-      marginBottom: Spacing.xxl,
-    },
-    title: {
-      fontSize: 36,
-      ...Font.heavy,
-      color: Colors.text,
-      letterSpacing: -0.5,
-      lineHeight: 42,
-    },
-    subtitle: {
-      fontSize: Typography.bodyLarge,
-      color: Colors.textSecondary,
-      marginTop: Spacing.sm,
-      lineHeight: Typography.bodyLarge * 1.5,
-    },
     errorContainer: {
       backgroundColor: "rgba(220, 38, 38, 0.1)",
       borderRadius: Radius.md,
@@ -381,17 +352,18 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.medium,
       color: Colors.text,
     },
+    // Wrapper enforces the same height as the Google button.
+    // Without an explicit container the native Apple button expands
+    // to its own preferred intrinsic size, making the text appear
+    // much larger than our custom Google button.
+    appleButtonWrapper: {
+      height: 56,
+      borderRadius: Radius.lg,
+      overflow: "hidden" as const,
+    },
     appleButton: {
-      backgroundColor: "#FFFFFF",
-    },
-    appleIcon: {
-      fontSize: 20,
-      color: "#000",
-    },
-    appleButtonText: {
-      fontSize: Typography.bodyLarge,
-      ...Font.medium,
-      color: "#000",
+      height: 56,
+      width: "100%",
     },
     orDivider: {
       flexDirection: "row",
@@ -421,11 +393,6 @@ const makeStyles = (Colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: Colors.border,
     },
-    footer: {
-      marginTop: "auto",
-      paddingBottom: Spacing.lg,
-      paddingTop: Spacing.md,
-    },
     footerText: {
       fontSize: Typography.labelSmall,
       color: Colors.textMuted,
@@ -435,5 +402,22 @@ const makeStyles = (Colors: ThemeColors) =>
     footerLink: {
       color: Colors.textSecondary,
       textDecorationLine: "underline",
+    },
+    legalModal: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    legalModalHeader: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+    },
+    legalModalClose: {
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+      color: Colors.primary,
     },
   });

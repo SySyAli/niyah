@@ -13,7 +13,6 @@ import {
   Linking,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import {
@@ -23,7 +22,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Button } from "../../src/components";
+import { Button, AuthScreenScaffold } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { logger } from "../../src/utils/logger";
 
@@ -84,86 +83,68 @@ export default function CheckEmailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Back button */}
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>{"\u2190"}</Text>
+    <AuthScreenScaffold keyboardAware={false}>
+      <View style={styles.body}>
+        {/* Mail icon */}
+        <View style={styles.iconContainer}>
+          <Text style={styles.mailIcon}>{"\u2709"}</Text>
+        </View>
+
+        {/* Header */}
+        <Text style={styles.title}>Check your{"\n"}inbox</Text>
+        <Text style={styles.subtitle}>We sent a sign-in link to</Text>
+        <Text style={styles.email}>{email}</Text>
+        <Text style={styles.instructions}>
+          Tap the link in your email to continue.{"\n"}
+          It may take a moment to arrive.
+        </Text>
+
+        {/* Open Mail button */}
+        <Button title="Open Mail App" onPress={handleOpenMail} size="large" />
+
+        {/* Resend */}
+        <Pressable
+          onPress={handleResend}
+          disabled={resendCooldown > 0 || isLoading}
+          style={styles.resendButton}
+          accessibilityRole="button"
+          accessibilityLabel={
+            resendCooldown > 0
+              ? `Resend in ${resendCooldown} seconds`
+              : "Resend link"
+          }
+        >
+          <Text
+            style={[
+              styles.resendText,
+              resendCooldown > 0 && styles.resendDisabled,
+            ]}
+          >
+            {resendCooldown > 0
+              ? `Resend in ${resendCooldown}s`
+              : "Resend link"}
+          </Text>
         </Pressable>
 
-        <View style={styles.body}>
-          {/* Mail icon */}
-          <View style={styles.iconContainer}>
-            <Text style={styles.mailIcon}>{"\u2709"}</Text>
-          </View>
-
-          {/* Header */}
-          <Text style={styles.title}>Check your{"\n"}inbox</Text>
-          <Text style={styles.subtitle}>We sent a sign-in link to</Text>
-          <Text style={styles.email}>{email}</Text>
-          <Text style={styles.instructions}>
-            Tap the link in your email to continue.{"\n"}
-            It may take a moment to arrive.
-          </Text>
-
-          {/* Open Mail button */}
-          <Button title="Open Mail App" onPress={handleOpenMail} size="large" />
-
-          {/* Resend */}
-          <Pressable
-            onPress={handleResend}
-            disabled={resendCooldown > 0 || isLoading}
-            style={styles.resendButton}
-          >
-            <Text
-              style={[
-                styles.resendText,
-                resendCooldown > 0 && styles.resendDisabled,
-              ]}
-            >
-              {resendCooldown > 0
-                ? `Resend in ${resendCooldown}s`
-                : "Resend link"}
-            </Text>
-          </Pressable>
-
-          {/* Try different email */}
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
-            }}
-            style={styles.differentButton}
-          >
-            <Text style={styles.differentText}>Try a different email</Text>
-          </Pressable>
-        </View>
+        {/* Try different email */}
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.back();
+          }}
+          style={styles.differentButton}
+          accessibilityRole="button"
+          accessibilityLabel="Try a different email"
+        >
+          <Text style={styles.differentText}>Try a different email</Text>
+        </Pressable>
       </View>
-    </SafeAreaView>
+    </AuthScreenScaffold>
   );
 }
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.md,
-    },
-    backButton: {
-      marginBottom: Spacing.xl,
-      width: 44,
-      height: 44,
-      justifyContent: "center",
-    },
-    backText: {
-      color: Colors.text,
-      fontSize: 24,
-    },
     body: {
       flex: 1,
       alignItems: "center",

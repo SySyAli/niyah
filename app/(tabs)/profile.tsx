@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
   Switch,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -21,7 +22,7 @@ import { useColors } from "../../src/hooks/useColors";
 import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import { useThemeStore } from "../../src/store/themeStore";
 import * as Haptics from "expo-haptics";
-import { Card, Balance } from "../../src/components";
+import { Card, Balance, LegalContentView, InviteCTA } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
@@ -51,6 +52,8 @@ export default function ProfileScreen() {
       loadMyFollows(user.id).catch(() => {});
     }
   }, [user?.id, loadMyFollows]);
+
+  const [legalModalVisible, setLegalModalVisible] = useState(false);
 
   const handleLogout = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -98,25 +101,7 @@ export default function ProfileScreen() {
         />
 
         {/* Invite Friends Card */}
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.push("/invite" as never);
-          }}
-          style={styles.inviteCard}
-        >
-          <View style={styles.inviteCardContent}>
-            <View>
-              <Text style={styles.inviteCardTitle}>Invite Friends</Text>
-              <Text style={styles.inviteCardSubtitle}>
-                Earn +10 social credit per referral
-              </Text>
-            </View>
-            <View style={styles.inviteBadge}>
-              <Text style={styles.inviteBadgeText}>+10</Text>
-            </View>
-          </View>
-        </Pressable>
+        <InviteCTA style={styles.inviteCard} />
 
         <ScreenTimeCard />
 
@@ -193,6 +178,20 @@ export default function ProfileScreen() {
           </Card>
         </View>
 
+        {/* Legal */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          <Card style={styles.settingsCard} animate={false}>
+            <Pressable
+              onPress={() => setLegalModalVisible(true)}
+              style={styles.settingRow}
+            >
+              <Text style={styles.settingLabel}>Terms & Privacy</Text>
+              <Text style={styles.settingChevron}>›</Text>
+            </Pressable>
+          </Card>
+        </View>
+
         {/* Account */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
@@ -202,6 +201,23 @@ export default function ProfileScreen() {
             </Pressable>
           </Card>
         </View>
+
+        {/* Read-only legal modal */}
+        <Modal
+          visible={legalModalVisible}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setLegalModalVisible(false)}
+        >
+          <View style={styles.legalModal}>
+            <View style={styles.legalModalHeader}>
+              <Pressable onPress={() => setLegalModalVisible(false)}>
+                <Text style={styles.legalModalClose}>Done</Text>
+              </Pressable>
+            </View>
+            <LegalContentView section="both" />
+          </View>
+        </Modal>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -227,39 +243,7 @@ const makeStyles = (Colors: ThemeColors) =>
       paddingBottom: Spacing.xxl,
     },
     inviteCard: {
-      backgroundColor: Colors.primaryMuted,
-      borderRadius: Radius.lg,
-      borderWidth: 1,
-      borderColor: Colors.primaryLight,
-      paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.lg,
       marginBottom: Spacing.md,
-    },
-    inviteCardContent: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-    },
-    inviteCardTitle: {
-      fontSize: Typography.titleSmall,
-      ...Font.semibold,
-      color: Colors.text,
-    },
-    inviteCardSubtitle: {
-      fontSize: Typography.labelSmall,
-      color: Colors.textSecondary,
-      marginTop: 2,
-    },
-    inviteBadge: {
-      backgroundColor: Colors.primary,
-      borderRadius: Radius.full,
-      paddingVertical: 4,
-      paddingHorizontal: Spacing.md,
-    },
-    inviteBadgeText: {
-      fontSize: Typography.labelLarge,
-      ...Font.bold,
-      color: Colors.white,
     },
     balanceCard: {
       marginBottom: Spacing.md,
@@ -355,6 +339,27 @@ const makeStyles = (Colors: ThemeColors) =>
     settingLabelDestructive: {
       fontSize: Typography.bodyMedium,
       color: Colors.danger,
+    },
+    settingChevron: {
+      fontSize: Typography.titleMedium,
+      color: Colors.textMuted,
+    },
+    legalModal: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    legalModalHeader: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+    },
+    legalModalClose: {
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+      color: Colors.primary,
     },
     footer: {
       alignItems: "center",

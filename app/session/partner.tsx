@@ -4,10 +4,8 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  ScrollView,
   TextInput,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -18,7 +16,7 @@ import {
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
-import { Card, Button } from "../../src/components";
+import { Card, Button, SessionScreenScaffold } from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { REPUTATION_LEVELS } from "../../src/constants/config";
 import { Partner } from "../../src/types";
@@ -126,163 +124,112 @@ export default function PartnerSelectionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={20}>
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
+    <SessionScreenScaffold
+      headerVariant="back"
+      title="Choose Your Partner"
+      subtitle="Select an accountability partner for this session"
+    >
+      {/* Partner List */}
+      {partners.length > 0 ? (
+        <View style={styles.partnerList}>
+          {partners.map(renderPartnerCard)}
         </View>
-
-        {/* Title */}
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>Choose Your Partner</Text>
-          <Text style={styles.subtitle}>
-            Select an accountability partner for this session
+      ) : (
+        <Card style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>No Partners Yet</Text>
+          <Text style={styles.emptyText}>
+            Invite a friend to be your accountability partner. You'll both
+            stake money and keep each other focused.
           </Text>
-        </View>
+        </Card>
+      )}
 
-        {/* Partner List */}
-        {partners.length > 0 ? (
-          <View style={styles.partnerList}>
-            {partners.map(renderPartnerCard)}
-          </View>
-        ) : (
-          <Card style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No Partners Yet</Text>
-            <Text style={styles.emptyText}>
-              Invite a friend to be your accountability partner. You'll both
-              stake money and keep each other focused.
-            </Text>
-          </Card>
-        )}
-
-        {/* Invite Section */}
-        {showInvite ? (
-          <Card style={styles.inviteCard}>
-            <Text style={styles.inviteTitle}>Invite a Partner</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Friend's name"
-              placeholderTextColor={Colors.textMuted}
-              value={inviteName}
-              onChangeText={setInviteName}
-              autoCapitalize="words"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Friend's email"
-              placeholderTextColor={Colors.textMuted}
-              value={inviteEmail}
-              onChangeText={setInviteEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <View style={styles.inviteButtons}>
-              <View style={styles.inviteButtonFlex}>
-                <Button
-                  title="Cancel"
-                  variant="secondary"
-                  onPress={() => setShowInvite(false)}
-                />
-              </View>
-              <View style={styles.inviteButtonFlex}>
-                <Button
-                  title="Send Invite"
-                  onPress={handleSendInvite}
-                  disabled={!inviteEmail || !inviteName}
-                />
-              </View>
+      {/* Invite Section */}
+      {showInvite ? (
+        <Card style={styles.inviteCard}>
+          <Text style={styles.inviteTitle}>Invite a Partner</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Friend's name"
+            placeholderTextColor={Colors.textMuted}
+            value={inviteName}
+            onChangeText={setInviteName}
+            autoCapitalize="words"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Friend's email"
+            placeholderTextColor={Colors.textMuted}
+            value={inviteEmail}
+            onChangeText={setInviteEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <View style={styles.inviteButtons}>
+            <View style={styles.inviteButtonFlex}>
+              <Button
+                title="Cancel"
+                variant="secondary"
+                onPress={() => setShowInvite(false)}
+              />
             </View>
-          </Card>
-        ) : (
-          <Pressable
-            style={styles.addButton}
-            onPress={() => setShowInvite(true)}
-          >
-            <Text style={styles.addButtonText}>+ Invite New Partner</Text>
-          </Pressable>
-        )}
-
-        {/* Info Card */}
-        <Card style={styles.infoCard}>
-          <Text style={styles.infoTitle}>About Reputation Scores</Text>
-          <Text style={styles.infoText}>
-            Reputation reflects payment reliability. Partners who always pay
-            when they lose have high scores. Flaky payers get low scores and may
-            be excluded from groups.
-          </Text>
-          <View style={styles.legendRow}>
-            <View
-              style={[styles.legendDot, { backgroundColor: Colors.gain }]}
-            />
-            <Text style={styles.legendText}>80+ Oak - Highly trusted</Text>
-          </View>
-          <View style={styles.legendRow}>
-            <View
-              style={[styles.legendDot, { backgroundColor: Colors.primary }]}
-            />
-            <Text style={styles.legendText}>60+ Tree - Reliable</Text>
-          </View>
-          <View style={styles.legendRow}>
-            <View
-              style={[styles.legendDot, { backgroundColor: Colors.warning }]}
-            />
-            <Text style={styles.legendText}>40+ Sapling - Building trust</Text>
-          </View>
-          <View style={styles.legendRow}>
-            <View
-              style={[styles.legendDot, { backgroundColor: Colors.loss }]}
-            />
-            <Text style={styles.legendText}>Below 40 - Needs improvement</Text>
+            <View style={styles.inviteButtonFlex}>
+              <Button
+                title="Send Invite"
+                onPress={handleSendInvite}
+                disabled={!inviteEmail || !inviteName}
+              />
+            </View>
           </View>
         </Card>
-      </ScrollView>
-    </SafeAreaView>
+      ) : (
+        <Pressable
+          style={styles.addButton}
+          onPress={() => setShowInvite(true)}
+        >
+          <Text style={styles.addButtonText}>+ Invite New Partner</Text>
+        </Pressable>
+      )}
+
+      {/* Info Card */}
+      <Card style={styles.infoCard}>
+        <Text style={styles.infoTitle}>About Reputation Scores</Text>
+        <Text style={styles.infoText}>
+          Reputation reflects payment reliability. Partners who always pay
+          when they lose have high scores. Flaky payers get low scores and may
+          be excluded from groups.
+        </Text>
+        <View style={styles.legendRow}>
+          <View
+            style={[styles.legendDot, { backgroundColor: Colors.gain }]}
+          />
+          <Text style={styles.legendText}>80+ Oak - Highly trusted</Text>
+        </View>
+        <View style={styles.legendRow}>
+          <View
+            style={[styles.legendDot, { backgroundColor: Colors.primary }]}
+          />
+          <Text style={styles.legendText}>60+ Tree - Reliable</Text>
+        </View>
+        <View style={styles.legendRow}>
+          <View
+            style={[styles.legendDot, { backgroundColor: Colors.warning }]}
+          />
+          <Text style={styles.legendText}>40+ Sapling - Building trust</Text>
+        </View>
+        <View style={styles.legendRow}>
+          <View
+            style={[styles.legendDot, { backgroundColor: Colors.loss }]}
+          />
+          <Text style={styles.legendText}>Below 40 - Needs improvement</Text>
+        </View>
+      </Card>
+    </SessionScreenScaffold>
   );
 }
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      padding: Spacing.lg,
-      paddingBottom: Spacing.xl,
-    },
-    header: {
-      marginBottom: Spacing.md,
-    },
-    backText: {
-      color: Colors.textSecondary,
-      fontSize: Typography.bodyLarge,
-      ...Font.medium,
-    },
-    titleSection: {
-      alignItems: "center",
-      marginBottom: Spacing.xl,
-    },
-    title: {
-      fontSize: Typography.headlineMedium,
-      ...Font.bold,
-      color: Colors.text,
-    },
-    subtitle: {
-      fontSize: Typography.bodyMedium,
-      color: Colors.textSecondary,
-      marginTop: Spacing.xs,
-      textAlign: "center",
-    },
     partnerList: {
       gap: Spacing.md,
       marginBottom: Spacing.lg,

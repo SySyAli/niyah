@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   Typography,
@@ -10,7 +9,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button } from "../../src/components";
+import { Card, Button, SessionScreenScaffold } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
@@ -44,39 +43,6 @@ const BLOCKED_APPS = [
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      padding: Spacing.lg,
-      paddingBottom: Spacing.xl,
-    },
-    header: {
-      marginBottom: Spacing.md,
-    },
-    backText: {
-      color: Colors.textSecondary,
-      fontSize: Typography.bodyLarge,
-      ...Font.medium,
-    },
-    titleSection: {
-      alignItems: "center",
-      marginBottom: Spacing.xl,
-    },
-    title: {
-      fontSize: Typography.headlineMedium,
-      ...Font.bold,
-      color: Colors.text,
-    },
-    subtitle: {
-      fontSize: Typography.bodyMedium,
-      color: Colors.textSecondary,
-      marginTop: Spacing.xs,
-    },
     partnerCard: {
       marginBottom: Spacing.md,
       backgroundColor: Colors.primaryMuted,
@@ -264,13 +230,6 @@ const makeStyles = (Colors: ThemeColors) =>
       marginTop: Spacing.sm,
       fontStyle: "italic",
     },
-    footer: {
-      padding: Spacing.lg,
-      paddingBottom: Spacing.xl,
-      gap: Spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: Colors.border,
-    },
     disclaimer: {
       textAlign: "center",
       color: Colors.textMuted,
@@ -355,184 +314,169 @@ export default function ConfirmSessionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={20}>
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-        </View>
-
-        {/* Title */}
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>Ready to Focus?</Text>
-          <Text style={styles.subtitle}>
-            {currentPartner
-              ? "Review your duo session details"
-              : "Review your session details"}
+    <SessionScreenScaffold
+      headerVariant="back"
+      title="Ready to Focus?"
+      subtitle={
+        currentPartner
+          ? "Review your duo session details"
+          : "Review your session details"
+      }
+      footer={
+        <>
+          <Button
+            title={currentPartner ? "Start Duo Session" : "Start Solo Session"}
+            onPress={handleConfirm}
+            size="large"
+          />
+          <Text style={styles.disclaimer}>
+            Your {formatMoney(config.stake)} stake will be deducted immediately
           </Text>
-        </View>
-
-        {/* Partner Card */}
-        {currentPartner && (
-          <Card style={styles.partnerCard}>
-            <Text style={styles.partnerLabel}>With Partner</Text>
-            <View style={styles.partnerInfo}>
-              <View style={styles.partnerAvatar}>
-                <Text style={styles.partnerInitial}>
-                  {currentPartner.name.charAt(0).toUpperCase()}
+        </>
+      }
+    >
+      {/* Partner Card */}
+      {currentPartner && (
+        <Card style={styles.partnerCard}>
+          <Text style={styles.partnerLabel}>With Partner</Text>
+          <View style={styles.partnerInfo}>
+            <View style={styles.partnerAvatar}>
+              <Text style={styles.partnerInitial}>
+                {currentPartner.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.partnerDetails}>
+              <Text style={styles.partnerName}>{currentPartner.name}</Text>
+              <View style={styles.reputationBadge}>
+                <Text style={styles.reputationText}>
+                  {getReputationLabel(currentPartner.reputation.level)} (
+                  {currentPartner.reputation.score}/100)
                 </Text>
               </View>
-              <View style={styles.partnerDetails}>
-                <Text style={styles.partnerName}>{currentPartner.name}</Text>
-                <View style={styles.reputationBadge}>
-                  <Text style={styles.reputationText}>
-                    {getReputationLabel(currentPartner.reputation.level)} (
-                    {currentPartner.reputation.score}/100)
-                  </Text>
-                </View>
-              </View>
             </View>
-            <Pressable
-              style={styles.changePartnerButton}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={() => router.push("/session/partner" as any)}
-            >
-              <Text style={styles.changePartnerText}>Change Partner</Text>
-            </Pressable>
-          </Card>
-        )}
+          </View>
+          <Pressable
+            style={styles.changePartnerButton}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onPress={() => router.push("/session/partner" as any)}
+          >
+            <Text style={styles.changePartnerText}>Change Partner</Text>
+          </Pressable>
+        </Card>
+      )}
 
-        {/* Session Details */}
-        <Card style={styles.detailsCard}>
+      {/* Session Details */}
+      <Card style={styles.detailsCard}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Session Type</Text>
+          <Text style={styles.detailValue}>{config.name}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Duration</Text>
+          <Text style={styles.detailValue}>{getDurationText()}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Your Stake</Text>
+          <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
+        </View>
+        {currentPartner && (
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Session Type</Text>
-            <Text style={styles.detailValue}>{config.name}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Duration</Text>
-            <Text style={styles.detailValue}>{getDurationText()}</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Your Stake</Text>
+            <Text style={styles.detailLabel}>Partner's Stake</Text>
             <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
           </View>
-          {currentPartner && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Partner's Stake</Text>
-              <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
-            </View>
-          )}
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>
-              {currentPartner ? "Your Potential Earn" : "Earn on Completion"}
-            </Text>
-            <Text style={[styles.stakeValue, { color: Colors.gain }]}>
-              {currentPartner
-                ? `Up to ${formatMoney(config.stake * 2)}`
-                : formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)}
-            </Text>
-          </View>
-        </Card>
-
-        {/* How It Works */}
-        <Card style={styles.howItWorksCard}>
-          <Text style={styles.howItWorksTitle}>How It Works</Text>
-          <View style={styles.outcomeRow}>
-            <View
-              style={[styles.outcomeDot, { backgroundColor: Colors.gain }]}
-            />
-            <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>Complete the session:</Text>{" "}
-              {currentPartner
-                ? `Earn your share of the pool — up to ${formatMoney(config.stake * 2)}`
-                : `Earn ${formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)} (${SOLO_COMPLETION_MULTIPLIER}× your stake)`}
-            </Text>
-          </View>
-          <View style={styles.outcomeRow}>
-            <View
-              style={[styles.outcomeDot, { backgroundColor: Colors.loss }]}
-            />
-            <Text style={styles.outcomeText}>
-              <Text style={styles.outcomeHighlight}>Surrender early:</Text> You
-              forfeit your {formatMoney(config.stake)} stake
-            </Text>
-          </View>
-          {currentPartner && (
-            <View style={styles.outcomeRow}>
-              <View style={styles.outcomeDot} />
-              <Text style={styles.outcomeText}>
-                <Text style={styles.outcomeHighlight}>Duo mode:</Text> If your
-                partner surrenders and you complete, you split their stake
-              </Text>
-            </View>
-          )}
-        </Card>
-
-        {/* Warning */}
-        <Card style={styles.warningCard}>
-          <Text style={styles.warningTitle}>Important</Text>
-          <Text style={styles.warningText}>
-            {currentPartner
-              ? `Once you start, distracting apps will be blocked. Surrendering forfeits your ${formatMoney(config.stake)} stake. Your reputation score is affected by payment reliability.`
-              : `Once you start, distracting apps will be blocked. Surrendering forfeits your ${formatMoney(config.stake)} stake — no refunds.`}
+        )}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>
+            {currentPartner ? "Your Potential Earn" : "Earn on Completion"}
           </Text>
-        </Card>
-
-        {/* Blocked Apps */}
-        <View style={styles.blockedSection}>
-          <Text style={styles.blockedTitle}>Apps that will be blocked</Text>
-          {isScreenTimeAvailable &&
-          getScreenTimeAuthStatus() === "approved" &&
-          getSavedAppSelection() ? (
-            <>
-              <View style={styles.appList}>
-                <View style={[styles.appBadge, styles.appBadgeActive]}>
-                  <Text style={[styles.appName, styles.appNameActive]}>
-                    {getSavedAppSelection()?.label ?? "Selected apps"}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.blockedNote}>
-                Apps will be blocked when session starts
-              </Text>
-            </>
-          ) : (
-            <>
-              <View style={styles.appList}>
-                {BLOCKED_APPS.map((app) => (
-                  <View key={app} style={styles.appBadge}>
-                    <Text style={styles.appName}>{app}</Text>
-                  </View>
-                ))}
-              </View>
-              <Text style={styles.blockedNote}>
-                {isScreenTimeAvailable
-                  ? "Set up Screen Time in Profile to actually block apps"
-                  : "Demo mode: Apps are not actually blocked"}
-              </Text>
-            </>
-          )}
+          <Text style={[styles.stakeValue, { color: Colors.gain }]}>
+            {currentPartner
+              ? `Up to ${formatMoney(config.stake * 2)}`
+              : formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)}
+          </Text>
         </View>
-      </ScrollView>
+      </Card>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Button
-          title={currentPartner ? "Start Duo Session" : "Start Solo Session"}
-          onPress={handleConfirm}
-          size="large"
-        />
-        <Text style={styles.disclaimer}>
-          Your {formatMoney(config.stake)} stake will be deducted immediately
+      {/* How It Works */}
+      <Card style={styles.howItWorksCard}>
+        <Text style={styles.howItWorksTitle}>How It Works</Text>
+        <View style={styles.outcomeRow}>
+          <View
+            style={[styles.outcomeDot, { backgroundColor: Colors.gain }]}
+          />
+          <Text style={styles.outcomeText}>
+            <Text style={styles.outcomeHighlight}>Complete the session:</Text>{" "}
+            {currentPartner
+              ? `Earn your share of the pool — up to ${formatMoney(config.stake * 2)}`
+              : `Earn ${formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)} (${SOLO_COMPLETION_MULTIPLIER}× your stake)`}
+          </Text>
+        </View>
+        <View style={styles.outcomeRow}>
+          <View
+            style={[styles.outcomeDot, { backgroundColor: Colors.loss }]}
+          />
+          <Text style={styles.outcomeText}>
+            <Text style={styles.outcomeHighlight}>Surrender early:</Text> You
+            forfeit your {formatMoney(config.stake)} stake
+          </Text>
+        </View>
+        {currentPartner && (
+          <View style={styles.outcomeRow}>
+            <View style={styles.outcomeDot} />
+            <Text style={styles.outcomeText}>
+              <Text style={styles.outcomeHighlight}>Duo mode:</Text> If your
+              partner surrenders and you complete, you split their stake
+            </Text>
+          </View>
+        )}
+      </Card>
+
+      {/* Warning */}
+      <Card style={styles.warningCard}>
+        <Text style={styles.warningTitle}>Important</Text>
+        <Text style={styles.warningText}>
+          {currentPartner
+            ? `Once you start, distracting apps will be blocked. Surrendering forfeits your ${formatMoney(config.stake)} stake. Your reputation score is affected by payment reliability.`
+            : `Once you start, distracting apps will be blocked. Surrendering forfeits your ${formatMoney(config.stake)} stake — no refunds.`}
         </Text>
+      </Card>
+
+      {/* Blocked Apps */}
+      <View style={styles.blockedSection}>
+        <Text style={styles.blockedTitle}>Apps that will be blocked</Text>
+        {isScreenTimeAvailable &&
+        getScreenTimeAuthStatus() === "approved" &&
+        getSavedAppSelection() ? (
+          <>
+            <View style={styles.appList}>
+              <View style={[styles.appBadge, styles.appBadgeActive]}>
+                <Text style={[styles.appName, styles.appNameActive]}>
+                  {getSavedAppSelection()?.label ?? "Selected apps"}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.blockedNote}>
+              Apps will be blocked when session starts
+            </Text>
+          </>
+        ) : (
+          <>
+            <View style={styles.appList}>
+              {BLOCKED_APPS.map((app) => (
+                <View key={app} style={styles.appBadge}>
+                  <Text style={styles.appName}>{app}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.blockedNote}>
+              {isScreenTimeAvailable
+                ? "Set up Screen Time in Profile to actually block apps"
+                : "Demo mode: Apps are not actually blocked"}
+            </Text>
+          </>
+        )}
       </View>
-    </SafeAreaView>
+    </SessionScreenScaffold>
   );
 }

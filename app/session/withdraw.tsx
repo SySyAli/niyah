@@ -5,13 +5,9 @@ import {
   StyleSheet,
   Pressable,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   Linking,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -23,7 +19,13 @@ import {
 import { useColors } from "../../src/hooks/useColors";
 import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import * as Haptics from "expo-haptics";
-import { Button, Card, NumPad, AmountDisplay } from "../../src/components";
+import {
+  Button,
+  Card,
+  NumPad,
+  AmountDisplay,
+  SessionScreenScaffold,
+} from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { formatMoney } from "../../src/utils/format";
@@ -164,278 +166,229 @@ export default function WithdrawScreen() {
 
   if (step === "method") {
     return (
-      <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.content}
-        >
-          <View style={styles.header}>
-            <Pressable
-              onPress={() => setStep("amount")}
-              style={styles.closeButton}
-              hitSlop={20}
-            >
-              <Text style={styles.closeText}>Back</Text>
-            </Pressable>
-            <Text style={styles.title}>Withdraw</Text>
-            <View style={styles.closeButton} />
-          </View>
+      <SessionScreenScaffold
+        headerVariant="centered"
+        backLabel="Back"
+        headerTitle="Withdraw"
+        onBack={() => setStep("amount")}
+        scrollable={true}
+      >
+        {/* Amount summary */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>Withdrawal Amount</Text>
+          <Text style={styles.summaryAmount}>
+            {formatMoney(amountInCents)}
+          </Text>
+        </View>
 
-          <ScrollView
-            style={styles.scrollContent}
-            contentContainerStyle={styles.detailsContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Amount summary */}
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>Withdrawal Amount</Text>
-              <Text style={styles.summaryAmount}>
-                {formatMoney(amountInCents)}
+        {hasActiveStripe ? (
+          <>
+            <Text style={styles.sectionLabel}>
+              How would you like to receive it?
+            </Text>
+
+            {/* Standard method card */}
+            <Pressable onPress={() => setSelectedMethod("standard")}>
+              <View
+                style={[
+                  styles.methodCard,
+                  selectedMethod === "standard" &&
+                    styles.methodCardSelected,
+                ]}
+              >
+                <View style={styles.methodCardHeader}>
+                  <View style={styles.methodInfo}>
+                    <Text
+                      style={[
+                        styles.methodTitle,
+                        selectedMethod === "standard" &&
+                          styles.methodTitleSelected,
+                      ]}
+                    >
+                      Standard
+                    </Text>
+                    <Text style={styles.methodSubtitle}>
+                      1–2 business days
+                    </Text>
+                  </View>
+                  <View style={styles.methodBadge}>
+                    <Text style={styles.methodBadgeText}>Free</Text>
+                  </View>
+                </View>
+                <Text style={styles.methodDescription}>
+                  Transferred to your linked bank account via ACH. No fees.
+                </Text>
+              </View>
+            </Pressable>
+
+            {/* Instant method card */}
+            <Pressable onPress={() => setSelectedMethod("instant")}>
+              <View
+                style={[
+                  styles.methodCard,
+                  selectedMethod === "instant" && styles.methodCardSelected,
+                ]}
+              >
+                <View style={styles.methodCardHeader}>
+                  <View style={styles.methodInfo}>
+                    <Text
+                      style={[
+                        styles.methodTitle,
+                        selectedMethod === "instant" &&
+                          styles.methodTitleSelected,
+                      ]}
+                    >
+                      Instant
+                    </Text>
+                    <Text style={styles.methodSubtitle}>
+                      Within 30 minutes
+                    </Text>
+                  </View>
+                  <View
+                    style={[styles.methodBadge, styles.methodBadgeAccent]}
+                  >
+                    <Text style={styles.methodBadgeTextAccent}>
+                      {formatMoney(instantFee)} fee
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.methodDescription}>
+                  Instant bank deposit. Stripe charges 1.5% (min $0.50) —
+                  covered by NIYAH. You receive the full{" "}
+                  {formatMoney(amountInCents)}.
+                </Text>
+              </View>
+            </Pressable>
+
+            <View style={styles.footer}>
+              {isLoading ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.loadingText}>
+                    Processing withdrawal...
+                  </Text>
+                </View>
+              ) : (
+                <Button
+                  title={`Withdraw ${formatMoney(amountInCents)} to Bank`}
+                  onPress={handleStripeWithdraw}
+                  size="large"
+                />
+              )}
+
+              <Pressable
+                onPress={handleVenmoWithdraw}
+                style={styles.venmoLink}
+              >
+                <Text style={styles.venmoLinkText}>
+                  Send via Venmo instead
+                </Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          /* No active Stripe Connect account */
+          <>
+            <Card style={styles.setupCard} variant="outlined">
+              <Text style={styles.setupTitle}>
+                {stripeStatus === "pending"
+                  ? "Verification In Progress"
+                  : "Bank Payouts Not Set Up"}
               </Text>
+              <Text style={styles.setupDescription}>
+                {stripeStatus === "pending"
+                  ? "Your Stripe account is being verified. This usually takes a few minutes."
+                  : "Connect your bank account to withdraw directly. Secure, free, and instant setup."}
+              </Text>
+              <Button
+                title={
+                  stripeStatus === "pending"
+                    ? "Check Status"
+                    : "Set Up Bank Payouts"
+                }
+                onPress={() => router.push("/session/stripe-onboarding")}
+                size="large"
+                style={styles.setupButton}
+              />
+            </Card>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
             </View>
 
-            {hasActiveStripe ? (
-              <>
-                <Text style={styles.sectionLabel}>
-                  How would you like to receive it?
-                </Text>
-
-                {/* Standard method card */}
-                <Pressable onPress={() => setSelectedMethod("standard")}>
-                  <View
-                    style={[
-                      styles.methodCard,
-                      selectedMethod === "standard" &&
-                        styles.methodCardSelected,
-                    ]}
-                  >
-                    <View style={styles.methodCardHeader}>
-                      <View style={styles.methodInfo}>
-                        <Text
-                          style={[
-                            styles.methodTitle,
-                            selectedMethod === "standard" &&
-                              styles.methodTitleSelected,
-                          ]}
-                        >
-                          Standard
-                        </Text>
-                        <Text style={styles.methodSubtitle}>
-                          1–2 business days
-                        </Text>
-                      </View>
-                      <View style={styles.methodBadge}>
-                        <Text style={styles.methodBadgeText}>Free</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.methodDescription}>
-                      Transferred to your linked bank account via ACH. No fees.
-                    </Text>
-                  </View>
-                </Pressable>
-
-                {/* Instant method card */}
-                <Pressable onPress={() => setSelectedMethod("instant")}>
-                  <View
-                    style={[
-                      styles.methodCard,
-                      selectedMethod === "instant" && styles.methodCardSelected,
-                    ]}
-                  >
-                    <View style={styles.methodCardHeader}>
-                      <View style={styles.methodInfo}>
-                        <Text
-                          style={[
-                            styles.methodTitle,
-                            selectedMethod === "instant" &&
-                              styles.methodTitleSelected,
-                          ]}
-                        >
-                          Instant
-                        </Text>
-                        <Text style={styles.methodSubtitle}>
-                          Within 30 minutes
-                        </Text>
-                      </View>
-                      <View
-                        style={[styles.methodBadge, styles.methodBadgeAccent]}
-                      >
-                        <Text style={styles.methodBadgeTextAccent}>
-                          {formatMoney(instantFee)} fee
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.methodDescription}>
-                      Instant bank deposit. Stripe charges 1.5% (min $0.50) —
-                      covered by NIYAH. You receive the full{" "}
-                      {formatMoney(amountInCents)}.
-                    </Text>
-                  </View>
-                </Pressable>
-
-                <View style={styles.footer}>
-                  {isLoading ? (
-                    <View style={styles.loadingRow}>
-                      <ActivityIndicator size="small" color={Colors.primary} />
-                      <Text style={styles.loadingText}>
-                        Processing withdrawal...
-                      </Text>
-                    </View>
-                  ) : (
-                    <Button
-                      title={`Withdraw ${formatMoney(amountInCents)} to Bank`}
-                      onPress={handleStripeWithdraw}
-                      size="large"
-                    />
-                  )}
-
-                  <Pressable
-                    onPress={handleVenmoWithdraw}
-                    style={styles.venmoLink}
-                  >
-                    <Text style={styles.venmoLinkText}>
-                      Send via Venmo instead
-                    </Text>
-                  </Pressable>
-                </View>
-              </>
-            ) : (
-              /* No active Stripe Connect account */
-              <>
-                <Card style={styles.setupCard} variant="outlined">
-                  <Text style={styles.setupTitle}>
-                    {stripeStatus === "pending"
-                      ? "Verification In Progress"
-                      : "Bank Payouts Not Set Up"}
-                  </Text>
-                  <Text style={styles.setupDescription}>
-                    {stripeStatus === "pending"
-                      ? "Your Stripe account is being verified. This usually takes a few minutes."
-                      : "Connect your bank account to withdraw directly. Secure, free, and instant setup."}
-                  </Text>
-                  <Button
-                    title={
-                      stripeStatus === "pending"
-                        ? "Check Status"
-                        : "Set Up Bank Payouts"
-                    }
-                    onPress={() => router.push("/session/stripe-onboarding")}
-                    size="large"
-                    style={styles.setupButton}
-                  />
-                </Card>
-
-                <View style={styles.dividerRow}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <Text style={styles.venmoSectionLabel}>Request via Venmo</Text>
-                <Text style={styles.venmoSectionDescription}>
-                  Opens Venmo to request {formatMoney(amountInCents)} from
-                  @niyah-focus. We'll approve and send it within 24 hours.
-                </Text>
-                <Button
-                  title="Open Venmo"
-                  onPress={handleVenmoWithdraw}
-                  size="large"
-                  variant="secondary"
-                />
-              </>
-            )}
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+            <Text style={styles.venmoSectionLabel}>Request via Venmo</Text>
+            <Text style={styles.venmoSectionDescription}>
+              Opens Venmo to request {formatMoney(amountInCents)} from
+              @niyah-focus. We'll approve and send it within 24 hours.
+            </Text>
+            <Button
+              title="Open Venmo"
+              onPress={handleVenmoWithdraw}
+              size="large"
+              variant="secondary"
+            />
+          </>
+        )}
+      </SessionScreenScaffold>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.closeButton}
-            hitSlop={20}
-          >
-            <Text style={styles.closeText}>Cancel</Text>
-          </Pressable>
-          <Text style={styles.title}>Withdraw</Text>
-          <Pressable
-            onPress={handleMaxAmount}
-            style={styles.maxButton}
-            hitSlop={10}
-          >
-            <Text style={styles.maxText}>Max</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.balanceInfo}>
-          <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceAmount}>{formatMoney(balance)}</Text>
-        </View>
-
-        <AmountDisplay
-          amount={displayAmount}
-          label="Enter amount"
-          placeholder="$0"
-        />
-        {error && <Text style={styles.errorText}>{error}</Text>}
-
-        <View style={styles.numPadContainer}>
-          <NumPad
-            onKeyPress={handleKeyPress}
-            onBackspace={handleBackspace}
-            showDecimal={true}
-          />
-        </View>
-
-        <View style={styles.footer}>
-          <Button
-            title={isValidAmount ? "Continue" : "Enter amount (min $10)"}
-            onPress={handleContinue}
-            disabled={!isValidAmount}
-            size="large"
-          />
-        </View>
+    <SessionScreenScaffold
+      headerVariant="centered"
+      headerTitle="Withdraw"
+      scrollable={false}
+      headerRight={
+        <Pressable
+          onPress={handleMaxAmount}
+          style={styles.maxButton}
+          hitSlop={10}
+        >
+          <Text style={styles.maxText}>Max</Text>
+        </Pressable>
+      }
+    >
+      <View style={styles.balanceInfo}>
+        <Text style={styles.balanceLabel}>Available Balance</Text>
+        <Text style={styles.balanceAmount}>{formatMoney(balance)}</Text>
       </View>
-    </SafeAreaView>
+
+      <AmountDisplay
+        amount={displayAmount}
+        label="Enter amount"
+        placeholder="$0"
+      />
+      {error && <Text style={styles.errorText}>{error}</Text>}
+
+      <View style={styles.numPadContainer}>
+        <NumPad
+          onKeyPress={handleKeyPress}
+          onBackspace={handleBackspace}
+          showDecimal={true}
+        />
+      </View>
+
+      <View style={styles.footer}>
+        <Button
+          title={isValidAmount ? "Continue" : "Enter amount (min $10)"}
+          onPress={handleContinue}
+          disabled={!isValidAmount}
+          size="large"
+        />
+      </View>
+    </SessionScreenScaffold>
   );
 }
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
-    content: { flex: 1, paddingHorizontal: Spacing.lg },
-    scrollContent: { flex: 1 },
-    detailsContent: {
-      paddingTop: Spacing.lg,
-      gap: Spacing.lg,
-      paddingBottom: Spacing.xl,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: Spacing.md,
-    },
-    closeButton: { width: 60 },
-    closeText: {
-      color: Colors.textSecondary,
-      fontSize: Typography.bodyLarge,
-      ...Font.medium,
-    },
-    maxButton: { width: 60, alignItems: "flex-end" },
+    maxButton: { alignItems: "flex-end" },
     maxText: {
       color: Colors.primary,
       fontSize: Typography.bodyLarge,
       ...Font.semibold,
-    },
-    title: {
-      fontSize: Typography.titleLarge,
-      ...Font.semibold,
-      color: Colors.text,
     },
     balanceInfo: { alignItems: "center", paddingVertical: Spacing.md },
     balanceLabel: {
@@ -462,6 +415,7 @@ const makeStyles = (Colors: ThemeColors) =>
       paddingVertical: Spacing.xl,
       backgroundColor: Colors.backgroundCard,
       borderRadius: Radius.lg,
+      marginBottom: Spacing.lg,
     },
     summaryLabel: {
       fontSize: Typography.labelMedium,
@@ -479,6 +433,7 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textSecondary,
       textTransform: "uppercase",
       letterSpacing: 0.5,
+      marginBottom: Spacing.lg,
     },
     methodCard: {
       padding: Spacing.md,
@@ -487,6 +442,7 @@ const makeStyles = (Colors: ThemeColors) =>
       borderWidth: 2,
       borderColor: Colors.border,
       gap: Spacing.sm,
+      marginBottom: Spacing.lg,
     },
     methodCardSelected: {
       borderColor: Colors.primary,
@@ -560,17 +516,19 @@ const makeStyles = (Colors: ThemeColors) =>
       lineHeight: Typography.bodyMedium * 1.5,
     },
     setupButton: { marginTop: Spacing.sm },
-    dividerRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
+    dividerRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md, marginBottom: Spacing.lg },
     dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
     dividerText: { color: Colors.textMuted, fontSize: Typography.labelMedium },
     venmoSectionLabel: {
       fontSize: Typography.bodyLarge,
       ...Font.semibold,
       color: Colors.text,
+      marginBottom: Spacing.lg,
     },
     venmoSectionDescription: {
       fontSize: Typography.bodyMedium,
       color: Colors.textSecondary,
       lineHeight: Typography.bodyMedium * 1.5,
+      marginBottom: Spacing.lg,
     },
   });

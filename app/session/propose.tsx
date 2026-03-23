@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Pressable,
   TextInput,
 } from "react-native";
@@ -17,7 +16,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button } from "../../src/components";
+import { Card, Button, SessionScreenScaffold } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
@@ -54,31 +53,6 @@ const TIMES = [
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    scrollContent: {
-      padding: Spacing.lg,
-      paddingBottom: Spacing.xxl,
-    },
-    backText: {
-      color: Colors.textSecondary,
-      fontSize: Typography.bodyLarge,
-      ...Font.medium,
-      marginBottom: Spacing.lg,
-    },
-    title: {
-      fontSize: Typography.headlineMedium,
-      ...Font.bold,
-      color: Colors.text,
-    },
-    subtitle: {
-      fontSize: Typography.bodyMedium,
-      color: Colors.textSecondary,
-      marginTop: Spacing.xs,
-      marginBottom: Spacing.xl,
-    },
     sectionLabel: {
       fontSize: Typography.labelLarge,
       ...Font.semibold,
@@ -259,13 +233,6 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.text,
     },
     // ── Footer ────────────────────────────────────────────────────────────────
-    footer: {
-      padding: Spacing.lg,
-      paddingBottom: Spacing.xl,
-      borderTopWidth: 1,
-      borderTopColor: Colors.border,
-      gap: Spacing.sm,
-    },
     footerHint: {
       textAlign: "center",
       fontSize: Typography.labelSmall,
@@ -278,6 +245,7 @@ const makeStyles = (Colors: ThemeColors) =>
       justifyContent: "center",
       padding: Spacing.xl,
       gap: Spacing.lg,
+      backgroundColor: Colors.background,
     },
     successEmoji: {
       fontSize: 56,
@@ -395,35 +363,33 @@ export default function ProposeSessionScreen() {
       .join(", ");
 
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.successContainer}>
-          <Text style={styles.successEmoji}>🌱</Text>
-          <Text style={styles.successTitle}>Challenge Proposed</Text>
-          <Text style={styles.successSubtitle}>
-            Your invite has been sent to{" "}
-            <Text style={{ color: Colors.primaryLight, ...Font.semibold }}>
-              {invitedNames}
-            </Text>
-            .{"\n"}The session starts{" "}
-            <Text style={{ color: Colors.text, ...Font.semibold }}>
-              {effectiveDay} at {effectiveTime}
-            </Text>{" "}
-            for{" "}
-            <Text style={{ color: Colors.text, ...Font.semibold }}>
-              {effectiveDuration}
-            </Text>
-            .
+      <SafeAreaView style={styles.successContainer}>
+        <Text style={styles.successEmoji}>🌱</Text>
+        <Text style={styles.successTitle}>Challenge Proposed</Text>
+        <Text style={styles.successSubtitle}>
+          Your invite has been sent to{" "}
+          <Text style={{ color: Colors.primaryLight, ...Font.semibold }}>
+            {invitedNames}
           </Text>
-          <Text style={styles.successDetail}>
-            Once everyone accepts, the {formatMoney(effectiveStake!)} stake
-            locks in.
+          .{"\n"}The session starts{" "}
+          <Text style={{ color: Colors.text, ...Font.semibold }}>
+            {effectiveDay} at {effectiveTime}
+          </Text>{" "}
+          for{" "}
+          <Text style={{ color: Colors.text, ...Font.semibold }}>
+            {effectiveDuration}
           </Text>
-          <Button
-            title="Back to Home"
-            onPress={() => router.replace("/(tabs)")}
-            size="large"
-          />
-        </View>
+          .
+        </Text>
+        <Text style={styles.successDetail}>
+          Once everyone accepts, the {formatMoney(effectiveStake!)} stake
+          locks in.
+        </Text>
+        <Button
+          title="Back to Home"
+          onPress={() => router.replace("/(tabs)")}
+          size="large"
+        />
       </SafeAreaView>
     );
   }
@@ -431,284 +397,275 @@ export default function ProposeSessionScreen() {
   // ── Form ────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Pressable onPress={() => router.back()} hitSlop={20}>
-          <Text style={styles.backText}>Cancel</Text>
-        </Pressable>
-
-        <Text style={styles.title}>Group Challenge</Text>
-        <Text style={styles.subtitle}>
-          Set a stake, invite your friends, and schedule a time.
-        </Text>
-
-        {/* ── Stake ────────────────────────────────────────────────────────── */}
-        <Text style={styles.sectionLabel}>Stake</Text>
-        <View style={styles.chipsRow}>
-          {QUICK_STAKES.map((s) => {
-            const selected = stake === s && !customStake;
-            return (
-              <Pressable
-                key={s}
-                style={[styles.chip, selected && styles.chipSelected]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setStake(s);
-                  setCustomStake("");
-                }}
-              >
-                <Text
-                  style={[styles.chipText, selected && styles.chipTextSelected]}
-                >
-                  {formatMoney(s)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <TextInput
-          style={[styles.customInput, stakeFocused && styles.customInputActive]}
-          placeholder="Custom amount (e.g. 15)"
-          placeholderTextColor={Colors.textMuted}
-          keyboardType="numeric"
-          value={customStake}
-          onChangeText={(v) => {
-            setCustomStake(v.replace(/[^0-9]/g, ""));
-            setStake(null);
-          }}
-          onFocus={() => setStakeFocused(true)}
-          onBlur={() => setStakeFocused(false)}
-        />
-
-        {/* ── Duration ─────────────────────────────────────────────────────── */}
-        <Text style={styles.sectionLabel}>Duration</Text>
-        <View style={styles.chipsRow}>
-          {DURATIONS.map((d) => {
-            const selected = duration === d.value && !customDuration;
-            return (
-              <Pressable
-                key={d.value}
-                style={[styles.chip, selected && styles.chipSelected]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setDuration(d.value);
-                  setCustomDuration("");
-                }}
-              >
-                <Text
-                  style={[styles.chipText, selected && styles.chipTextSelected]}
-                >
-                  {d.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <TextInput
-          style={[
-            styles.customInput,
-            durationFocused && styles.customInputActive,
-          ]}
-          placeholder="Custom duration (e.g. 90 mins)"
-          placeholderTextColor={Colors.textMuted}
-          value={customDuration}
-          onChangeText={(v) => {
-            setCustomDuration(v);
-            setDuration(null);
-          }}
-          onFocus={() => setDurationFocused(true)}
-          onBlur={() => setDurationFocused(false)}
-        />
-
-        {/* ── Invite Friends ───────────────────────────────────────────────── */}
-        <Text style={styles.sectionLabel}>Invite Friends</Text>
-        <Card>
-          {people.length === 0 ? (
-            <Text style={styles.emptyText}>
-              Follow people or add partners to invite them.
+    <SessionScreenScaffold
+      headerVariant="back"
+      backLabel="Cancel"
+      title="Group Challenge"
+      subtitle="Set a stake, invite your friends, and schedule a time."
+      centerTitle={false}
+      footer={
+        <>
+          <Button
+            title="Propose Challenge"
+            onPress={handlePropose}
+            disabled={!canPropose}
+            size="large"
+          />
+          {!canPropose && (
+            <Text style={styles.footerHint}>
+              Set a stake, duration, at least one friend, and a time
             </Text>
-          ) : (
-            people.map((person, i) => {
-              const selected = selectedPeople.includes(person.id);
-              const isLast = i === people.length - 1;
-              return (
-                <Pressable
-                  key={person.id}
-                  style={[styles.personRow, !isLast && styles.personRowBorder]}
-                  onPress={() => togglePerson(person.id)}
-                >
-                  <View
-                    style={[styles.avatar, selected && styles.avatarSelected]}
-                  >
-                    <Text
-                      style={[
-                        styles.avatarText,
-                        selected && styles.avatarTextSelected,
-                      ]}
-                    >
-                      {person.name.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.personName}>{person.name}</Text>
-                    <Text style={styles.personTag}>{person.tag}</Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.checkCircle,
-                      selected && styles.checkCircleSelected,
-                    ]}
-                  >
-                    {selected && <Text style={styles.checkMark}>✓</Text>}
-                  </View>
-                </Pressable>
-              );
-            })
           )}
-        </Card>
-
-        {/* ── Day ──────────────────────────────────────────────────────────── */}
-        <Text style={styles.sectionLabel}>Day</Text>
-        <View style={styles.chipsRow}>
-          {DAYS.map((d) => (
+        </>
+      }
+    >
+      {/* ── Stake ────────────────────────────────────────────────────────── */}
+      <Text style={styles.sectionLabel}>Stake</Text>
+      <View style={styles.chipsRow}>
+        {QUICK_STAKES.map((s) => {
+          const selected = stake === s && !customStake;
+          return (
             <Pressable
-              key={d.value}
-              style={[
-                styles.chip,
-                selectedDay === d.value && !customDay && styles.chipSelected,
-              ]}
+              key={s}
+              style={[styles.chip, selected && styles.chipSelected]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setSelectedDay(d.value);
-                setCustomDay("");
+                setStake(s);
+                setCustomStake("");
               }}
             >
               <Text
-                style={[
-                  styles.chipText,
-                  selectedDay === d.value &&
-                    !customDay &&
-                    styles.chipTextSelected,
-                ]}
+                style={[styles.chipText, selected && styles.chipTextSelected]}
+              >
+                {formatMoney(s)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <TextInput
+        style={[styles.customInput, stakeFocused && styles.customInputActive]}
+        placeholder="Custom amount (e.g. 15)"
+        placeholderTextColor={Colors.textMuted}
+        keyboardType="numeric"
+        value={customStake}
+        onChangeText={(v) => {
+          setCustomStake(v.replace(/[^0-9]/g, ""));
+          setStake(null);
+        }}
+        onFocus={() => setStakeFocused(true)}
+        onBlur={() => setStakeFocused(false)}
+      />
+
+      {/* ── Duration ─────────────────────────────────────────────────────── */}
+      <Text style={styles.sectionLabel}>Duration</Text>
+      <View style={styles.chipsRow}>
+        {DURATIONS.map((d) => {
+          const selected = duration === d.value && !customDuration;
+          return (
+            <Pressable
+              key={d.value}
+              style={[styles.chip, selected && styles.chipSelected]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setDuration(d.value);
+                setCustomDuration("");
+              }}
+            >
+              <Text
+                style={[styles.chipText, selected && styles.chipTextSelected]}
               >
                 {d.label}
               </Text>
             </Pressable>
-          ))}
-        </View>
-        <TextInput
-          style={[styles.customInput, dayFocused && styles.customInputActive]}
-          placeholder="Custom date (e.g. March 3rd)"
-          placeholderTextColor={Colors.textMuted}
-          value={customDay}
-          onChangeText={(v) => {
-            setCustomDay(v);
-            setSelectedDay(null);
-          }}
-          onFocus={() => setDayFocused(true)}
-          onBlur={() => setDayFocused(false)}
-        />
+          );
+        })}
+      </View>
+      <TextInput
+        style={[
+          styles.customInput,
+          durationFocused && styles.customInputActive,
+        ]}
+        placeholder="Custom duration (e.g. 90 mins)"
+        placeholderTextColor={Colors.textMuted}
+        value={customDuration}
+        onChangeText={(v) => {
+          setCustomDuration(v);
+          setDuration(null);
+        }}
+        onFocus={() => setDurationFocused(true)}
+        onBlur={() => setDurationFocused(false)}
+      />
 
-        {/* ── Time ─────────────────────────────────────────────────────────── */}
-        <Text style={styles.sectionLabel}>Start Time</Text>
-        <View style={styles.scheduleGrid}>
-          {TIMES.map((t) => {
-            const selected = selectedTime === t.value && !customTime;
+      {/* ── Invite Friends ───────────────────────────────────────────────── */}
+      <Text style={styles.sectionLabel}>Invite Friends</Text>
+      <Card>
+        {people.length === 0 ? (
+          <Text style={styles.emptyText}>
+            Follow people or add partners to invite them.
+          </Text>
+        ) : (
+          people.map((person, i) => {
+            const selected = selectedPeople.includes(person.id);
+            const isLast = i === people.length - 1;
             return (
               <Pressable
-                key={t.value}
-                style={[
-                  styles.scheduleChip,
-                  selected && styles.scheduleChipSelected,
-                ]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelectedTime(t.value);
-                  setCustomTime("");
-                }}
+                key={person.id}
+                style={[styles.personRow, !isLast && styles.personRowBorder]}
+                onPress={() => togglePerson(person.id)}
               >
-                <Text
+                <View
+                  style={[styles.avatar, selected && styles.avatarSelected]}
+                >
+                  <Text
+                    style={[
+                      styles.avatarText,
+                      selected && styles.avatarTextSelected,
+                    ]}
+                  >
+                    {person.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.personName}>{person.name}</Text>
+                  <Text style={styles.personTag}>{person.tag}</Text>
+                </View>
+                <View
                   style={[
-                    styles.scheduleChipLabel,
-                    selected && styles.scheduleChipLabelSelected,
+                    styles.checkCircle,
+                    selected && styles.checkCircleSelected,
                   ]}
                 >
-                  {t.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.scheduleChipSub,
-                    selected && styles.scheduleChipSubSelected,
-                  ]}
-                >
-                  {t.sub}
-                </Text>
+                  {selected && <Text style={styles.checkMark}>✓</Text>}
+                </View>
               </Pressable>
             );
-          })}
-        </View>
-        <TextInput
-          style={[styles.customInput, timeFocused && styles.customInputActive]}
-          placeholder="Custom time (e.g. 3:30 pm)"
-          placeholderTextColor={Colors.textMuted}
-          value={customTime}
-          onChangeText={(v) => {
-            setCustomTime(v);
-            setSelectedTime(null);
-          }}
-          onFocus={() => setTimeFocused(true)}
-          onBlur={() => setTimeFocused(false)}
-        />
-
-        {/* ── Summary ──────────────────────────────────────────────────────── */}
-        {canPropose && (
-          <Card style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Challenge Summary</Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Stake per person</Text>
-              <Text style={styles.summaryValue}>
-                {formatMoney(effectiveStake!)}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Duration</Text>
-              <Text style={styles.summaryValue}>{effectiveDuration}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Inviting</Text>
-              <Text style={styles.summaryValue}>
-                {selectedPeople.length}{" "}
-                {selectedPeople.length === 1 ? "person" : "people"}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Starts</Text>
-              <Text style={styles.summaryValue}>
-                {effectiveDay} at {effectiveTime}
-              </Text>
-            </View>
-          </Card>
+          })
         )}
-      </ScrollView>
+      </Card>
 
-      {/* ── Footer ───────────────────────────────────────────────────────────── */}
-      <View style={styles.footer}>
-        <Button
-          title="Propose Challenge"
-          onPress={handlePropose}
-          disabled={!canPropose}
-          size="large"
-        />
-        {!canPropose && (
-          <Text style={styles.footerHint}>
-            Set a stake, duration, at least one friend, and a time
-          </Text>
-        )}
+      {/* ── Day ──────────────────────────────────────────────────────────── */}
+      <Text style={styles.sectionLabel}>Day</Text>
+      <View style={styles.chipsRow}>
+        {DAYS.map((d) => (
+          <Pressable
+            key={d.value}
+            style={[
+              styles.chip,
+              selectedDay === d.value && !customDay && styles.chipSelected,
+            ]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setSelectedDay(d.value);
+              setCustomDay("");
+            }}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                selectedDay === d.value &&
+                  !customDay &&
+                  styles.chipTextSelected,
+              ]}
+            >
+              {d.label}
+            </Text>
+          </Pressable>
+        ))}
       </View>
-    </SafeAreaView>
+      <TextInput
+        style={[styles.customInput, dayFocused && styles.customInputActive]}
+        placeholder="Custom date (e.g. March 3rd)"
+        placeholderTextColor={Colors.textMuted}
+        value={customDay}
+        onChangeText={(v) => {
+          setCustomDay(v);
+          setSelectedDay(null);
+        }}
+        onFocus={() => setDayFocused(true)}
+        onBlur={() => setDayFocused(false)}
+      />
+
+      {/* ── Time ─────────────────────────────────────────────────────────── */}
+      <Text style={styles.sectionLabel}>Start Time</Text>
+      <View style={styles.scheduleGrid}>
+        {TIMES.map((t) => {
+          const selected = selectedTime === t.value && !customTime;
+          return (
+            <Pressable
+              key={t.value}
+              style={[
+                styles.scheduleChip,
+                selected && styles.scheduleChipSelected,
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSelectedTime(t.value);
+                setCustomTime("");
+              }}
+            >
+              <Text
+                style={[
+                  styles.scheduleChipLabel,
+                  selected && styles.scheduleChipLabelSelected,
+                ]}
+              >
+                {t.label}
+              </Text>
+              <Text
+                style={[
+                  styles.scheduleChipSub,
+                  selected && styles.scheduleChipSubSelected,
+                ]}
+              >
+                {t.sub}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <TextInput
+        style={[styles.customInput, timeFocused && styles.customInputActive]}
+        placeholder="Custom time (e.g. 3:30 pm)"
+        placeholderTextColor={Colors.textMuted}
+        value={customTime}
+        onChangeText={(v) => {
+          setCustomTime(v);
+          setSelectedTime(null);
+        }}
+        onFocus={() => setTimeFocused(true)}
+        onBlur={() => setTimeFocused(false)}
+      />
+
+      {/* ── Summary ──────────────────────────────────────────────────────── */}
+      {canPropose && (
+        <Card style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Challenge Summary</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Stake per person</Text>
+            <Text style={styles.summaryValue}>
+              {formatMoney(effectiveStake!)}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Duration</Text>
+            <Text style={styles.summaryValue}>{effectiveDuration}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Inviting</Text>
+            <Text style={styles.summaryValue}>
+              {selectedPeople.length}{" "}
+              {selectedPeople.length === 1 ? "person" : "people"}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Starts</Text>
+            <Text style={styles.summaryValue}>
+              {effectiveDay} at {effectiveTime}
+            </Text>
+          </View>
+        </Card>
+      )}
+    </SessionScreenScaffold>
   );
 }

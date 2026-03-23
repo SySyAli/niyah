@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button, Timer } from "../../src/components";
+import { Card, Button, Timer, SessionScreenScaffold } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useCountdown } from "../../src/hooks/useCountdown";
@@ -21,14 +20,6 @@ export default function ActiveSessionScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        container: {
-          flex: 1,
-          backgroundColor: Colors.background,
-        },
-        content: {
-          flex: 1,
-          padding: Spacing.lg,
-        },
         header: {
           alignItems: "center",
           marginTop: Spacing.sm,
@@ -164,10 +155,6 @@ export default function ActiveSessionScreen() {
           color: Colors.textSecondary,
           lineHeight: 16,
         },
-        footer: {
-          marginTop: "auto",
-          gap: Spacing.sm,
-        },
         footerButtonsRow: {
           flexDirection: "row",
           gap: Spacing.sm,
@@ -270,91 +257,12 @@ export default function ActiveSessionScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Status Header */}
-        <View style={styles.header}>
-          <View style={styles.statusBadge}>
-            <View
-              style={[
-                styles.statusDot,
-                isPaused && { backgroundColor: Colors.warning },
-              ]}
-            />
-            <Text
-              style={[styles.statusText, isPaused && { color: Colors.warning }]}
-            >
-              {isPaused ? "SESSION PAUSED" : "SESSION ACTIVE"}
-            </Text>
-          </View>
-          <Text style={styles.title}>Stay Focused</Text>
-          <Text style={styles.subtitle}>
-            {isPaused
-              ? "Timer is paused — resume when you're ready"
-              : "Distracting apps are blocked"}
-          </Text>
-        </View>
-
-        {/* Timer */}
-        <View style={styles.timerSection}>
-          <Timer
-            timeRemaining={timeRemaining}
-            totalTime={totalDuration}
-            size="medium"
-            showProgress={true}
-          />
-        </View>
-
-        {/* Progress Bar */}
-        <View style={styles.progressSection}>
-          <View style={styles.progressContainer}>
-            <View
-              style={[styles.progressBar, { width: `${progressPercent}%` }]}
-            />
-          </View>
-          <Text style={styles.progressText}>{progressPercent}% complete</Text>
-        </View>
-
-        {/* Payout Card */}
-        <Card style={styles.payoutCard}>
-          <Text style={styles.payoutLabel}>Complete to earn</Text>
-          <Text style={styles.payoutAmount}>
-            {activeGroupSession.participants.length <= 1
-              ? formatMoney(
-                  activeGroupSession.stakePerParticipant *
-                    SOLO_COMPLETION_MULTIPLIER,
-                )
-              : `Up to ${formatMoney(activeGroupSession.poolTotal)}`}
-          </Text>
-        </Card>
-
-        {/* Violation Counter */}
-        {violationCount > 0 && (
-          <Card style={styles.violationCard}>
-            <Text style={styles.violationLabel}>Blocked app attempts</Text>
-            <Text style={styles.violationCount}>{violationCount}</Text>
-          </Card>
-        )}
-
-        {/* Tips */}
-        <View style={styles.tipsSection}>
-          <Text style={styles.tipsTitle}>Stay strong</Text>
-          <View style={styles.tipsList}>
-            {[
-              "Put your phone face down",
-              "Take short breaks for water",
-              "Deep breaths help refocus",
-            ].map((tip, index) => (
-              <View key={index} style={styles.tipRow}>
-                <View style={styles.tipBullet} />
-                <Text style={styles.tipText}>{tip}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
+    <SessionScreenScaffold
+      headerVariant="none"
+      scrollable={false}
+      stickyFooter={true}
+      footer={
+        <>
           <View style={styles.footerButtonsRow}>
             <View style={styles.footerButton}>
               <Button
@@ -384,8 +292,89 @@ export default function ActiveSessionScreen() {
             Warning: Surrendering forfeits your{" "}
             {formatMoney(activeGroupSession.stakePerParticipant)} stake
           </Text>
+        </>
+      }
+    >
+      {/* Status Header */}
+      <View style={styles.header}>
+        <View style={styles.statusBadge}>
+          <View
+            style={[
+              styles.statusDot,
+              isPaused && { backgroundColor: Colors.warning },
+            ]}
+          />
+          <Text
+            style={[styles.statusText, isPaused && { color: Colors.warning }]}
+          >
+            {isPaused ? "SESSION PAUSED" : "SESSION ACTIVE"}
+          </Text>
+        </View>
+        <Text style={styles.title}>Stay Focused</Text>
+        <Text style={styles.subtitle}>
+          {isPaused
+            ? "Timer is paused — resume when you're ready"
+            : "Distracting apps are blocked"}
+        </Text>
+      </View>
+
+      {/* Timer */}
+      <View style={styles.timerSection}>
+        <Timer
+          timeRemaining={timeRemaining}
+          totalTime={totalDuration}
+          size="medium"
+          showProgress={true}
+        />
+      </View>
+
+      {/* Progress Bar */}
+      <View style={styles.progressSection}>
+        <View style={styles.progressContainer}>
+          <View
+            style={[styles.progressBar, { width: `${progressPercent}%` }]}
+          />
+        </View>
+        <Text style={styles.progressText}>{progressPercent}% complete</Text>
+      </View>
+
+      {/* Payout Card */}
+      <Card style={styles.payoutCard}>
+        <Text style={styles.payoutLabel}>Complete to earn</Text>
+        <Text style={styles.payoutAmount}>
+          {activeGroupSession.participants.length <= 1
+            ? formatMoney(
+                activeGroupSession.stakePerParticipant *
+                  SOLO_COMPLETION_MULTIPLIER,
+              )
+            : `Up to ${formatMoney(activeGroupSession.poolTotal)}`}
+        </Text>
+      </Card>
+
+      {/* Violation Counter */}
+      {violationCount > 0 && (
+        <Card style={styles.violationCard}>
+          <Text style={styles.violationLabel}>Blocked app attempts</Text>
+          <Text style={styles.violationCount}>{violationCount}</Text>
+        </Card>
+      )}
+
+      {/* Tips */}
+      <View style={styles.tipsSection}>
+        <Text style={styles.tipsTitle}>Stay strong</Text>
+        <View style={styles.tipsList}>
+          {[
+            "Put your phone face down",
+            "Take short breaks for water",
+            "Deep breaths help refocus",
+          ].map((tip, index) => (
+            <View key={index} style={styles.tipRow}>
+              <View style={styles.tipBullet} />
+              <Text style={styles.tipText}>{tip}</Text>
+            </View>
+          ))}
         </View>
       </View>
-    </SafeAreaView>
+    </SessionScreenScaffold>
   );
 }

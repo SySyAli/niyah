@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   Pressable,
   ActivityIndicator,
 } from "react-native";
@@ -20,7 +20,7 @@ import { useColors } from "../../src/hooks/useColors";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
-import { PublicProfile } from "../../src/types";
+import { PublicProfile, Partner } from "../../src/types";
 
 // ─── Styles (makeStyles) ──────────────────────────────────────────────────────
 
@@ -372,6 +372,12 @@ const PartnerRow: React.FC<{
   );
 };
 
+// ─── Discriminated union for FlatList items ──────────────────────────────────
+
+type FollowingItem = { type: "following"; uid: string; profile: PublicProfile };
+type PartnerItem = { type: "partner"; partner: Partner };
+type ListItem = FollowingItem | PartnerItem;
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function FriendsScreen() {
@@ -464,80 +470,116 @@ export default function FriendsScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Friends</Text>
-        <Pressable onPress={() => router.push("/invite")}>
-          <Text style={styles.inviteLink}>Invite →</Text>
-        </Pressable>
+  // ── Build list data based on active tab ──────────────────────────────────
+
+  const listData: ListItem[] = useMemo(() => {
+    if (tab === "following") {
+      return following
+        .map((uid): FollowingItem | null => {
+          const profile = profiles[uid] ?? getFallbackProfile(uid);
+          if (!profile) return null;
+          return { type: "following", uid, profile };
+        })
+        .filter((item): item is FollowingItem => item !== null);
+    }
+    return partners.map(
+      (partner): PartnerItem => ({ type: "partner", partner }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, following, profiles, partners]);
+
+  const keyExtractor = useCallback((item: ListItem) => {
+    return item.type === "following" ? item.uid : item.partner.id;
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ListItem }) => {
+      if (item.type === "following") {
+        return (
+          <FollowingRow
+            profile={item.profile}
+            onPress={() =>
+              router.push(`/user/${item.uid}` as `/user/${string}`)
+            }
+            onUnfollow={() => handleUnfollow(item.uid)}
+            unfollowLoading={!!loadingUids[item.uid]}
+          />
+        );
+      }
+      const { partner } = item;
+      return (
+        <PartnerRow
+          uid={partner.oderId}
+          name={partner.name}
+          tag={partner.tag}
+          reputationLevel={partner.reputation.level}
+          reputationScore={partner.reputation.score}
+          isFollowing={isFollowing(partner.oderId)}
+          onPress={() =>
+            router.push(`/user/${partner.oderId}` as `/user/${string}`)
+          }
+          onToggleFollow={() => handleToggleFollow(partner.oderId)}
+          followLoading={!!loadingUids[partner.oderId]}
+        />
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loadingUids, isFollowing, router],
+  );
+
+  const listHeader = useMemo(
+    () => (
+      <>
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Friends</Text>
+          <Pressable onPress={() => router.push("/invite")}>
+            <Text style={styles.inviteLink}>Invite →</Text>
+          </Pressable>
+        </View>
+
+        {/* ── Segment control ─────────────────────────────────────────────── */}
+        <SegmentControl selected={tab} onChange={setTab} />
+      </>
+    ),
+    [styles, tab, router],
+  );
+
+  const listEmpty = useMemo(
+    () => (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyText}>
+          {tab === "following"
+            ? "Follow your partners to stay connected"
+            : "No partners yet. Invite friends to do sessions together."}
+        </Text>
       </View>
+    ),
+    [styles, tab],
+  );
 
-      {/* ── Segment control ─────────────────────────────────────────────── */}
-      <SegmentControl selected={tab} onChange={setTab} />
-
-      {/* ── Content ─────────────────────────────────────────────────────── */}
-      {isLoading ? (
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.center}>
           <ActivityIndicator color={Colors.primaryLight} />
         </View>
-      ) : (
-        <ScrollView
-          style={styles.list}
-          contentContainerStyle={styles.listContent}
-          contentInsetAdjustmentBehavior="automatic"
-        >
-          {tab === "following" ? (
-            following.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
-                  Follow your partners to stay connected
-                </Text>
-              </View>
-            ) : (
-              following.map((uid) => {
-                const profile = profiles[uid] ?? getFallbackProfile(uid);
-                if (!profile) return null;
-                return (
-                  <FollowingRow
-                    key={uid}
-                    profile={profile}
-                    onPress={() =>
-                      router.push(`/user/${uid}` as `/user/${string}`)
-                    }
-                    onUnfollow={() => handleUnfollow(uid)}
-                    unfollowLoading={!!loadingUids[uid]}
-                  />
-                );
-              })
-            )
-          ) : partners.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                No partners yet. Invite friends to do sessions together.
-              </Text>
-            </View>
-          ) : (
-            partners.map((partner) => (
-              <PartnerRow
-                key={partner.id}
-                uid={partner.oderId}
-                name={partner.name}
-                tag={partner.tag}
-                reputationLevel={partner.reputation.level}
-                reputationScore={partner.reputation.score}
-                isFollowing={isFollowing(partner.oderId)}
-                onPress={() =>
-                  router.push(`/user/${partner.oderId}` as `/user/${string}`)
-                }
-                onToggleFollow={() => handleToggleFollow(partner.oderId)}
-                followLoading={!!loadingUids[partner.oderId]}
-              />
-            ))
-          )}
-        </ScrollView>
-      )}
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <FlatList<ListItem>
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        data={listData}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+        contentInsetAdjustmentBehavior="automatic"
+      />
     </SafeAreaView>
   );
 }

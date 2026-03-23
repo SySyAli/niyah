@@ -15,12 +15,18 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if request.auth != null;
 
-      // Owner: full write access (profile setup, profile updates)
-      allow write: if request.auth != null && request.auth.uid == uid;
+      // Owner: full write access (profile setup, profile updates) EXCEPT
+      // legal acceptance fields which must go through the acceptLegalTerms
+      // Cloud Function for tamper-resistant server-side timestamping.
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['legalAcceptanceVersion', 'legalAcceptedAt']);
 
-      // Cross-user reputation updates REMOVED — now handled by Cloud Function.
-      // The previous rule allowed any authenticated user to modify any user's
-      // reputation field, enabling score manipulation. See awardReferral CF.
+      // Initial profile creation (no existing doc — resource is null)
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && !request.resource.data.keys().hasAny(['legalAcceptanceVersion', 'legalAcceptedAt']);
     }
 
     // -------------------------------------------------------------------------

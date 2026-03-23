@@ -58,6 +58,10 @@ export const REPUTATION_LEVELS = {
   },
 } as const;
 
+// Legal versioning
+// Bump this when Terms or Privacy content changes to re-prompt all users.
+export const CURRENT_LEGAL_VERSION = "1.0.0";
+
 // Referral system
 // Each accepted referral permanently boosts the new user's social credit score by this amount.
 // e.g. a brand-new user (score 50) who joins via referral starts at 60.

@@ -8,10 +8,8 @@ import {
   Linking,
   Alert,
   KeyboardAvoidingView,
-  ScrollView,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -21,7 +19,11 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button } from "../../src/components";
+import {
+  Card,
+  Button,
+  SessionScreenScaffold,
+} from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
@@ -32,36 +34,6 @@ import { formatMoney } from "../../src/utils/format";
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    content: {
-      flex: 1,
-      padding: Spacing.lg,
-    },
-    header: {
-      marginBottom: Spacing.md,
-    },
-    backText: {
-      color: Colors.primary,
-      fontSize: Typography.bodyLarge,
-      ...Font.medium,
-    },
-    titleSection: {
-      alignItems: "center",
-      marginBottom: Spacing.xl,
-    },
-    title: {
-      fontSize: Typography.headlineMedium,
-      ...Font.bold,
-      color: Colors.text,
-    },
-    subtitle: {
-      fontSize: Typography.bodyMedium,
-      color: Colors.textSecondary,
-      marginTop: Spacing.xs,
-    },
     warningCard: {
       alignItems: "center",
       backgroundColor: Colors.lossLight,
@@ -216,10 +188,6 @@ const makeStyles = (Colors: ThemeColors) =>
       marginTop: Spacing.lg,
       gap: Spacing.sm,
     },
-    scrollContent: {
-      padding: Spacing.lg,
-      paddingBottom: Spacing.xxl,
-    },
   });
 
 export default function SurrenderScreen() {
@@ -336,179 +304,159 @@ export default function SurrenderScreen() {
 
   if (showPayment) {
     return (
-      <SafeAreaView style={styles.container}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.titleSection}>
-            <Text style={styles.title}>Pay Your Partner</Text>
-            <Text style={styles.subtitle}>
-              You surrendered - time to settle up
+      <SessionScreenScaffold
+        headerVariant="none"
+        scrollable={true}
+        title="Pay Your Partner"
+        subtitle="You surrendered - time to settle up"
+      >
+        <Card style={styles.paymentCard}>
+          <Text style={styles.paymentLabel}>You owe</Text>
+          <Text style={styles.paymentAmount}>{formatMoney(amountOwed)}</Text>
+          <Text style={styles.paymentTo}>to {settledPartner?.name}</Text>
+          {settledPartner?.venmoHandle && (
+            <Text style={styles.venmoHandle}>
+              {settledPartner.venmoHandle}
             </Text>
-          </View>
+          )}
+        </Card>
 
-          <Card style={styles.paymentCard}>
-            <Text style={styles.paymentLabel}>You owe</Text>
-            <Text style={styles.paymentAmount}>{formatMoney(amountOwed)}</Text>
-            <Text style={styles.paymentTo}>to {settledPartner?.name}</Text>
-            {settledPartner?.venmoHandle && (
-              <Text style={styles.venmoHandle}>
-                {settledPartner.venmoHandle}
-              </Text>
-            )}
-          </Card>
+        <Card style={styles.reputationWarning}>
+          <Text style={styles.reputationTitle}>About Your Reputation</Text>
+          <Text style={styles.reputationText}>
+            Paying promptly builds trust. Users with low reputation scores get
+            excluded from groups. Your current score affects who wants to
+            partner with you.
+          </Text>
+        </Card>
 
-          <Card style={styles.reputationWarning}>
-            <Text style={styles.reputationTitle}>About Your Reputation</Text>
-            <Text style={styles.reputationText}>
-              Paying promptly builds trust. Users with low reputation scores get
-              excluded from groups. Your current score affects who wants to
-              partner with you.
+        <View style={styles.footer}>
+          <Button
+            title="Pay via Venmo"
+            onPress={handlePayVenmo}
+            size="large"
+            variant="primary"
+          />
+          <Button
+            title="I Already Paid"
+            onPress={handleMarkPaid}
+            size="large"
+            variant="secondary"
+          />
+          <Pressable onPress={handleSkipPayment} style={styles.skipButton}>
+            <Text style={styles.skipText}>
+              Skip Payment (hurts reputation)
             </Text>
-          </Card>
-
-          <View style={styles.footer}>
-            <Button
-              title="Pay via Venmo"
-              onPress={handlePayVenmo}
-              size="large"
-              variant="primary"
-            />
-            <Button
-              title="I Already Paid"
-              onPress={handleMarkPaid}
-              size="large"
-              variant="secondary"
-            />
-            <Pressable onPress={handleSkipPayment} style={styles.skipButton}>
-              <Text style={styles.skipText}>
-                Skip Payment (hurts reputation)
-              </Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+          </Pressable>
+        </View>
+      </SessionScreenScaffold>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <SessionScreenScaffold
+        headerVariant="back"
+        backLabel="Go Back"
+        onBack={() => router.back()}
+        scrollable={true}
+        title="Surrender Session?"
+        subtitle="This action cannot be undone"
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={20}>
-              <Text style={styles.backText}>Go Back</Text>
-            </Pressable>
-          </View>
-
-          {/* Title */}
-          <View style={styles.titleSection}>
-            <Text style={styles.title}>Surrender Session?</Text>
-            <Text style={styles.subtitle}>This action cannot be undone</Text>
-          </View>
-
-          {/* Loss Warning */}
-          <Card style={styles.warningCard}>
-            <Text style={styles.warningLabel}>
-              {isSoloSession
-                ? "You will forfeit your stake"
-                : "You will owe your partner"}
-            </Text>
-            <Text style={styles.lossAmount}>
-              {formatMoney(activeGroupSession?.stakePerParticipant || 0)}
-            </Text>
-            {!isSoloSession && (
-              <View style={styles.partnerInfo}>
-                <Text style={styles.warningNote}>
-                  Pay {activePartner?.name} via Venmo
+        {/* Loss Warning */}
+        <Card style={styles.warningCard}>
+          <Text style={styles.warningLabel}>
+            {isSoloSession
+              ? "You will forfeit your stake"
+              : "You will owe your partner"}
+          </Text>
+          <Text style={styles.lossAmount}>
+            {formatMoney(activeGroupSession?.stakePerParticipant || 0)}
+          </Text>
+          {!isSoloSession && (
+            <View style={styles.partnerInfo}>
+              <Text style={styles.warningNote}>
+                Pay {activePartner?.name} via Venmo
+              </Text>
+              {activePartner?.venmoHandle && (
+                <Text style={styles.partnerVenmo}>
+                  {activePartner.venmoHandle}
                 </Text>
-                {activePartner?.venmoHandle && (
-                  <Text style={styles.partnerVenmo}>
-                    {activePartner.venmoHandle}
-                  </Text>
-                )}
-              </View>
-            )}
-          </Card>
-
-          {/* Reputation Impact */}
-          <Card style={styles.reputationCard}>
-            <Text style={styles.reputationTitle}>Reputation Impact</Text>
-            <Text style={styles.reputationText}>
-              {isSoloSession
-                ? "Surrendering forfeits your stake. Your reputation score will reflect the incomplete session."
-                : "Surrendering is okay - but not paying hurts your reputation. Pay your partner to maintain trust."}
-            </Text>
-          </Card>
-
-          {/* Alternative Suggestions */}
-          <Card style={styles.alternativeCard}>
-            <Text style={styles.alternativeTitle}>Before you go...</Text>
-            <Text style={styles.alternativeText}>
-              You have made it this far. Try one of these instead:
-            </Text>
-            <View style={styles.suggestions}>
-              {[
-                "Take a 5-minute walk",
-                "Get a glass of water",
-                "Do some stretches",
-                "Take 10 deep breaths",
-              ].map((suggestion, index) => (
-                <View key={index} style={styles.suggestionRow}>
-                  <View style={styles.suggestionBullet} />
-                  <Text style={styles.suggestionText}>{suggestion}</Text>
-                </View>
-              ))}
+              )}
             </View>
-          </Card>
+          )}
+        </Card>
 
-          {/* Confirm Section */}
-          <View style={styles.confirmSection}>
-            <Text style={styles.confirmLabel}>
-              Type QUIT to confirm surrender
-            </Text>
-            <TextInput
-              style={[
-                styles.confirmInput,
-                canSurrender && styles.confirmInputValid,
-              ]}
-              value={confirmText}
-              onChangeText={setConfirmText}
-              placeholder="Type QUIT"
-              placeholderTextColor={Colors.textMuted}
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-          </View>
+        {/* Reputation Impact */}
+        <Card style={styles.reputationCard}>
+          <Text style={styles.reputationTitle}>Reputation Impact</Text>
+          <Text style={styles.reputationText}>
+            {isSoloSession
+              ? "Surrendering forfeits your stake. Your reputation score will reflect the incomplete session."
+              : "Surrendering is okay - but not paying hurts your reputation. Pay your partner to maintain trust."}
+          </Text>
+        </Card>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Button
-              title={isSoloSession ? "Surrender" : "Surrender and Pay Partner"}
-              onPress={handleSurrender}
-              disabled={!canSurrender}
-              variant="danger"
-              size="large"
-            />
-            <Button
-              title="Keep Going"
-              onPress={() => router.back()}
-              variant="primary"
-              size="large"
-            />
+        {/* Alternative Suggestions */}
+        <Card style={styles.alternativeCard}>
+          <Text style={styles.alternativeTitle}>Before you go...</Text>
+          <Text style={styles.alternativeText}>
+            You have made it this far. Try one of these instead:
+          </Text>
+          <View style={styles.suggestions}>
+            {[
+              "Take a 5-minute walk",
+              "Get a glass of water",
+              "Do some stretches",
+              "Take 10 deep breaths",
+            ].map((suggestion, index) => (
+              <View key={index} style={styles.suggestionRow}>
+                <View style={styles.suggestionBullet} />
+                <Text style={styles.suggestionText}>{suggestion}</Text>
+              </View>
+            ))}
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </Card>
+
+        {/* Confirm Section */}
+        <View style={styles.confirmSection}>
+          <Text style={styles.confirmLabel}>
+            Type QUIT to confirm surrender
+          </Text>
+          <TextInput
+            style={[
+              styles.confirmInput,
+              canSurrender && styles.confirmInputValid,
+            ]}
+            value={confirmText}
+            onChangeText={setConfirmText}
+            placeholder="Type QUIT"
+            placeholderTextColor={Colors.textMuted}
+            autoCapitalize="characters"
+            autoCorrect={false}
+          />
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Button
+            title={isSoloSession ? "Surrender" : "Surrender and Pay Partner"}
+            onPress={handleSurrender}
+            disabled={!canSurrender}
+            variant="danger"
+            size="large"
+          />
+          <Button
+            title="Keep Going"
+            onPress={() => router.back()}
+            variant="primary"
+            size="large"
+          />
+        </View>
+      </SessionScreenScaffold>
+    </KeyboardAvoidingView>
   );
 }

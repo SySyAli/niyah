@@ -53,6 +53,7 @@ interface GroupSessionState {
     recipientHandle: string,
     note: string,
   ) => string;
+  reset: () => void;
 }
 
 export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
@@ -406,4 +407,11 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
   // ─── Utilities ──────────────────────────────────────────────────────────────
 
   getVenmoPayLink,
+
+  reset: () => {
+    set({
+      activeGroupSession: null,
+      groupSessionHistory: [],
+    });
+  },
 }));

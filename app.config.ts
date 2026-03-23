@@ -104,6 +104,7 @@ export default {
       "./plugins/withFirebaseStaticFrameworks",
       "./plugins/withScreenTimeEntitlement",
       "./plugins/withDeviceActivityMonitor",
+      "./plugins/withShieldExtensions",
     ],
     experiments: {
       typedRoutes: true,

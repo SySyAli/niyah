@@ -1,5 +1,12 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import * as Haptics from "expo-haptics";
 import {
   Typography,
@@ -26,6 +33,8 @@ export function ScreenTimeCard() {
   const [screenTimeAuth, setScreenTimeAuth] =
     useState<AuthorizationStatus>("notDetermined");
   const [appSelectionCount, setAppSelectionCount] = useState(0);
+  const [isEnabling, setIsEnabling] = useState(false);
+  const [isSelectingApps, setIsSelectingApps] = useState(false);
 
   const refreshStatus = useCallback(() => {
     if (!isScreenTimeAvailable) return;
@@ -57,9 +66,14 @@ export function ScreenTimeCard() {
 
       {screenTimeAuth !== "approved" ? (
         <Pressable
-          style={styles.screenTimeButton}
+          style={[
+            styles.screenTimeButton,
+            isEnabling && styles.screenTimeButtonLoading,
+          ]}
           onPress={async () => {
+            if (isEnabling) return;
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            setIsEnabling(true);
             try {
               const status = await requestScreenTimeAuth();
               setScreenTimeAuth(status);
@@ -74,27 +88,58 @@ export function ScreenTimeCard() {
                 "Error",
                 "Could not request Screen Time permission. Make sure you're on a physical device with iOS 16+.",
               );
+            } finally {
+              setIsEnabling(false);
             }
           }}
+          disabled={isEnabling}
         >
-          <Text style={styles.screenTimeButtonText}>Enable Screen Time</Text>
+          {isEnabling ? (
+            <ActivityIndicator
+              size="small"
+              color="#F2EDE4"
+              style={styles.screenTimeButtonSpinner}
+            />
+          ) : null}
+          <Text style={styles.screenTimeButtonText}>
+            {isEnabling ? "Enabling…" : "Enable Screen Time"}
+          </Text>
         </Pressable>
       ) : (
         <View style={styles.screenTimeActions}>
           <Pressable
-            style={styles.screenTimeButton}
+            style={[
+              styles.screenTimeButton,
+              isSelectingApps && styles.screenTimeButtonLoading,
+            ]}
             onPress={async () => {
+              if (isSelectingApps) return;
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setIsSelectingApps(true);
               try {
                 const selection = await presentAppPicker();
                 setAppSelectionCount(selection.appCount);
               } catch {
                 // User cancelled the picker
+              } finally {
+                setIsSelectingApps(false);
               }
             }}
+            disabled={isSelectingApps}
           >
+            {isSelectingApps ? (
+              <ActivityIndicator
+                size="small"
+                color="#F2EDE4"
+                style={styles.screenTimeButtonSpinner}
+              />
+            ) : null}
             <Text style={styles.screenTimeButtonText}>
-              {appSelectionCount > 0 ? "Change Apps" : "Select Apps"}
+              {isSelectingApps
+                ? "Opening…"
+                : appSelectionCount > 0
+                  ? "Change Apps"
+                  : "Select Apps"}
             </Text>
           </Pressable>
 
@@ -129,11 +174,21 @@ const makeStyles = (Colors: ThemeColors) =>
       lineHeight: 20,
     },
     screenTimeButton: {
+      flexDirection: "row",
+      alignItems: "center",
       backgroundColor: Colors.primary,
       paddingVertical: Spacing.sm,
       paddingHorizontal: Spacing.lg,
       borderRadius: Radius.md,
       alignSelf: "flex-start",
+      minHeight: 36,
+      gap: Spacing.xs,
+    },
+    screenTimeButtonLoading: {
+      opacity: 0.7,
+    },
+    screenTimeButtonSpinner: {
+      // ActivityIndicator sits inline next to text via flexDirection: row
     },
     screenTimeButtonText: {
       fontSize: Typography.labelMedium,

@@ -50,4 +50,10 @@ export type NiyahScreenTimeModuleEvents = {
   onShieldViolation: (event: ShieldViolationEvent) => void;
   /** Fired when authorization status changes */
   onAuthorizationChange: (event: { status: AuthorizationStatus }) => void;
+  /**
+   * Fired when the user taps "Surrender Session" on the custom Niyah
+   * shield screen (NiyahShieldAction extension).
+   * The main app should call surrenderSession() in response.
+   */
+  onSurrenderRequested: (event: Record<string, never>) => void;
 };

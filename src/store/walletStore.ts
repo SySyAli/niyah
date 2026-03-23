@@ -26,6 +26,7 @@ interface WalletState {
     partnerId: string,
     description: string,
   ) => void;
+  reset: () => void;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -195,6 +196,25 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     useAuthStore.getState().updateUser({
       balance: get().balance,
+    });
+  },
+
+  reset: () => {
+    set({
+      balance: DEMO_MODE ? INITIAL_BALANCE : 0,
+      transactions: DEMO_MODE
+        ? [
+            {
+              id: "initial",
+              type: "deposit" as const,
+              amount: INITIAL_BALANCE,
+              description: "Welcome bonus",
+              createdAt: new Date(),
+            },
+          ]
+        : [],
+      pendingWithdrawal: 0,
+      isHydrated: DEMO_MODE,
     });
   },
 }));

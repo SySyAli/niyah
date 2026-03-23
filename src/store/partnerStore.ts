@@ -39,6 +39,7 @@ interface PartnerState {
   // Called on the new user's device after they authenticate via a referral link.
   // Fetches the referrer's name, boosts the new user's reputation, and awards the referrer.
   applyReferralBonus: (referrerUid: string) => Promise<void>;
+  reset: () => void;
 }
 
 interface PartnerInvite {
@@ -364,4 +365,14 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   },
 
   getVenmoPayLink,
+
+  reset: () => {
+    set({
+      currentPartner: null,
+      partners: [],
+      activeDuoSession: null,
+      duoSessionHistory: [],
+      pendingInvites: [],
+    });
+  },
 }));

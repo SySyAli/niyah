@@ -173,6 +173,19 @@ export async function unfollowUserCF(
   return callFunction<{ success: boolean }>("unfollowUserFn", { targetUid });
 }
 
+// ─── Legal acceptance functions ──────────────────────────────────────────────
+
+/**
+ * Records the user's acceptance of the current legal terms version.
+ * The Cloud Function writes `legalAcceptanceVersion` and `legalAcceptedAt`
+ * (server timestamp) to the user document for tamper-resistance.
+ */
+export async function acceptLegalTerms(
+  version: string,
+): Promise<{ success: boolean }> {
+  return callFunction<{ success: boolean }>("acceptLegalTerms", { version });
+}
+
 // ─── Group session functions ─────────────────────────────────────────────────
 
 export interface GroupPayoutResult {

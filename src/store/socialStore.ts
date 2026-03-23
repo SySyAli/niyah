@@ -19,6 +19,7 @@ interface SocialState {
   unfollowUser: (myUid: string, targetUid: string) => Promise<void>;
   loadProfile: (uid: string) => Promise<void>;
   isFollowing: (uid: string) => boolean;
+  reset: () => void;
 }
 
 export const useSocialStore = create<SocialState>((set, get) => ({
@@ -83,5 +84,14 @@ export const useSocialStore = create<SocialState>((set, get) => ({
 
   isFollowing: (uid: string) => {
     return get().following.includes(uid);
+  },
+
+  reset: () => {
+    set({
+      following: [],
+      followers: [],
+      profiles: {},
+      isLoading: false,
+    });
   },
 }));

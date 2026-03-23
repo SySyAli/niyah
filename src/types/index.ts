@@ -40,6 +40,9 @@ export interface User {
   stripeAccountId?: string;
   stripeCustomerId?: string;
   stripeAccountStatus?: "pending" | "active" | "restricted";
+  // Legal acceptance
+  legalAcceptanceVersion?: string;
+  legalAcceptedAt?: Date;
 }
 
 // Social credit system - tracks payment reliability

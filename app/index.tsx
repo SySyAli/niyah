@@ -3,12 +3,21 @@ import { Redirect } from "expo-router";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { useAuthStore } from "../src/store/authStore";
 import { useColors } from "../src/hooks/useColors";
+import { LegalAcceptanceOverlay } from "../src/components";
+import { logger } from "../src/utils/logger";
 
 export default function Index() {
   const Colors = useColors();
-  const { isAuthenticated, isInitialized, profileComplete, initialize } =
-    useAuthStore();
+  const {
+    isAuthenticated,
+    isInitialized,
+    profileComplete,
+    hasAcceptedCurrentLegal,
+    acceptLegal,
+    initialize,
+  } = useAuthStore();
   const [ready, setReady] = useState(false);
+  const [legalLoading, setLegalLoading] = useState(false);
 
   const styles = useMemo(
     () =>
@@ -32,6 +41,17 @@ export default function Index() {
     };
   }, [initialize]);
 
+  const handleAcceptLegal = async () => {
+    setLegalLoading(true);
+    try {
+      await acceptLegal();
+    } catch (error) {
+      logger.error("Legal acceptance error:", error);
+    } finally {
+      setLegalLoading(false);
+    }
+  };
+
   if (!isInitialized || !ready) {
     return (
       <View style={styles.loading}>
@@ -46,6 +66,20 @@ export default function Index() {
 
   if (!profileComplete) {
     return <Redirect href="/(auth)/profile-setup" />;
+  }
+
+  // Legal gate: authenticated users who haven't accepted current legal version
+  // see a non-dismissible overlay before proceeding to tabs.
+  if (!hasAcceptedCurrentLegal) {
+    return (
+      <View style={styles.loading}>
+        <LegalAcceptanceOverlay
+          visible={true}
+          onAccept={handleAcceptLegal}
+          loading={legalLoading}
+        />
+      </View>
+    );
   }
 
   return <Redirect href="/(tabs)" />;

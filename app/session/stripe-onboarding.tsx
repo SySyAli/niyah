@@ -9,11 +9,9 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -25,7 +23,11 @@ import {
 import { useColors } from "../../src/hooks/useColors";
 import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import * as Haptics from "expo-haptics";
-import { Button, Card } from "../../src/components";
+import {
+  Button,
+  Card,
+  SessionScreenScaffold,
+} from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import {
   createConnectAccount,
@@ -228,56 +230,18 @@ export default function StripeOnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.closeButton}
-            hitSlop={20}
-          >
-            <Text style={styles.closeText}>Cancel</Text>
-          </Pressable>
-          <Text style={styles.title}>Payout Setup</Text>
-          <View style={styles.closeButton} />
-        </View>
-
-        {renderContent()}
-      </View>
-    </SafeAreaView>
+    <SessionScreenScaffold
+      headerVariant="centered"
+      headerTitle="Payout Setup"
+      scrollable={false}
+    >
+      {renderContent()}
+    </SessionScreenScaffold>
   );
 }
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: Spacing.lg,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: Spacing.md,
-    },
-    closeButton: {
-      width: 60,
-    },
-    closeText: {
-      color: Colors.textSecondary,
-      fontSize: Typography.bodyLarge,
-      ...Font.medium,
-    },
-    title: {
-      fontSize: Typography.titleLarge,
-      ...Font.semibold,
-      color: Colors.text,
-    },
     center: {
       flex: 1,
       alignItems: "center",

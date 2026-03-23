@@ -12,6 +12,13 @@ import * as Haptics from "expo-haptics";
 import { Radius, Typography, Font } from "../constants/colors";
 import { useColors } from "../hooks/useColors";
 
+// CTA emphasis mapping:
+//   primary  = high emphasis (main action)
+//   secondary = medium emphasis (secondary action)
+//   outline  = medium emphasis (alternative style)
+//   ghost    = low emphasis (tertiary/text-like)
+//   danger   = destructive action
+
 interface ButtonProps {
   title: string;
   onPress: () => void;
@@ -39,7 +46,6 @@ export const Button: React.FC<ButtonProps> = ({
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.spring(scaleAnim, {
       toValue: 0.97,
       useNativeDriver: true,
@@ -97,7 +103,7 @@ export const Button: React.FC<ButtonProps> = ({
   const getPadding = () => {
     switch (size) {
       case "small":
-        return { paddingVertical: 10, paddingHorizontal: 16 };
+        return { paddingVertical: 12, paddingHorizontal: 16 };
       case "medium":
         return { paddingVertical: 16, paddingHorizontal: 24 };
       case "large":
@@ -146,7 +152,10 @@ export const Button: React.FC<ButtonProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled || loading}
-      style={fullWidth && styles.fullWidth}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
+      style={[fullWidth && styles.fullWidth, { minHeight: 44 }]}
     >
       <Animated.View
         style={[

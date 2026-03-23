@@ -43,8 +43,9 @@ public class NiyahScreenTimeModule: Module {
     set { sharedDefaults.set(newValue, forKey: Self.blockingKey) }
   }
 
-  // ── Violation polling ───────────────────────────────────────────────────────
-  private static let violationsKey = "niyah_shield_violations"
+  // ── Violation + surrender polling ──────────────────────────────────────────
+  private static let violationsKey  = "niyah_shield_violations"
+  private static let surrenderKey   = "niyah_surrender_requested"
   private var violationPollTimer: Timer?
   private var lastViolationCount: Int = 0
 
@@ -101,7 +102,7 @@ public class NiyahScreenTimeModule: Module {
   public func definition() -> ModuleDefinition {
     Name("NiyahScreenTime")
 
-    Events("onShieldViolation", "onAuthorizationChange")
+    Events("onShieldViolation", "onAuthorizationChange", "onSurrenderRequested")
 
     // ================================================================
     // MARK: - Authorization
@@ -327,15 +328,25 @@ public class NiyahScreenTimeModule: Module {
   }
 
   private func checkForNewViolations() {
+    // ── Violation events ────────────────────────────────────────────────────
     let violations = sharedDefaults.array(forKey: Self.violationsKey) as? [Double] ?? []
-    guard violations.count > lastViolationCount else { return }
-
-    // Emit events for each new violation
-    for i in lastViolationCount..<violations.count {
-      let timestamp = violations[i]
-      NSLog("[NiyahScreenTime] Shield violation detected at \(timestamp)")
-      sendEvent("onShieldViolation", ["timestamp": timestamp])
+    if violations.count > lastViolationCount {
+      for i in lastViolationCount..<violations.count {
+        let timestamp = violations[i]
+        NSLog("[NiyahScreenTime] Shield violation detected at \(timestamp)")
+        sendEvent("onShieldViolation", ["timestamp": timestamp])
+      }
+      lastViolationCount = violations.count
     }
-    lastViolationCount = violations.count
+
+    // ── Surrender request from NiyahShieldAction extension ─────────────────
+    // The ShieldActionExtension writes this flag when the user taps
+    // "Surrender Session" on the custom shield screen.
+    if sharedDefaults.bool(forKey: Self.surrenderKey) {
+      NSLog("[NiyahScreenTime] Surrender requested via shield action")
+      sharedDefaults.removeObject(forKey: Self.surrenderKey)
+      sharedDefaults.synchronize()
+      sendEvent("onSurrenderRequested", [:])
+    }
   }
 }

@@ -12,6 +12,11 @@ import {
   updateSession,
   getActiveSession,
 } from "../config/firebase";
+import {
+  startBlocking,
+  stopBlocking,
+  onSurrenderRequested,
+} from "../config/screentime";
 import { generateId } from "../utils/id";
 import { logger } from "../utils/logger";
 
@@ -26,6 +31,7 @@ interface SessionState {
   getTimeRemaining: () => number;
   /** Recover an active session from Firestore after app restart. */
   recoverActiveSession: (userId: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -57,6 +63,20 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     useWalletStore.getState().deductStake(config.stake, session.id);
 
     set({ currentSession: session, isBlocking: true });
+
+    // Start Screen Time blocking (fire-and-forget; no-op on simulator)
+    startBlocking().catch((err) =>
+      logger.warn("Screen Time startBlocking failed:", err),
+    );
+
+    // Listen for surrender requests from the custom shield screen.
+    // If the user taps "Surrender Session" on the Niyah shield while a
+    // blocked app is open, the ShieldActionExtension writes a flag to
+    // shared UserDefaults and this subscription picks it up.
+    const unsubSurrender = onSurrenderRequested(() => {
+      unsubSurrender();
+      get().surrenderSession();
+    });
 
     // Persist session to Firestore (fire-and-forget)
     const userId = useAuthStore.getState().user?.id;
@@ -95,6 +115,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     useWalletStore
       .getState()
       .recordForfeit(currentSession.stakeAmount, currentSession.id);
+
+    // Stop Screen Time blocking (fire-and-forget)
+    stopBlocking().catch((err) =>
+      logger.warn("Screen Time stopBlocking (surrender) failed:", err),
+    );
 
     set({
       currentSession: null,
@@ -146,6 +171,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         (payout - currentSession.stakeAmount),
     });
     useWalletStore.getState().creditPayout(payout, currentSession.id);
+
+    // Stop Screen Time blocking (fire-and-forget)
+    stopBlocking().catch((err) =>
+      logger.warn("Screen Time stopBlocking (complete) failed:", err),
+    );
 
     set({
       currentSession: null,
@@ -256,5 +286,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     } catch (error) {
       logger.error("Failed to recover active session:", error);
     }
+  },
+
+  reset: () => {
+    set({
+      currentSession: null,
+      sessionHistory: [],
+      isBlocking: false,
+    });
   },
 }));

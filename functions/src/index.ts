@@ -1421,3 +1421,57 @@ export const stripeWebhook = onRequest(
     }
   },
 );
+
+// ─── Legal Acceptance ──────────────────────────────────────────────────────
+
+/**
+ * Records a user's acceptance of the Terms and Privacy policy.
+ * Writes `legalAcceptanceVersion` and `legalAcceptedAt` (server timestamp)
+ * to the user document for tamper-resistance.
+ */
+export const acceptLegalTerms = onRequest(
+  { cors: true },
+  async (req: Request, res: Response) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    try {
+      const uid = await verifyAuth(req);
+      const { version } = req.body;
+
+      if (!version || typeof version !== "string") {
+        sendError(res, 400, "Missing or invalid version");
+        return;
+      }
+
+      // Rate limit: 10 calls per minute
+      const blocked = await checkRateLimit(uid, "acceptLegalTerms", {
+        maxCalls: 10,
+        windowMs: 60_000,
+      });
+      if (blocked) {
+        sendError(res, 429, "Too many requests");
+        return;
+      }
+
+      await db
+        .collection("users")
+        .doc(uid)
+        .update({
+          legalAcceptanceVersion: version,
+          legalAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("acceptLegalTerms error:", err);
+      sendError(
+        res,
+        500,
+        err instanceof Error ? err.message : "Internal error",
+      );
+    }
+  },
+);

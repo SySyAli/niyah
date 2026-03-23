@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo } from "react";
 import { View, Text, StyleSheet, Animated, Linking, Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -10,7 +9,12 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button, Confetti } from "../../src/components";
+import {
+  Card,
+  Button,
+  Confetti,
+  SessionScreenScaffold,
+} from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
@@ -21,16 +25,6 @@ import type { SessionTransfer } from "../../src/types";
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: Spacing.md,
-      paddingTop: Spacing.sm,
-      paddingBottom: Spacing.md,
-    },
     header: {
       alignItems: "center",
       marginTop: 0,
@@ -249,10 +243,6 @@ const makeStyles = (Colors: ThemeColors) =>
       textAlign: "center",
       lineHeight: 18,
     },
-    footer: {
-      marginTop: "auto",
-      gap: Spacing.sm,
-    },
   });
 
 export default function CompleteScreen() {
@@ -355,9 +345,14 @@ export default function CompleteScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <>
       {showConfetti && <Confetti count={60} />}
-      <View style={styles.content}>
+      <SessionScreenScaffold
+        headerVariant="none"
+        scrollable={false}
+        stickyFooter={true}
+        footer={<Button title="Done" onPress={handleDone} size="medium" />}
+      >
         {/* Header */}
         <Animated.View
           style={[
@@ -548,11 +543,7 @@ export default function CompleteScreen() {
         <Card style={styles.motivationCard}>
           <Text style={styles.motivationText}>{getStreakMessage()}</Text>
         </Card>
-
-        <View style={styles.footer}>
-          <Button title="Done" onPress={handleDone} size="medium" />
-        </View>
-      </View>
-    </SafeAreaView>
+      </SessionScreenScaffold>
+    </>
   );
 }

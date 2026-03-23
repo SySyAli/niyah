@@ -4,11 +4,7 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,7 +16,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Button } from "../../src/components";
+import { Button, AuthScreenScaffold } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { PENDING_REFERRAL_KEY } from "../../src/constants/config";
@@ -103,157 +99,115 @@ export default function ProfileSetupScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.flex}
-      >
-        <ScrollView
-          style={styles.flex}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Complete your{"\n"}profile</Text>
-            <Text style={styles.subtitle}>
-              Just a few details to get you started
-            </Text>
+    <AuthScreenScaffold
+      showBack={false}
+      scrollable
+      title={"Complete your\nprofile"}
+      subtitle="Just a few details to get you started"
+    >
+      {/* Error */}
+      {error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+
+      {/* Form */}
+      <View style={styles.form}>
+        {/* First Name */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>First Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="First name"
+            placeholderTextColor={Colors.textMuted}
+            value={firstName}
+            onChangeText={(text) => {
+              setFirstName(text);
+              setError("");
+            }}
+            autoCapitalize="words"
+            autoCorrect={false}
+            autoComplete="given-name"
+            textContentType="givenName"
+            autoFocus
+          />
+        </View>
+
+        {/* Last Name */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Last Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Last name"
+            placeholderTextColor={Colors.textMuted}
+            value={lastName}
+            onChangeText={(text) => {
+              setLastName(text);
+              setError("");
+            }}
+            autoCapitalize="words"
+            autoCorrect={false}
+            autoComplete="family-name"
+            textContentType="familyName"
+          />
+        </View>
+
+        {/* Email (locked) */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.lockedInputContainer}>
+            <TextInput
+              style={[styles.input, styles.lockedInput]}
+              value={email}
+              editable={false}
+              selectTextOnFocus={false}
+            />
+            <Text style={styles.lockIcon}>{"\uD83D\uDD12"}</Text>
           </View>
+        </View>
 
-          {/* Error */}
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
-          {/* Form */}
-          <View style={styles.form}>
-            {/* First Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>First Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="First name"
-                placeholderTextColor={Colors.textMuted}
-                value={firstName}
-                onChangeText={(text) => {
-                  setFirstName(text);
-                  setError("");
-                }}
-                autoCapitalize="words"
-                autoCorrect={false}
-                autoComplete="given-name"
-                textContentType="givenName"
-                autoFocus
-              />
-            </View>
-
-            {/* Last Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Last Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Last name"
-                placeholderTextColor={Colors.textMuted}
-                value={lastName}
-                onChangeText={(text) => {
-                  setLastName(text);
-                  setError("");
-                }}
-                autoCapitalize="words"
-                autoCorrect={false}
-                autoComplete="family-name"
-                textContentType="familyName"
-              />
-            </View>
-
-            {/* Email (locked) */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.lockedInputContainer}>
-                <TextInput
-                  style={[styles.input, styles.lockedInput]}
-                  value={email}
-                  editable={false}
-                  selectTextOnFocus={false}
-                />
-                <Text style={styles.lockIcon}>{"\uD83D\uDD12"}</Text>
-              </View>
-            </View>
-
-            {/* Phone (optional) */}
-            <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>Phone Number</Text>
-                <Text style={styles.optional}>Optional</Text>
-              </View>
-              <View style={styles.phoneRow}>
-                <View style={styles.prefixBox}>
-                  <Text style={styles.prefixText}>+1</Text>
-                </View>
-                <TextInput
-                  style={[styles.input, styles.phoneInput]}
-                  placeholder="(555) 123-4567"
-                  placeholderTextColor={Colors.textMuted}
-                  keyboardType="phone-pad"
-                  value={formatPhoneDisplay(phone)}
-                  onChangeText={handlePhoneChange}
-                  maxLength={14}
-                  autoComplete="tel"
-                  textContentType="telephoneNumber"
-                />
-              </View>
-            </View>
+        {/* Phone (optional) */}
+        <View style={styles.inputGroup}>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Phone Number</Text>
+            <Text style={styles.optional}>Optional</Text>
           </View>
-
-          {/* Continue button */}
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Continue"
-              onPress={handleContinue}
-              disabled={!canContinue || isLoading}
-              loading={isLoading}
-              size="large"
+          <View style={styles.phoneRow}>
+            <View style={styles.prefixBox}>
+              <Text style={styles.prefixText}>+1</Text>
+            </View>
+            <TextInput
+              style={[styles.input, styles.phoneInput]}
+              placeholder="(555) 123-4567"
+              placeholderTextColor={Colors.textMuted}
+              keyboardType="phone-pad"
+              value={formatPhoneDisplay(phone)}
+              onChangeText={handlePhoneChange}
+              maxLength={14}
+              autoComplete="tel"
+              textContentType="telephoneNumber"
             />
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </View>
+      </View>
+
+      {/* Continue button */}
+      <View style={styles.buttonContainer}>
+        <Button
+          title="Continue"
+          onPress={handleContinue}
+          disabled={!canContinue || isLoading}
+          loading={isLoading}
+          size="large"
+        />
+      </View>
+    </AuthScreenScaffold>
   );
 }
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: Colors.background,
-    },
-    flex: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.xl,
-      paddingBottom: Spacing.xxl,
-    },
-    header: {
-      marginBottom: Spacing.xxl,
-    },
-    title: {
-      fontSize: 36,
-      ...Font.heavy,
-      color: Colors.text,
-      letterSpacing: -0.5,
-      lineHeight: 42,
-    },
-    subtitle: {
-      fontSize: Typography.bodyLarge,
-      color: Colors.textSecondary,
-      marginTop: Spacing.sm,
-    },
     errorContainer: {
       backgroundColor: "rgba(220, 38, 38, 0.1)",
       borderRadius: Radius.md,

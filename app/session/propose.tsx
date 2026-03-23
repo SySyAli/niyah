@@ -1,7 +1,14 @@
 import React, { useState, useMemo } from "react";
-import { View, Text, StyleSheet, Pressable, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  TextInput,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, type RelativePathString } from "expo-router";
 import {
   Typography,
   Spacing,
@@ -15,7 +22,21 @@ import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
 import { useAuthStore } from "../../src/store/authStore";
+import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { formatMoney } from "../../src/utils/format";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function parseDurationToMs(durationLabel: string): number {
+  const durationMap: Record<string, number> = {
+    "30 min": 30 * 60 * 1000,
+    "1 hr": 60 * 60 * 1000,
+    "2 hrs": 2 * 60 * 60 * 1000,
+    "4 hrs": 4 * 60 * 60 * 1000,
+    "All day": 12 * 60 * 60 * 1000,
+  };
+  return durationMap[durationLabel] || 60 * 60 * 1000; // default 1 hour
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -272,6 +293,7 @@ export default function ProposeSessionScreen() {
   const { user } = useAuthStore();
   const { partners } = usePartnerStore();
   const { following, profiles } = useSocialStore();
+  const { proposeSession } = useGroupSessionStore();
 
   // Stake
   const [stake, setStake] = useState<number | null>(null);
@@ -294,7 +316,8 @@ export default function ProposeSessionScreen() {
   const [timeFocused, setTimeFocused] = useState(false);
 
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
-  const [proposed, setProposed] = useState(false);
+  const [proposed, _setProposed] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Build inviteable people list: partners + following (deduped)
   const people = useMemo(() => {
@@ -343,10 +366,32 @@ export default function ProposeSessionScreen() {
     );
   };
 
-  const handlePropose = () => {
+  const handlePropose = async () => {
     if (!canPropose) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setProposed(true);
+    setLoading(true);
+    try {
+      // Convert duration label to ms
+      const durationMs = parseDurationToMs(effectiveDuration!);
+      // Stake in cents
+      const stakeCents = effectiveStake!;
+
+      const sessionId = await proposeSession({
+        cadence: "daily", // Default cadence for custom proposals
+        stakePerParticipant: stakeCents,
+        duration: durationMs,
+        inviteeIds: selectedPeople,
+        customStake: true,
+      });
+
+      // Navigate to waiting room instead of showing local success
+      router.push(
+        `/session/waiting-room?sessionId=${sessionId}` as RelativePathString,
+      );
+    } catch {
+      Alert.alert("Error", "Failed to create group session. Please try again.");
+      setLoading(false);
+    }
   };
 
   // ── Success state ───────────────────────────────────────────────────────────

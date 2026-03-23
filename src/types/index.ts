@@ -173,3 +173,63 @@ export interface GroupSession {
   participants: SessionParticipant[];
   transfers: SessionTransfer[]; // empty while active; populated on completion
 }
+
+// ─── Group Session (Firestore-backed, server-authoritative) ─────────────────
+
+export type GroupSessionStatus =
+  | "pending" // invites sent, waiting for accepts
+  | "ready" // all accepted, waiting for everyone to go online
+  | "active" // timer running
+  | "completed" // all participants reported, payouts distributed
+  | "cancelled"; // proposer cancelled or auto-timeout
+
+export interface GroupSessionParticipant {
+  name: string;
+  venmoHandle?: string;
+  profileImage?: string;
+  reputation: UserReputation;
+  accepted: boolean;
+  online: boolean;
+  completed?: boolean;
+  surrendered?: boolean;
+  surrenderedAt?: Date;
+}
+
+// The Firestore document shape for group sessions
+export interface GroupSessionDoc {
+  id: string;
+  proposerId: string;
+  status: GroupSessionStatus;
+  cadence: CadenceType;
+  stakePerParticipant: number; // cents
+  customStake: boolean;
+  duration: number; // ms
+  participantIds: string[]; // for security rules / queries
+  participants: Record<string, GroupSessionParticipant>;
+  poolTotal: number;
+  startedAt?: Date;
+  endsAt?: Date;
+  completedAt?: Date;
+  payouts?: Record<string, number>; // userId -> payout in cents
+  transfers?: SessionTransfer[];
+  createdAt: Date;
+  updatedAt: Date;
+  autoTimeoutAt?: Date; // 30 min after all accept; null while pending
+}
+
+export type GroupInviteStatus = "pending" | "accepted" | "declined" | "expired";
+
+export interface GroupInvite {
+  id: string;
+  sessionId: string;
+  fromUserId: string;
+  fromUserName: string;
+  fromUserImage?: string;
+  toUserId: string;
+  stake: number; // cents
+  cadence: CadenceType;
+  duration: number; // ms
+  status: GroupInviteStatus;
+  createdAt: Date;
+  respondedAt?: Date;
+}

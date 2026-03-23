@@ -167,6 +167,40 @@ export default function ActiveSessionScreen() {
         footerButton: {
           flex: 1,
         },
+        participantsCard: {
+          backgroundColor: Colors.backgroundCard,
+          borderRadius: Radius.lg,
+          padding: Spacing.md,
+          marginBottom: Spacing.md,
+        },
+        participantsTitle: {
+          fontSize: Typography.bodyMedium,
+          ...Font.semibold,
+          color: Colors.text,
+          marginBottom: Spacing.sm,
+        },
+        participantRow: {
+          flexDirection: "row",
+          alignItems: "center",
+          paddingVertical: Spacing.xs,
+        },
+        participantDot: {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          marginRight: Spacing.sm,
+        },
+        participantName: {
+          flex: 1,
+          fontSize: Typography.bodySmall,
+          color: Colors.text,
+          ...Font.medium,
+        },
+        participantStatus: {
+          fontSize: Typography.labelSmall,
+          color: Colors.textSecondary,
+          ...Font.medium,
+        },
         warningText: {
           textAlign: "center",
           color: Colors.textMuted,
@@ -176,7 +210,14 @@ export default function ActiveSessionScreen() {
     [Colors],
   );
   const router = useRouter();
-  const { activeGroupSession, completeGroupSession } = useGroupSessionStore();
+  const {
+    activeGroupSession,
+    completeGroupSession,
+    activeSession,
+    reportCompletion,
+    reportSurrender,
+    subscribeToSession,
+  } = useGroupSessionStore();
   // Tracks intentional navigation away (complete or surrender) so the
   // useEffect guard doesn't redirect home when activeGroupSession clears.
   const isNavigatingAwayRef = useRef(false);
@@ -192,9 +233,29 @@ export default function ActiveSessionScreen() {
         stopBlocking().catch(() => {});
       }
       // Delay one render cycle so the drain animation reaches 100% before navigating.
-      setTimeout(() => {
-        const session = useGroupSessionStore.getState().activeGroupSession;
-        if (session) {
+      setTimeout(async () => {
+        const store = useGroupSessionStore.getState();
+        const firestoreSession = store.activeSession;
+        const session = store.activeGroupSession;
+
+        // If this is a Firestore-backed session, report to server
+        if (firestoreSession) {
+          try {
+            await reportCompletion(firestoreSession.id);
+          } catch (err) {
+            // Fallback to legacy local completion
+            console.warn("Server report failed, using local completion:", err);
+            if (session) {
+              completeGroupSession(
+                session.participants.map((p) => ({
+                  userId: p.userId,
+                  completed: true,
+                })),
+              );
+            }
+          }
+          router.replace("/session/complete");
+        } else if (session) {
           completeGroupSession(
             session.participants.map((p) => ({
               userId: p.userId,
@@ -215,6 +276,14 @@ export default function ActiveSessionScreen() {
     });
     return unsubscribe;
   }, [activeGroupSession]);
+
+  // Subscribe to Firestore session for real-time participant updates
+  useEffect(() => {
+    if (activeSession?.id) {
+      subscribeToSession(activeSession.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSession?.id]);
 
   useEffect(() => {
     if (activeGroupSession) {
@@ -280,11 +349,19 @@ export default function ActiveSessionScreen() {
             <View style={styles.footerButton}>
               <Button
                 title="Surrender"
-                onPress={() => {
+                onPress={async () => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                   isNavigatingAwayRef.current = true;
                   if (isScreenTimeAvailable) {
                     stopBlocking().catch(() => {});
+                  }
+                  // Report surrender to Firestore if server-backed
+                  if (activeSession) {
+                    try {
+                      await reportSurrender(activeSession.id);
+                    } catch (err) {
+                      console.warn("Server surrender report failed:", err);
+                    }
                   }
                   router.push("/session/surrender");
                 }}

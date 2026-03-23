@@ -1,10 +1,16 @@
 import { create } from "zustand";
 import {
   GroupSession,
+  GroupSessionDoc,
+  GroupSessionParticipant,
+  GroupSessionStatus,
+  GroupInvite,
+  GroupInviteStatus,
   SessionParticipant,
   SessionTransfer,
   TransferStatus,
   CadenceType,
+  UserReputation,
 } from "../types";
 import { CADENCES, DEMO_MODE } from "../constants/config";
 import { useAuthStore } from "./authStore";
@@ -17,6 +23,19 @@ import {
 import { getVenmoPayLink } from "../utils/format";
 import { generateId } from "../utils/id";
 import { distributeGroupPayouts as cloudDistributePayouts } from "../config/functions";
+import {
+  createGroupSession as cloudCreateGroupSession,
+  respondToGroupInvite as cloudRespondToGroupInvite,
+  markOnlineForSession as cloudMarkOnline,
+  startGroupSessionCF as cloudStartSession,
+  reportSessionStatus as cloudReportStatus,
+  cancelGroupSession as cloudCancelSession,
+} from "../config/functions";
+import {
+  subscribeToGroupSession,
+  subscribeToGroupInvites,
+  subscribeToActiveGroupSessions,
+} from "../config/firebase";
 import { logger } from "../utils/logger";
 
 // Participants are provided without the fields the store sets internally.
@@ -25,10 +44,144 @@ type NewParticipant = Omit<
   "stakeAmount" | "completed" | "screenTime" | "payout"
 >;
 
+// ─── Firestore data parsing helpers ──────────────────────────────────────────
+
+function parseTimestamp(val: unknown): Date | undefined {
+  if (!val) return undefined;
+  if (val instanceof Date) return val;
+  if (typeof val === "object" && val !== null && "toDate" in val) {
+    return (val as { toDate: () => Date }).toDate();
+  }
+  if (typeof val === "number") return new Date(val);
+  return undefined;
+}
+
+function parseParticipants(
+  raw: Record<string, unknown> | undefined,
+): Record<string, GroupSessionParticipant> {
+  if (!raw) return {};
+  const result: Record<string, GroupSessionParticipant> = {};
+  for (const [uid, data] of Object.entries(raw)) {
+    const p = data as Record<string, unknown>;
+    result[uid] = {
+      name: (p.name as string) ?? "",
+      venmoHandle: p.venmoHandle as string | undefined,
+      profileImage: p.profileImage as string | undefined,
+      reputation: ((p.reputation as UserReputation) ?? {
+        score: 50,
+        level: "sapling",
+        paymentsCompleted: 0,
+        paymentsMissed: 0,
+        totalOwedPaid: 0,
+        totalOwedMissed: 0,
+        lastUpdated: new Date(),
+      }) as UserReputation,
+      accepted: (p.accepted as boolean) ?? false,
+      online: (p.online as boolean) ?? false,
+      completed: p.completed as boolean | undefined,
+      surrendered: p.surrendered as boolean | undefined,
+      surrenderedAt: parseTimestamp(p.surrenderedAt),
+    };
+  }
+  return result;
+}
+
+function parseGroupSessionDoc(data: Record<string, unknown>): GroupSessionDoc {
+  return {
+    id: (data.__id as string) || (data.id as string),
+    proposerId: data.proposerId as string,
+    status: data.status as GroupSessionStatus,
+    cadence: data.cadence as CadenceType,
+    stakePerParticipant: data.stakePerParticipant as number,
+    customStake: (data.customStake as boolean) ?? false,
+    duration: data.duration as number,
+    participantIds: (data.participantIds as string[]) ?? [],
+    participants: parseParticipants(
+      data.participants as Record<string, unknown>,
+    ),
+    poolTotal: data.poolTotal as number,
+    startedAt: parseTimestamp(data.startedAt),
+    endsAt: parseTimestamp(data.endsAt),
+    completedAt: parseTimestamp(data.completedAt),
+    payouts: data.payouts as Record<string, number> | undefined,
+    transfers: (data.transfers as SessionTransfer[]) ?? [],
+    createdAt: parseTimestamp(data.createdAt) ?? new Date(),
+    updatedAt: parseTimestamp(data.updatedAt) ?? new Date(),
+    autoTimeoutAt: parseTimestamp(data.autoTimeoutAt),
+  };
+}
+
+function parseGroupInvite(data: Record<string, unknown>): GroupInvite {
+  return {
+    id: (data.__id as string) || (data.id as string),
+    sessionId: data.sessionId as string,
+    fromUserId: data.fromUserId as string,
+    fromUserName: data.fromUserName as string,
+    fromUserImage: data.fromUserImage as string | undefined,
+    toUserId: data.toUserId as string,
+    stake: data.stake as number,
+    cadence: data.cadence as CadenceType,
+    duration: data.duration as number,
+    status: data.status as GroupInviteStatus,
+    createdAt: parseTimestamp(data.createdAt) ?? new Date(),
+    respondedAt: parseTimestamp(data.respondedAt),
+  };
+}
+
+// ─── Unsubscribe tracking (outside Zustand to avoid serialization issues) ───
+
+let _unsubSession: (() => void) | null = null;
+let _unsubInvites: (() => void) | null = null;
+let _unsubActiveSessions: (() => void) | null = null;
+
+// ─── Store interface ────────────────────────────────────────────────────────
+
 interface GroupSessionState {
+  // Real-time synced from Firestore
+  activeSession: GroupSessionDoc | null;
+  pendingInvites: GroupInvite[];
+  activeGroupSessions: GroupSessionDoc[];
+
+  // Legacy local-only state (keep for backward compat with existing screens)
   activeGroupSession: GroupSession | null;
   groupSessionHistory: GroupSession[];
 
+  // Subscription management
+  subscribeToInvites: (userId: string) => void;
+  subscribeToSession: (sessionId: string) => void;
+  subscribeToActiveSessions: (userId: string) => void;
+  unsubscribeAll: () => void;
+
+  // Cloud Function actions
+  proposeSession: (params: {
+    cadence: CadenceType;
+    stakePerParticipant: number;
+    duration: number;
+    inviteeIds: string[];
+    customStake?: boolean;
+  }) => Promise<string>;
+
+  acceptInvite: (inviteId: string) => Promise<void>;
+  declineInvite: (inviteId: string) => Promise<void>;
+  markOnline: (sessionId: string) => Promise<boolean>;
+  startSession: (sessionId: string) => Promise<void>;
+  reportCompletion: (sessionId: string) => Promise<void>;
+  reportSurrender: (sessionId: string) => Promise<void>;
+  cancelSession: (sessionId: string) => Promise<void>;
+
+  // Keep existing settlement methods (they work on local groupSessionHistory)
+  markTransferPaid: (sessionId: string, transferId: string) => void;
+  markTransferConfirmed: (sessionId: string, transferId: string) => void;
+  markTransferOverdue: (sessionId: string, transferId: string) => void;
+  markTransferDisputed: (sessionId: string, transferId: string) => void;
+
+  // Keep existing query methods
+  getSessionsWithPendingTransfers: (userId: string) => GroupSession[];
+  getPendingTransfersForUser: (
+    userId: string,
+  ) => Array<{ session: GroupSession; transfer: SessionTransfer }>;
+
+  // Legacy lifecycle (keep for backward compat, wraps new Cloud Function calls)
   startGroupSession: (
     cadence: CadenceType,
     participants: NewParticipant[],
@@ -38,16 +191,6 @@ interface GroupSessionState {
   ) => GroupSession | undefined;
   getTimeRemaining: () => number;
 
-  markTransferPaid: (sessionId: string, transferId: string) => void;
-  markTransferConfirmed: (sessionId: string, transferId: string) => void;
-  markTransferOverdue: (sessionId: string, transferId: string) => void;
-  markTransferDisputed: (sessionId: string, transferId: string) => void;
-
-  getSessionsWithPendingTransfers: (userId: string) => GroupSession[];
-  getPendingTransfersForUser: (
-    userId: string,
-  ) => Array<{ session: GroupSession; transfer: SessionTransfer }>;
-
   getVenmoPayLink: (
     amount: number,
     recipientHandle: string,
@@ -56,13 +199,136 @@ interface GroupSessionState {
   reset: () => void;
 }
 
+// ─── Store ──────────────────────────────────────────────────────────────────
+
 export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
+  // Real-time state
+  activeSession: null,
+  pendingInvites: [],
+  activeGroupSessions: [],
+
+  // Legacy state
   activeGroupSession: null,
   groupSessionHistory: [],
 
-  // ─── Lifecycle ──────────────────────────────────────────────────────────────
+  // ─── Subscription management ──────────────────────────────────────────────
+
+  subscribeToSession: (sessionId: string) => {
+    // Tear down existing subscription
+    if (_unsubSession) {
+      _unsubSession();
+      _unsubSession = null;
+    }
+
+    _unsubSession = subscribeToGroupSession(sessionId, (data) => {
+      if (data) {
+        set({ activeSession: parseGroupSessionDoc(data) });
+      } else {
+        set({ activeSession: null });
+      }
+    });
+  },
+
+  subscribeToInvites: (userId: string) => {
+    if (_unsubInvites) {
+      _unsubInvites();
+      _unsubInvites = null;
+    }
+
+    _unsubInvites = subscribeToGroupInvites(userId, (rawInvites) => {
+      const invites = rawInvites.map(parseGroupInvite);
+      set({ pendingInvites: invites });
+    });
+  },
+
+  subscribeToActiveSessions: (userId: string) => {
+    if (_unsubActiveSessions) {
+      _unsubActiveSessions();
+      _unsubActiveSessions = null;
+    }
+
+    _unsubActiveSessions = subscribeToActiveGroupSessions(
+      userId,
+      (rawSessions) => {
+        const sessions = rawSessions.map(parseGroupSessionDoc);
+        set({ activeGroupSessions: sessions });
+      },
+    );
+  },
+
+  unsubscribeAll: () => {
+    if (_unsubSession) {
+      _unsubSession();
+      _unsubSession = null;
+    }
+    if (_unsubInvites) {
+      _unsubInvites();
+      _unsubInvites = null;
+    }
+    if (_unsubActiveSessions) {
+      _unsubActiveSessions();
+      _unsubActiveSessions = null;
+    }
+    set({
+      activeSession: null,
+      pendingInvites: [],
+      activeGroupSessions: [],
+    });
+  },
+
+  // ─── Cloud Function actions ───────────────────────────────────────────────
+
+  proposeSession: async (params) => {
+    const result = await cloudCreateGroupSession(
+      params.cadence,
+      params.stakePerParticipant,
+      params.duration,
+      params.inviteeIds,
+      params.customStake,
+    );
+    return result.sessionId;
+  },
+
+  acceptInvite: async (inviteId: string) => {
+    await cloudRespondToGroupInvite(inviteId, true);
+  },
+
+  declineInvite: async (inviteId: string) => {
+    await cloudRespondToGroupInvite(inviteId, false);
+  },
+
+  markOnline: async (sessionId: string) => {
+    const result = await cloudMarkOnline(sessionId);
+    return result.allOnline;
+  },
+
+  startSession: async (sessionId: string) => {
+    await cloudStartSession(sessionId);
+  },
+
+  reportCompletion: async (sessionId: string) => {
+    await cloudReportStatus(sessionId, "complete");
+  },
+
+  reportSurrender: async (sessionId: string) => {
+    await cloudReportStatus(sessionId, "surrender");
+  },
+
+  cancelSession: async (sessionId: string) => {
+    await cloudCancelSession(sessionId);
+  },
+
+  // ─── Legacy lifecycle (backward compat) ───────────────────────────────────
 
   startGroupSession: (cadence, participants) => {
+    // In live mode, screens should use proposeSession flow instead
+    if (!DEMO_MODE) {
+      logger.warn(
+        "startGroupSession called in live mode — use proposeSession instead",
+      );
+      return;
+    }
+
     const { activeGroupSession } = get();
     if (activeGroupSession) {
       throw new Error(
@@ -71,7 +337,7 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
     }
 
     const config = CADENCES[cadence];
-    const duration = DEMO_MODE ? config.demoDuration : config.duration;
+    const duration = config.demoDuration;
 
     const fullParticipants: SessionParticipant[] = participants.map((p) => ({
       ...p,
@@ -182,8 +448,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
         });
       } else {
         // Surrendered: stake was already deducted at session start.
-        // totalEarnings is only updated on successful completions (consistent
-        // with solo session behaviour in sessionStore.ts).
         authStore.updateUser({
           currentStreak: 0,
           totalSessions: (authStore.user?.totalSessions ?? 0) + 1,

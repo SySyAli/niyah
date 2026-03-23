@@ -130,6 +130,35 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // groupSessions/{sessionId}
+    // -------------------------------------------------------------------------
+    // Participants can read their own group sessions. All writes happen
+    // exclusively via Cloud Functions (admin SDK) to enforce server-authoritative
+    // session lifecycle, payout calculations, and stake management.
+    match /groupSessions/{sessionId} {
+      allow read: if request.auth != null
+        && request.auth.uid in resource.data.participantIds;
+
+      // No client-side writes — all managed by Cloud Functions
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // groupInvites/{inviteId}
+    // -------------------------------------------------------------------------
+    // Recipients can read invites sent to them. Proposers can read invites
+    // they sent. All writes (create, accept, decline, expire) happen via
+    // Cloud Functions to enforce stake deduction and session state transitions.
+    match /groupInvites/{inviteId} {
+      allow read: if request.auth != null
+        && (resource.data.toUserId == request.auth.uid
+            || resource.data.fromUserId == request.auth.uid);
+
+      // No client-side writes — all managed by Cloud Functions
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------------------
     // Default deny
     // -------------------------------------------------------------------------
     // Any collection not explicitly matched above is denied by default.

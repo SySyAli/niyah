@@ -199,7 +199,7 @@ export default function SurrenderScreen() {
     markTransferPaid,
   } = useGroupSessionStore();
   const userId = useAuthStore((state) => state.user?.id);
-  const [surrendering, setSurrendering] = useState(false);
+  const [_surrendering, setSurrendering] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [completedSession, setCompletedSession] = useState<GroupSession | null>(

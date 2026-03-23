@@ -317,7 +317,7 @@ export default function ProposeSessionScreen() {
 
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [proposed, _setProposed] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
 
   // Build inviteable people list: partners + following (deduped)
   const people = useMemo(() => {

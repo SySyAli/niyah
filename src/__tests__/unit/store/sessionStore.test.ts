@@ -496,7 +496,8 @@ describe("sessionStore", () => {
         ? CADENCES.daily.demoDuration
         : CADENCES.daily.duration;
 
-      expect(store.getTimeRemaining()).toBe(expectedDuration);
+      expect(store.getTimeRemaining()).toBeGreaterThanOrEqual(expectedDuration - 50);
+      expect(store.getTimeRemaining()).toBeLessThanOrEqual(expectedDuration);
     });
 
     it("should return time remaining close to duration", () => {

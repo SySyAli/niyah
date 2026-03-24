@@ -28,7 +28,7 @@ import {
 } from "../../../config/notifications";
 
 // Shared mock instance — messaging() always returns this same object.
-const sharedInstance = {
+const sharedInstance: Record<string, jest.Mock> = {
   requestPermission: jest.fn(() => Promise.resolve(1)),
   getToken: jest.fn(() => Promise.resolve("mock-fcm-token")),
   registerDeviceForRemoteMessages: jest.fn(() => Promise.resolve()),
@@ -155,7 +155,7 @@ describe("notifications", () => {
       (getAuth as jest.Mock).mockReturnValue({
         currentUser: { uid: "user-789" },
       });
-      sharedInstance.getToken.mockResolvedValue(null);
+      sharedInstance.getToken.mockResolvedValue(null as any);
 
       await registerFCMToken();
 
@@ -193,7 +193,7 @@ describe("notifications", () => {
     });
 
     it("no-ops when getToken returns null", async () => {
-      sharedInstance.getToken.mockResolvedValue(null);
+      sharedInstance.getToken.mockResolvedValue(null as any);
 
       await removeFCMToken("user-123");
 

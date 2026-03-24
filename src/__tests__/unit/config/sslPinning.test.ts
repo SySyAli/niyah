@@ -19,7 +19,7 @@ describe("sslPinning", () => {
 
   it("no-ops in __DEV__ mode", async () => {
     // __DEV__ is true in test environment (set in jest.setup.ts)
-    expect(globalThis.__DEV__).toBe(true);
+    expect((globalThis as any).__DEV__).toBe(true);
 
     // Load a fresh copy to ensure we pick up __DEV__
     let mod: typeof import("../../../config/sslPinning");
@@ -52,7 +52,7 @@ describe("sslPinning", () => {
   it("handles missing native module gracefully", async () => {
     // Temporarily override __DEV__ to false and set iOS platform so the
     // function reaches the require() path.
-    const prevDev = globalThis.__DEV__;
+    const prevDev = (globalThis as any).__DEV__;
     (globalThis as any).__DEV__ = false;
     Platform.OS = "ios" as typeof Platform.OS;
 

@@ -1,7 +1,5 @@
 import { logger } from "../../../utils/logger";
 
-/* eslint-disable no-console */
-
 describe("logger", () => {
   beforeEach(() => {
     jest.spyOn(console, "error").mockImplementation(() => {});

@@ -19,37 +19,40 @@ jest.mock("../../../constants/config", () => ({
   DEMO_MODE: true,
 }));
 
-// Mock Cloud Functions
-const mockCreateGroupSession = jest.fn(() =>
+// Mock Cloud Functions — typed to accept any args so TS doesn't complain about spread
+const mockCreateGroupSession: jest.Mock = jest.fn(() =>
   Promise.resolve({ sessionId: "new-session-123" }),
 );
-const mockRespondToGroupInvite = jest.fn(() =>
+const mockRespondToGroupInvite: jest.Mock = jest.fn(() =>
   Promise.resolve({ success: true, sessionStatus: "ready" }),
 );
-const mockMarkOnline = jest.fn(() =>
+const mockMarkOnline: jest.Mock = jest.fn(() =>
   Promise.resolve({ success: true, allOnline: true }),
 );
-const mockStartSession = jest.fn(() =>
+const mockStartSession: jest.Mock = jest.fn(() =>
   Promise.resolve({ success: true, endsAt: Date.now() + 60000 }),
 );
-const mockReportStatus = jest.fn(() =>
+const mockReportStatus: jest.Mock = jest.fn(() =>
   Promise.resolve({ success: true, sessionComplete: false }),
 );
-const mockCancelSession = jest.fn(() =>
+const mockCancelSession: jest.Mock = jest.fn(() =>
   Promise.resolve({ success: true, refundedCount: 3 }),
 );
-const mockDistributePayouts = jest.fn(() => Promise.resolve({ success: true }));
+const mockDistributePayouts: jest.Mock = jest.fn(() =>
+  Promise.resolve({ success: true }),
+);
 
 jest.mock("../../../config/functions", () => ({
-  createGroupSession: (...args: unknown[]) => mockCreateGroupSession(...args),
-  respondToGroupInvite: (...args: unknown[]) =>
-    mockRespondToGroupInvite(...args),
-  markOnlineForSession: (...args: unknown[]) => mockMarkOnline(...args),
-  startGroupSessionCF: (...args: unknown[]) => mockStartSession(...args),
-  reportSessionStatus: (...args: unknown[]) => mockReportStatus(...args),
-  cancelGroupSession: (...args: unknown[]) => mockCancelSession(...args),
-  distributeGroupPayouts: (...args: unknown[]) =>
-    mockDistributePayouts(...args),
+  createGroupSession: (...a: unknown[]) =>
+    mockCreateGroupSession(...(a as [any])),
+  respondToGroupInvite: (...a: unknown[]) =>
+    mockRespondToGroupInvite(...(a as [any])),
+  markOnlineForSession: (...a: unknown[]) => mockMarkOnline(...(a as [any])),
+  startGroupSessionCF: (...a: unknown[]) => mockStartSession(...(a as [any])),
+  reportSessionStatus: (...a: unknown[]) => mockReportStatus(...(a as [any])),
+  cancelGroupSession: (...a: unknown[]) => mockCancelSession(...(a as [any])),
+  distributeGroupPayouts: (...a: unknown[]) =>
+    mockDistributePayouts(...(a as [any])),
 }));
 
 // Mock Firebase subscription functions — capture the callback so tests can invoke it

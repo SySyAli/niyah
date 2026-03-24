@@ -80,9 +80,9 @@ const mockUnfollowUserCF = jest.fn(() => Promise.resolve({ success: true }));
 const mockAwardReferral = jest.fn(() => Promise.resolve({ success: true }));
 
 jest.mock("../../../config/functions", () => ({
-  followUserCF: (...args: unknown[]) => mockFollowUserCF(...args),
-  unfollowUserCF: (...args: unknown[]) => mockUnfollowUserCF(...args),
-  awardReferral: (...args: unknown[]) => mockAwardReferral(...args),
+  followUserCF: mockFollowUserCF,
+  unfollowUserCF: mockUnfollowUserCF,
+  awardReferral: mockAwardReferral,
 }));
 
 // Cast mocks for type-safe assertions

@@ -32,11 +32,10 @@ jest.mock("../../../config/firebase", () => ({
 // Mock notifications module — authStore lazy-requires this.
 // Use controllable mock fns so individual tests can make them reject.
 const mockInitializeNotifications = jest.fn(() => Promise.resolve(() => {}));
-const mockRemoveFCMToken = jest.fn(() => Promise.resolve());
+const mockRemoveFCMToken = jest.fn((_uid?: string) => Promise.resolve());
 jest.mock("../../../config/notifications", () => ({
-  initializeNotifications: (...args: unknown[]) =>
-    mockInitializeNotifications(...args),
-  removeFCMToken: (...args: unknown[]) => mockRemoveFCMToken(...args),
+  initializeNotifications: mockInitializeNotifications,
+  removeFCMToken: mockRemoveFCMToken,
 }));
 
 // Mock groupSessionStore — authStore lazy-requires this for recovery and logout.

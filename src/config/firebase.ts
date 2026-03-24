@@ -445,7 +445,6 @@ export const updateSession = async (
   data: {
     status: string;
     completedAt?: Date;
-    actualPayout?: number;
   },
 ): Promise<void> => {
   const updateData: Record<string, unknown> = {
@@ -455,9 +454,8 @@ export const updateSession = async (
   if (data.completedAt) {
     updateData.completedAt = Timestamp.fromDate(data.completedAt);
   }
-  if (data.actualPayout !== undefined) {
-    updateData.actualPayout = data.actualPayout;
-  }
+  // actualPayout is written exclusively by Cloud Functions (admin SDK).
+  // Client writes to this field are blocked by Firestore security rules.
   await firestoreUpdateDoc(
     doc(db, COLLECTIONS.SESSIONS, sessionId),
     updateData,

@@ -17,6 +17,13 @@ module.exports = {
     "!src/**/index.ts",
     "!src/types/**",
     "!src/constants/**",
+    // Exclude purely visual/animation components — no testable logic
+    "!src/components/onboarding/**",
+    "!src/components/BlobsBackground.tsx",
+    "!src/components/Confetti.tsx",
+    "!src/components/MoneyPlant.tsx",
+    "!src/components/PeachAvatar.tsx",
+    "!src/components/BottomTabs.tsx",
   ],
   testTimeout: 15000,
   // Watchman requires Full Disk Access on macOS; skip it and use the Node

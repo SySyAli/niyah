@@ -35,8 +35,9 @@ export const CADENCES = {
   },
 } as const;
 
-// Demo mode settings
-export const DEMO_MODE = true;
+// Demo mode: driven by env var so production builds can't accidentally ship demo.
+// Set EXPO_PUBLIC_DEMO_MODE=true in .env for development; omit or set false for production.
+export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === "true";
 export const INITIAL_BALANCE = 5000; // $50.00 in cents
 
 // Reputation thresholds

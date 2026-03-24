@@ -162,7 +162,6 @@ describe("sessionStore — Firestore persistence (DEMO_MODE=false)", () => {
         expect.objectContaining({
           status: "surrendered",
           completedAt: expect.any(Date),
-          actualPayout: 0,
         }),
       );
     });
@@ -183,7 +182,6 @@ describe("sessionStore — Firestore persistence (DEMO_MODE=false)", () => {
         expect.objectContaining({
           status: "completed",
           completedAt: expect.any(Date),
-          actualPayout: session.potentialPayout,
         }),
       );
     });
@@ -240,12 +238,11 @@ describe("sessionStore — Firestore persistence (DEMO_MODE=false)", () => {
       expect(state.sessionHistory[0].status).toBe("completed");
       expect(state.sessionHistory[0].actualPayout).toBe(500);
 
-      // Firestore updated
+      // Firestore updated (actualPayout written by Cloud Function, not client)
       expect(updateSession).toHaveBeenCalledWith(
         "expired-session-1",
         expect.objectContaining({
           status: "completed",
-          actualPayout: 500,
         }),
       );
 

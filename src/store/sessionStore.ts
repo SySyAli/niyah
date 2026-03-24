@@ -127,11 +127,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       sessionHistory: [completedSession, ...sessionHistory],
     });
 
-    // Update session doc in Firestore (fire-and-forget)
+    // Update session doc in Firestore (fire-and-forget).
+    // actualPayout is written by Cloud Functions only — not sent from client.
     updateSession(currentSession.id, {
       status: "surrendered",
       completedAt,
-      actualPayout: 0,
     }).catch((err) =>
       logger.error("Failed to update session in Firestore:", err),
     );
@@ -183,11 +183,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       sessionHistory: [completedSession, ...sessionHistory],
     });
 
-    // Update session doc in Firestore (fire-and-forget)
+    // Update session doc in Firestore (fire-and-forget).
+    // actualPayout is written by Cloud Functions only — not sent from client.
     updateSession(currentSession.id, {
       status: "completed",
       completedAt,
-      actualPayout: payout,
     }).catch((err) =>
       logger.error("Failed to update session in Firestore:", err),
     );
@@ -255,10 +255,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           sessionHistory: [completedSession, ...state.sessionHistory],
         }));
 
+        // actualPayout is written by Cloud Functions only — not sent from client.
         updateSession(activeSession.id, {
           status: "completed",
           completedAt,
-          actualPayout: payout,
         }).catch((err) =>
           logger.error("Failed to auto-complete expired session:", err),
         );

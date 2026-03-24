@@ -157,8 +157,16 @@ export const createPaymentIntent = onRequest(
       return;
     }
 
-    const { amount } = req.body as { amount: number };
-    if (!amount || amount < 100 || amount > 1000000) {
+    const { amount } = req.body as { amount: unknown };
+    if (
+      typeof amount !== "number" ||
+      !Number.isFinite(amount) ||
+      !Number.isInteger(amount)
+    ) {
+      sendError(res, 400, "Amount must be an integer");
+      return;
+    }
+    if (amount < 100 || amount > 1000000) {
       sendError(res, 400, "Amount must be between $1 and $10,000");
       return;
     }
@@ -827,11 +835,19 @@ export const requestWithdrawal = onRequest(
     }
 
     const { amount, method = "standard" } = req.body as {
-      amount: number;
+      amount: unknown;
       method?: "standard" | "instant";
     };
 
-    if (!amount || amount < 1000) {
+    if (
+      typeof amount !== "number" ||
+      !Number.isFinite(amount) ||
+      !Number.isInteger(amount)
+    ) {
+      sendError(res, 400, "Amount must be an integer");
+      return;
+    }
+    if (amount < 1000) {
       sendError(res, 400, "Minimum withdrawal is $10");
       return;
     }
@@ -1518,21 +1534,59 @@ export const createGroupSession = onRequest(
 
     const { cadence, stakePerParticipant, duration, inviteeIds, customStake } =
       req.body as {
-        cadence: string;
-        stakePerParticipant: number;
-        duration: number;
-        inviteeIds: string[];
+        cadence: unknown;
+        stakePerParticipant: unknown;
+        duration: unknown;
+        inviteeIds: unknown;
         customStake?: boolean;
       };
 
-    // Validate inputs
-    if (!cadence || !stakePerParticipant || !duration || !inviteeIds?.length) {
-      sendError(res, 400, "Missing required fields");
+    // Validate input types
+    if (typeof cadence !== "string" || !cadence) {
+      sendError(res, 400, "Missing or invalid cadence");
+      return;
+    }
+    if (
+      typeof stakePerParticipant !== "number" ||
+      !Number.isFinite(stakePerParticipant) ||
+      !Number.isInteger(stakePerParticipant)
+    ) {
+      sendError(res, 400, "stakePerParticipant must be an integer");
+      return;
+    }
+    if (
+      typeof duration !== "number" ||
+      !Number.isFinite(duration) ||
+      !Number.isInteger(duration) ||
+      duration <= 0
+    ) {
+      sendError(res, 400, "duration must be a positive integer");
+      return;
+    }
+    if (
+      !Array.isArray(inviteeIds) ||
+      !inviteeIds.length ||
+      !inviteeIds.every((id): id is string => typeof id === "string")
+    ) {
+      sendError(res, 400, "inviteeIds must be a non-empty array of strings");
       return;
     }
 
     if (stakePerParticipant < 100 || stakePerParticipant > 10000) {
       sendError(res, 400, "Stake must be between $1 and $100");
+      return;
+    }
+
+    // Prevent duplicate invitees
+    const uniqueInvitees = new Set(inviteeIds);
+    if (uniqueInvitees.size !== inviteeIds.length) {
+      sendError(res, 400, "Duplicate invitees not allowed");
+      return;
+    }
+
+    // Prevent proposer from inviting themselves
+    if (inviteeIds.includes(uid)) {
+      sendError(res, 400, "Cannot invite yourself");
       return;
     }
 

@@ -70,7 +70,7 @@ function setIdTokenFailure(error = new Error("token refresh failed")) {
 // ─── Global fetch mock ──────────────────────────────────────────────────────
 
 const mockFetch = jest.fn();
-global.fetch = mockFetch;
+globalThis.fetch = mockFetch;
 
 /** Create a mock Response that resolves to the given JSON */
 function mockOkResponse(data: unknown) {
@@ -260,7 +260,7 @@ describe("FUNCTIONS_BASE URL construction", () => {
     const localFetch = jest
       .fn()
       .mockResolvedValue(mockOkResponse({ accountId: "a" }));
-    global.fetch = localFetch;
+    globalThis.fetch = localFetch;
 
     await freshFn();
 
@@ -269,7 +269,7 @@ describe("FUNCTIONS_BASE URL construction", () => {
 
     // Cleanup
     delete process.env.EXPO_PUBLIC_FUNCTIONS_URL;
-    global.fetch = mockFetch;
+    globalThis.fetch = mockFetch;
   });
 
   it("falls back to project-ID template when EXPO_PUBLIC_FUNCTIONS_URL is unset", async () => {
@@ -289,7 +289,7 @@ describe("FUNCTIONS_BASE URL construction", () => {
     const localFetch = jest
       .fn()
       .mockResolvedValue(mockOkResponse({ accountId: "a" }));
-    global.fetch = localFetch;
+    globalThis.fetch = localFetch;
 
     await freshFn();
 
@@ -299,7 +299,7 @@ describe("FUNCTIONS_BASE URL construction", () => {
     );
 
     // Cleanup
-    global.fetch = mockFetch;
+    globalThis.fetch = mockFetch;
   });
 });
 

@@ -32,9 +32,9 @@ describe("useScreenProtection", () => {
   it("calls enableAppSwitcherProtectionAsync with opacity on mount", () => {
     renderHook(() => useScreenProtection("test-key"));
 
-    expect(
-      ScreenCapture.enableAppSwitcherProtectionAsync,
-    ).toHaveBeenCalledWith(0.8);
+    expect(ScreenCapture.enableAppSwitcherProtectionAsync).toHaveBeenCalledWith(
+      0.8,
+    );
   });
 
   it("calls allowScreenCaptureAsync on unmount", () => {
@@ -52,15 +52,11 @@ describe("useScreenProtection", () => {
 
     unmount();
 
-    expect(
-      ScreenCapture.disableAppSwitcherProtectionAsync,
-    ).toHaveBeenCalled();
+    expect(ScreenCapture.disableAppSwitcherProtectionAsync).toHaveBeenCalled();
   });
 
   it("passes the key parameter correctly", () => {
-    const { unmount } = renderHook(() =>
-      useScreenProtection("wallet-screen"),
-    );
+    const { unmount } = renderHook(() => useScreenProtection("wallet-screen"));
 
     expect(ScreenCapture.preventScreenCaptureAsync).toHaveBeenCalledWith(
       "wallet-screen",
@@ -86,9 +82,7 @@ describe("useScreenProtection", () => {
     rerender({ key: "key-b" });
 
     // Cleanup for old key
-    expect(ScreenCapture.allowScreenCaptureAsync).toHaveBeenCalledWith(
-      "key-a",
-    );
+    expect(ScreenCapture.allowScreenCaptureAsync).toHaveBeenCalledWith("key-a");
     // Setup for new key
     expect(ScreenCapture.preventScreenCaptureAsync).toHaveBeenCalledWith(
       "key-b",

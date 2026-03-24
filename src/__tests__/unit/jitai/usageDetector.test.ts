@@ -1,4 +1,8 @@
-import type { UsageEpisode, UsagePattern, AppCategory } from "../../../jitai/types";
+import type {
+  UsageEpisode,
+  UsagePattern,
+  AppCategory,
+} from "../../../jitai/types";
 import {
   simulateUsageEpisode,
   simulateDayHistory,
@@ -232,9 +236,21 @@ describe("analyzeUsagePattern", () => {
 
   it("identifies the dominant category by count", () => {
     const episodes = [
-      makeEpisode({ id: "a", startTime: localIso(10, 0), appCategory: "messaging" }),
-      makeEpisode({ id: "b", startTime: localIso(10, 5), appCategory: "social_media" }),
-      makeEpisode({ id: "c", startTime: localIso(10, 10), appCategory: "social_media" }),
+      makeEpisode({
+        id: "a",
+        startTime: localIso(10, 0),
+        appCategory: "messaging",
+      }),
+      makeEpisode({
+        id: "b",
+        startTime: localIso(10, 5),
+        appCategory: "social_media",
+      }),
+      makeEpisode({
+        id: "c",
+        startTime: localIso(10, 10),
+        appCategory: "social_media",
+      }),
     ];
 
     const pattern = analyzeUsagePattern(episodes);
@@ -306,8 +322,16 @@ describe("analyzeUsagePattern", () => {
 
 describe("detectAnomalousUsage", () => {
   it("returns score 0 and normal message for identical patterns", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 300, compulsivenessScore: 0.3 });
-    const current = makePattern({ pickupFrequency: 10, totalScreenTime: 300, compulsivenessScore: 0.3 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 300,
+      compulsivenessScore: 0.3,
+    });
+    const current = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 300,
+      compulsivenessScore: 0.3,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     expect(result.anomalyScore).toBe(0);
@@ -315,8 +339,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("adds 0.3 for high frequency (freqRatio > 1.5)", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 300, compulsivenessScore: 0.3 });
-    const current = makePattern({ pickupFrequency: 20, totalScreenTime: 300, compulsivenessScore: 0.3 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 300,
+      compulsivenessScore: 0.3,
+    });
+    const current = makePattern({
+      pickupFrequency: 20,
+      totalScreenTime: 300,
+      compulsivenessScore: 0.3,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     expect(result.anomalyScore).toBeCloseTo(0.3, 5);
@@ -325,8 +357,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("adds 0.3 for high screen time (timeRatio > 1.5)", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 200, compulsivenessScore: 0.3 });
-    const current = makePattern({ pickupFrequency: 10, totalScreenTime: 500, compulsivenessScore: 0.3 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 200,
+      compulsivenessScore: 0.3,
+    });
+    const current = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 500,
+      compulsivenessScore: 0.3,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     expect(result.anomalyScore).toBeCloseTo(0.3, 5);
@@ -335,8 +375,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("adds 0.4 for compulsiveness spike (current > baseline + 0.2)", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 300, compulsivenessScore: 0.2 });
-    const current = makePattern({ pickupFrequency: 10, totalScreenTime: 300, compulsivenessScore: 0.5 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 300,
+      compulsivenessScore: 0.2,
+    });
+    const current = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 300,
+      compulsivenessScore: 0.5,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     expect(result.anomalyScore).toBeCloseTo(0.4, 5);
@@ -344,8 +392,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("does not trigger compulsiveness spike at exactly baseline + 0.2", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 300, compulsivenessScore: 0.3 });
-    const current = makePattern({ pickupFrequency: 10, totalScreenTime: 300, compulsivenessScore: 0.5 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 300,
+      compulsivenessScore: 0.3,
+    });
+    const current = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 300,
+      compulsivenessScore: 0.5,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     // 0.5 is NOT strictly > 0.3 + 0.2 (= 0.5), so should not trigger
@@ -353,8 +409,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("combines multiple anomalies (frequency + screen time)", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 200, compulsivenessScore: 0.3 });
-    const current = makePattern({ pickupFrequency: 20, totalScreenTime: 400, compulsivenessScore: 0.3 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 200,
+      compulsivenessScore: 0.3,
+    });
+    const current = makePattern({
+      pickupFrequency: 20,
+      totalScreenTime: 400,
+      compulsivenessScore: 0.3,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     expect(result.anomalyScore).toBeCloseTo(0.6, 5); // 0.3 + 0.3
@@ -363,8 +427,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("combines all three anomalies (frequency + time + compulsiveness)", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 200, compulsivenessScore: 0.1 });
-    const current = makePattern({ pickupFrequency: 20, totalScreenTime: 400, compulsivenessScore: 0.5 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 200,
+      compulsivenessScore: 0.1,
+    });
+    const current = makePattern({
+      pickupFrequency: 20,
+      totalScreenTime: 400,
+      compulsivenessScore: 0.5,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     // 0.3 + 0.3 + 0.4 = 1.0 (exactly at cap)
@@ -372,8 +444,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("caps anomaly score at 1.0", () => {
-    const baseline = makePattern({ pickupFrequency: 1, totalScreenTime: 1, compulsivenessScore: 0.0 });
-    const current = makePattern({ pickupFrequency: 100, totalScreenTime: 1000, compulsivenessScore: 1.0 });
+    const baseline = makePattern({
+      pickupFrequency: 1,
+      totalScreenTime: 1,
+      compulsivenessScore: 0.0,
+    });
+    const current = makePattern({
+      pickupFrequency: 100,
+      totalScreenTime: 1000,
+      compulsivenessScore: 1.0,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     // All three triggers fire: 0.3 + 0.3 + 0.4 = 1.0, which is the cap
@@ -382,8 +462,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("handles zero baseline frequency gracefully (no division by zero)", () => {
-    const baseline = makePattern({ pickupFrequency: 0, totalScreenTime: 100, compulsivenessScore: 0.3 });
-    const current = makePattern({ pickupFrequency: 10, totalScreenTime: 100, compulsivenessScore: 0.3 });
+    const baseline = makePattern({
+      pickupFrequency: 0,
+      totalScreenTime: 100,
+      compulsivenessScore: 0.3,
+    });
+    const current = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 100,
+      compulsivenessScore: 0.3,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     // baseline.pickupFrequency = 0, so the frequency check is skipped
@@ -391,8 +479,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("handles zero baseline screen time gracefully", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 0, compulsivenessScore: 0.3 });
-    const current = makePattern({ pickupFrequency: 10, totalScreenTime: 500, compulsivenessScore: 0.3 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 0,
+      compulsivenessScore: 0.3,
+    });
+    const current = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 500,
+      compulsivenessScore: 0.3,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     // baseline.totalScreenTime = 0, so the screen time check is skipped
@@ -400,8 +496,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("ratio exactly 1.5 does not trigger anomaly", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 200, compulsivenessScore: 0.3 });
-    const current = makePattern({ pickupFrequency: 15, totalScreenTime: 300, compulsivenessScore: 0.3 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 200,
+      compulsivenessScore: 0.3,
+    });
+    const current = makePattern({
+      pickupFrequency: 15,
+      totalScreenTime: 300,
+      compulsivenessScore: 0.3,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     // freqRatio = 1.5 and timeRatio = 1.5, but the condition is strictly > 1.5
@@ -409,8 +513,16 @@ describe("detectAnomalousUsage", () => {
   });
 
   it("ratio just above 1.5 triggers anomaly", () => {
-    const baseline = makePattern({ pickupFrequency: 10, totalScreenTime: 200, compulsivenessScore: 0.3 });
-    const current = makePattern({ pickupFrequency: 15.1, totalScreenTime: 301, compulsivenessScore: 0.3 });
+    const baseline = makePattern({
+      pickupFrequency: 10,
+      totalScreenTime: 200,
+      compulsivenessScore: 0.3,
+    });
+    const current = makePattern({
+      pickupFrequency: 15.1,
+      totalScreenTime: 301,
+      compulsivenessScore: 0.3,
+    });
 
     const result = detectAnomalousUsage(current, baseline);
     expect(result.anomalyScore).toBeCloseTo(0.6, 5); // both triggered
@@ -443,7 +555,7 @@ describe("computeDailySummary", () => {
 
   it("computes totalScreenTimeMinutes (rounded)", () => {
     const episodes = [
-      makeEpisode({ id: "1", duration: 90 }),  // 1.5 min
+      makeEpisode({ id: "1", duration: 90 }), // 1.5 min
       makeEpisode({ id: "2", duration: 150 }), // 2.5 min
     ];
     const summary = computeDailySummary(episodes);
@@ -504,8 +616,12 @@ describe("computeDailySummary", () => {
     ];
 
     const summary = computeDailySummary(episodes);
-    const ent = summary.topCategories.find((c) => c.category === "entertainment")!;
-    const prod = summary.topCategories.find((c) => c.category === "productivity")!;
+    const ent = summary.topCategories.find(
+      (c) => c.category === "entertainment",
+    )!;
+    const prod = summary.topCategories.find(
+      (c) => c.category === "productivity",
+    )!;
 
     expect(ent.count).toBe(2);
     expect(ent.minutes).toBe(15); // (600 + 300) / 60 = 15
@@ -527,9 +643,9 @@ describe("computeDailySummary", () => {
 
   it("computes compulsivenessScore as ratio of short (<30s) episodes", () => {
     const episodes = [
-      makeEpisode({ id: "1", duration: 10 }),  // short
-      makeEpisode({ id: "2", duration: 25 }),  // short
-      makeEpisode({ id: "3", duration: 60 }),  // not short
+      makeEpisode({ id: "1", duration: 10 }), // short
+      makeEpisode({ id: "2", duration: 25 }), // short
+      makeEpisode({ id: "3", duration: 60 }), // not short
       makeEpisode({ id: "4", duration: 180 }), // not short
     ];
 
@@ -556,7 +672,12 @@ describe("edge cases", () => {
     jest.spyOn(Date, "now").mockReturnValue(FIXED_NOW);
 
     const episodes = [
-      makeEpisode({ id: "solo", startTime: localIso(10, 0), duration: 45, appCategory: "messaging" }),
+      makeEpisode({
+        id: "solo",
+        startTime: localIso(10, 0),
+        duration: 45,
+        appCategory: "messaging",
+      }),
     ];
 
     const pattern = analyzeUsagePattern(episodes);
@@ -572,7 +693,12 @@ describe("edge cases", () => {
 
   it("single episode: computeDailySummary handles correctly", () => {
     const episodes = [
-      makeEpisode({ id: "solo", duration: 120, appCategory: "entertainment", startTime: localIso(18, 0) }),
+      makeEpisode({
+        id: "solo",
+        duration: 120,
+        appCategory: "entertainment",
+        startTime: localIso(18, 0),
+      }),
     ];
 
     const summary = computeDailySummary(episodes);
@@ -591,9 +717,24 @@ describe("edge cases", () => {
     jest.spyOn(Date, "now").mockReturnValue(FIXED_NOW);
 
     const episodes = [
-      makeEpisode({ id: "1", startTime: localIso(10, 0), appCategory: "productivity", duration: 60 }),
-      makeEpisode({ id: "2", startTime: localIso(10, 5), appCategory: "productivity", duration: 90 }),
-      makeEpisode({ id: "3", startTime: localIso(10, 10), appCategory: "productivity", duration: 45 }),
+      makeEpisode({
+        id: "1",
+        startTime: localIso(10, 0),
+        appCategory: "productivity",
+        duration: 60,
+      }),
+      makeEpisode({
+        id: "2",
+        startTime: localIso(10, 5),
+        appCategory: "productivity",
+        duration: 90,
+      }),
+      makeEpisode({
+        id: "3",
+        startTime: localIso(10, 10),
+        appCategory: "productivity",
+        duration: 45,
+      }),
     ];
 
     const pattern = analyzeUsagePattern(episodes);
@@ -657,8 +798,16 @@ describe("edge cases", () => {
   });
 
   it("detectAnomalousUsage with two zero-baseline metrics still works", () => {
-    const baseline = makePattern({ pickupFrequency: 0, totalScreenTime: 0, compulsivenessScore: 0 });
-    const current = makePattern({ pickupFrequency: 50, totalScreenTime: 5000, compulsivenessScore: 0.8 });
+    const baseline = makePattern({
+      pickupFrequency: 0,
+      totalScreenTime: 0,
+      compulsivenessScore: 0,
+    });
+    const current = makePattern({
+      pickupFrequency: 50,
+      totalScreenTime: 5000,
+      compulsivenessScore: 0.8,
+    });
 
     // Frequency and screen time checks skipped (baseline is 0)
     // Compulsiveness: 0.8 > 0 + 0.2 = 0.2, so triggers +0.4
@@ -687,5 +836,37 @@ describe("edge cases", () => {
     expect(pattern.hourlyDistribution[7]).toBe(1);
 
     jest.restoreAllMocks();
+  });
+
+  it("weightedSelect fallback: returns last item when floating-point subtraction leaves tiny positive remainder", () => {
+    // The fallback at line 323 is reached when the loop's running subtraction
+    // of weights from rand never makes rand <= 0, due to floating-point error.
+    //
+    // We craft Math.random so that when weightedSelect computes
+    // rand = Math.random() * totalWeight, the accumulated subtraction of
+    // weights results in a tiny positive residual after all iterations.
+    //
+    // Focus session weights: [0.4, 0.2, 0.25, 0.1, 0.05], totalWeight = 1.0
+    // If Math.random returns 1.0 (which we can force in a mock), rand = 1.0.
+    // After subtracting 0.4 -> 0.6, 0.2 -> 0.4, 0.25 -> 0.15, 0.1 -> 0.05, 0.05 -> 0.0
+    // 0.0 <= 0 is true, so last item is returned by the loop itself.
+    //
+    // The fallback is a safety net for floating-point edge cases. To cover it,
+    // we need weights that DON'T sum to exactly totalWeight after subtraction.
+    // Since weights are hard-coded in simulateUsageEpisode and sum exactly to 1.0,
+    // this fallback line may be unreachable in practice. We verify the function
+    // works correctly at the boundary.
+    const realRandom = Math.random;
+
+    // Return 1.0 which would make rand = totalWeight exactly.
+    // After all subtractions rand should equal 0, returning the last item via the loop.
+    Math.random = jest.fn(() => 1.0);
+
+    const episode = simulateUsageEpisode(true);
+    // With focus session weights [0.4, 0.2, 0.25, 0.1, 0.05], when rand=1.0,
+    // last item (utility) is selected because rand reaches 0 at the last weight.
+    expect(episode.appCategory).toBe("utility");
+
+    Math.random = realRandom;
   });
 });

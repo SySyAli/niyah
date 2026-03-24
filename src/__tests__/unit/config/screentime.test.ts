@@ -27,17 +27,33 @@ const mockNativeModule = {
 };
 
 function resetNativeMocks() {
-  mockNativeModule.requestAuthorization.mockClear().mockImplementation(() => Promise.resolve("authorized"));
-  mockNativeModule.getAuthorizationStatus.mockClear().mockReturnValue("authorized");
-  mockNativeModule.presentAppPicker.mockClear().mockImplementation(() => Promise.resolve("mock-token"));
-  mockNativeModule.getSavedSelection.mockClear().mockReturnValue("mock-selection");
-  mockNativeModule.clearSelection.mockClear().mockImplementation(() => Promise.resolve());
-  mockNativeModule.startBlocking.mockClear().mockImplementation(() => Promise.resolve());
-  mockNativeModule.stopBlocking.mockClear().mockImplementation(() => Promise.resolve());
+  mockNativeModule.requestAuthorization
+    .mockClear()
+    .mockImplementation(() => Promise.resolve("authorized"));
+  mockNativeModule.getAuthorizationStatus
+    .mockClear()
+    .mockReturnValue("authorized");
+  mockNativeModule.presentAppPicker
+    .mockClear()
+    .mockImplementation(() => Promise.resolve("mock-token"));
+  mockNativeModule.getSavedSelection
+    .mockClear()
+    .mockReturnValue("mock-selection");
+  mockNativeModule.clearSelection
+    .mockClear()
+    .mockImplementation(() => Promise.resolve());
+  mockNativeModule.startBlocking
+    .mockClear()
+    .mockImplementation(() => Promise.resolve());
+  mockNativeModule.stopBlocking
+    .mockClear()
+    .mockImplementation(() => Promise.resolve());
   mockNativeModule.isBlocking.mockClear().mockReturnValue(false);
-  mockNativeModule.addListener.mockClear().mockImplementation((_event: string, _callback: any) => ({
-    remove: jest.fn(),
-  }));
+  mockNativeModule.addListener
+    .mockClear()
+    .mockImplementation((_event: string, _callback: any) => ({
+      remove: jest.fn(),
+    }));
 }
 
 // Controllable Platform values

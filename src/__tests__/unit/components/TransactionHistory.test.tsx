@@ -79,9 +79,7 @@ describe("TransactionHistory", () => {
 
     it("shows zero amount with + prefix (>= 0)", () => {
       render(
-        <TransactionHistory
-          transactions={[makeTx({ id: "1", amount: 0 })]}
-        />,
+        <TransactionHistory transactions={[makeTx({ id: "1", amount: 0 })]} />,
       );
       expect(screen.getByText("+$0.00")).toBeTruthy();
     });
@@ -142,9 +140,7 @@ describe("TransactionHistory", () => {
     });
 
     it("shows all transactions when limit exceeds list length", () => {
-      const txs = [
-        makeTx({ id: "1", description: "Only one" }),
-      ];
+      const txs = [makeTx({ id: "1", description: "Only one" })];
       render(<TransactionHistory transactions={txs} limit={10} />);
       expect(screen.getByText("Only one")).toBeTruthy();
     });

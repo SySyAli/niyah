@@ -447,7 +447,9 @@ describe("Thompson Sampling selection", () => {
     // it should fall back to graduated response
     const results: InterventionLevel[] = [];
     for (let i = 0; i < 20; i++) {
-      Math.random = jest.fn(() => Math.abs(Math.sin(i * 13 + 3)) * 0.99 + 0.005);
+      Math.random = jest.fn(
+        () => Math.abs(Math.sin(i * 13 + 3)) * 0.99 + 0.005,
+      );
       const result = selectIntervention(
         "boredom_habit",
         pattern,
@@ -667,8 +669,7 @@ describe("updateAdaptation", () => {
       true,
     );
     const otherArms = updated.arms.filter(
-      (a) =>
-        !(a.context === "boredom_habit" && a.level === "friction_delay"),
+      (a) => !(a.context === "boredom_habit" && a.level === "friction_delay"),
     );
     for (const arm of otherArms) {
       expect(arm.alpha).toBe(1);
@@ -747,9 +748,7 @@ describe("getArmEstimates", () => {
     const confidences: number[] = [];
     for (let i = 0; i < 10; i++) {
       const estimates = getArmEstimates(state);
-      const est = estimates.find(
-        (e) => e.context === ctx && e.level === lvl,
-      );
+      const est = estimates.find((e) => e.context === ctx && e.level === lvl);
       confidences.push(est!.confidence);
       state = updateAdaptation(state, ctx, lvl, true);
     }
@@ -763,14 +762,28 @@ describe("getArmEstimates", () => {
   it("computes confidence correctly: 1 - 1/sqrt(totalPulls + 1)", () => {
     let state = initializeAdaptation();
     // 3 updates
-    state = updateAdaptation(state, "social_response", "reflection_prompt", true);
-    state = updateAdaptation(state, "social_response", "reflection_prompt", false);
-    state = updateAdaptation(state, "social_response", "reflection_prompt", true);
+    state = updateAdaptation(
+      state,
+      "social_response",
+      "reflection_prompt",
+      true,
+    );
+    state = updateAdaptation(
+      state,
+      "social_response",
+      "reflection_prompt",
+      false,
+    );
+    state = updateAdaptation(
+      state,
+      "social_response",
+      "reflection_prompt",
+      true,
+    );
 
     const estimates = getArmEstimates(state);
     const est = estimates.find(
-      (e) =>
-        e.context === "social_response" && e.level === "reflection_prompt",
+      (e) => e.context === "social_response" && e.level === "reflection_prompt",
     );
 
     // totalPulls = 3 => confidence = 1 - 1/sqrt(4) = 1 - 0.5 = 0.5
@@ -794,7 +807,13 @@ describe("getArmEstimates", () => {
   it("handles custom state with non-default arm values", () => {
     const state = makeAdaptation({
       arms: [
-        makeArm({ context: "boredom_habit", level: "soft_lock", alpha: 20, beta: 5, totalPulls: 23 }),
+        makeArm({
+          context: "boredom_habit",
+          level: "soft_lock",
+          alpha: 20,
+          beta: 5,
+          totalPulls: 23,
+        }),
       ],
     });
     const estimates = getArmEstimates(state);
@@ -824,10 +843,18 @@ describe("edge cases", () => {
     // Arms exist but for a different context
     const state = makeAdaptation({
       arms: [
-        makeArm({ context: "anxiety_check", level: "friction_delay", alpha: 50, beta: 1 }),
+        makeArm({
+          context: "anxiety_check",
+          level: "friction_delay",
+          alpha: 50,
+          beta: 1,
+        }),
       ],
     });
-    const pattern = makePattern({ compulsivenessScore: 0.2, pickupFrequency: 4 });
+    const pattern = makePattern({
+      compulsivenessScore: 0.2,
+      pickupFrequency: 4,
+    });
 
     // boredom_habit has no arms, should get graduated response
     const result = selectIntervention(
@@ -937,7 +964,10 @@ describe("edge cases", () => {
         }),
       ],
     });
-    const pattern = makePattern({ compulsivenessScore: 1.0, pickupFrequency: 100 });
+    const pattern = makePattern({
+      compulsivenessScore: 1.0,
+      pickupFrequency: 100,
+    });
 
     const result = selectIntervention(
       "boredom_habit",
@@ -964,5 +994,73 @@ describe("edge cases", () => {
       true,
     );
     expect(result).toBeNull();
+  });
+
+  it("generates full_lock message via Thompson Sampling with high compulsivenessScore", () => {
+    // Create a state with a single arm for full_lock with very high alpha
+    // so Thompson Sampling always selects it
+    const state = makeAdaptation({
+      arms: [
+        makeArm({
+          context: "boredom_habit",
+          level: "full_lock",
+          alpha: 1000,
+          beta: 1,
+          totalPulls: 1000,
+        }),
+      ],
+    });
+    // compulsivenessScore >= 0.3 so the constraint does NOT trigger fallback
+    const pattern = makePattern({
+      compulsivenessScore: 0.5,
+      pickupCount: 20,
+      totalScreenTime: 3600,
+    });
+
+    const result = selectIntervention(
+      "boredom_habit",
+      pattern,
+      state,
+      "ep-full-lock",
+      true,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.level).toBe("full_lock");
+    expect(result!.message).toContain("locked");
+  });
+
+  it("exercises gammaSample shape < 1 branch via betaSample with alpha < 1", () => {
+    // Create arms with alpha < 1 to trigger gammaSample(shape < 1) recursive path
+    const state = makeAdaptation({
+      arms: [
+        makeArm({
+          context: "anxiety_check",
+          level: "awareness_nudge",
+          alpha: 0.5, // < 1, triggers gammaSample shape < 1 branch
+          beta: 0.5, // < 1, also triggers the branch
+          totalPulls: 10,
+        }),
+      ],
+    });
+    const pattern = makePattern({
+      compulsivenessScore: 0.5,
+      pickupCount: 10,
+      totalScreenTime: 600,
+    });
+
+    // Run multiple times to ensure the path is exercised
+    for (let i = 0; i < 10; i++) {
+      Math.random = jest.fn(() => Math.abs(Math.sin(i * 7 + 1)) * 0.98 + 0.01);
+      const result = selectIntervention(
+        "anxiety_check",
+        pattern,
+        state,
+        `ep-gamma-${i}`,
+        false,
+      );
+      // Should produce a valid result (either from Thompson or graduated fallback)
+      expect(result).not.toBeNull();
+    }
   });
 });

@@ -172,7 +172,11 @@ describe("callFunction (core behaviour)", () => {
 
   it("sends JSON-stringified body", async () => {
     mockFetch.mockResolvedValue(
-      mockOkResponse({ clientSecret: "cs", paymentIntentId: "pi", customerId: "cus" }),
+      mockOkResponse({
+        clientSecret: "cs",
+        paymentIntentId: "pi",
+        customerId: "cus",
+      }),
     );
     await createPaymentIntent(2500);
 
@@ -181,7 +185,11 @@ describe("callFunction (core behaviour)", () => {
   });
 
   it("returns parsed JSON on success", async () => {
-    const payload = { clientSecret: "cs_123", paymentIntentId: "pi_456", customerId: "cus_789" };
+    const payload = {
+      clientSecret: "cs_123",
+      paymentIntentId: "pi_456",
+      customerId: "cus_789",
+    };
     mockFetch.mockResolvedValue(mockOkResponse(payload));
 
     const result = await createPaymentIntent(1000);
@@ -189,7 +197,9 @@ describe("callFunction (core behaviour)", () => {
   });
 
   it("throws on non-OK response with function name, status and body", async () => {
-    mockFetch.mockResolvedValue(mockErrorResponse(403, "Forbidden: invalid token"));
+    mockFetch.mockResolvedValue(
+      mockErrorResponse(403, "Forbidden: invalid token"),
+    );
 
     await expect(createConnectAccount()).rejects.toThrow(
       "[createConnectAccount] 403: Forbidden: invalid token",
@@ -197,7 +207,9 @@ describe("callFunction (core behaviour)", () => {
   });
 
   it("throws on 500 server error", async () => {
-    mockFetch.mockResolvedValue(mockErrorResponse(500, "Internal Server Error"));
+    mockFetch.mockResolvedValue(
+      mockErrorResponse(500, "Internal Server Error"),
+    );
 
     await expect(createConnectAccount()).rejects.toThrow(
       "[createConnectAccount] 500: Internal Server Error",
@@ -207,7 +219,9 @@ describe("callFunction (core behaviour)", () => {
   it("propagates network errors from fetch", async () => {
     mockFetch.mockRejectedValue(new TypeError("Network request failed"));
 
-    await expect(createConnectAccount()).rejects.toThrow("Network request failed");
+    await expect(createConnectAccount()).rejects.toThrow(
+      "Network request failed",
+    );
   });
 
   it("uses same base URL for all function calls", async () => {
@@ -243,7 +257,9 @@ describe("FUNCTIONS_BASE URL construction", () => {
       currentUser: { getIdToken: jest.fn().mockResolvedValue("tok") },
     });
 
-    const localFetch = jest.fn().mockResolvedValue(mockOkResponse({ accountId: "a" }));
+    const localFetch = jest
+      .fn()
+      .mockResolvedValue(mockOkResponse({ accountId: "a" }));
     global.fetch = localFetch;
 
     await freshFn();
@@ -270,7 +286,9 @@ describe("FUNCTIONS_BASE URL construction", () => {
       currentUser: { getIdToken: jest.fn().mockResolvedValue("tok") },
     });
 
-    const localFetch = jest.fn().mockResolvedValue(mockOkResponse({ accountId: "a" }));
+    const localFetch = jest
+      .fn()
+      .mockResolvedValue(mockOkResponse({ accountId: "a" }));
     global.fetch = localFetch;
 
     await freshFn();
@@ -291,7 +309,11 @@ describe("FUNCTIONS_BASE URL construction", () => {
 
 describe("createPaymentIntent", () => {
   it("calls createPaymentIntent with { amount }", async () => {
-    const payload = { clientSecret: "cs", paymentIntentId: "pi", customerId: "cus" };
+    const payload = {
+      clientSecret: "cs",
+      paymentIntentId: "pi",
+      customerId: "cus",
+    };
     mockFetch.mockResolvedValue(mockOkResponse(payload));
 
     const result = await createPaymentIntent(5000);
@@ -332,7 +354,9 @@ describe("handleSessionComplete", () => {
   });
 
   it("works without _stakeAmount parameter", async () => {
-    mockFetch.mockResolvedValue(mockOkResponse({ newBalance: 5500, payout: 500 }));
+    mockFetch.mockResolvedValue(
+      mockOkResponse({ newBalance: 5500, payout: 500 }),
+    );
     await handleSessionComplete("sess_2");
 
     const [, options] = mockFetch.mock.calls[0];
@@ -368,7 +392,9 @@ describe("createConnectAccount", () => {
 
 describe("createAccountLink", () => {
   it("calls createAccountLink with empty body", async () => {
-    mockFetch.mockResolvedValue(mockOkResponse({ url: "https://connect.stripe.com/..." }));
+    mockFetch.mockResolvedValue(
+      mockOkResponse({ url: "https://connect.stripe.com/..." }),
+    );
 
     const result = await createAccountLink();
 
@@ -381,7 +407,11 @@ describe("createAccountLink", () => {
 
 describe("getConnectAccountStatus", () => {
   it("calls getConnectAccountStatus with empty body", async () => {
-    const payload = { status: "active", chargesEnabled: true, payoutsEnabled: true };
+    const payload = {
+      status: "active",
+      chargesEnabled: true,
+      payoutsEnabled: true,
+    };
     mockFetch.mockResolvedValue(mockOkResponse(payload));
 
     const result = await getConnectAccountStatus();
@@ -407,18 +437,28 @@ describe("requestWithdrawal", () => {
 
     const [url, options] = mockFetch.mock.calls[0];
     expect(getFunctionName(url)).toBe("requestWithdrawal");
-    expect(JSON.parse(options.body)).toEqual({ amount: 5000, method: "instant" });
+    expect(JSON.parse(options.body)).toEqual({
+      amount: 5000,
+      method: "instant",
+    });
     expect(result).toEqual(payload);
   });
 
   it("supports standard withdrawal method", async () => {
     mockFetch.mockResolvedValue(
-      mockOkResponse({ success: true, transferId: "tr_789", estimatedArrival: "2026-03-26" }),
+      mockOkResponse({
+        success: true,
+        transferId: "tr_789",
+        estimatedArrival: "2026-03-26",
+      }),
     );
     await requestWithdrawal(10000, "standard");
 
     const [, options] = mockFetch.mock.calls[0];
-    expect(JSON.parse(options.body)).toEqual({ amount: 10000, method: "standard" });
+    expect(JSON.parse(options.body)).toEqual({
+      amount: 10000,
+      method: "standard",
+    });
   });
 });
 
@@ -510,7 +550,10 @@ describe("createGroupSession", () => {
     const payload = { sessionId: "gsess_new", inviteIds: ["inv_1", "inv_2"] };
     mockFetch.mockResolvedValue(mockOkResponse(payload));
 
-    const result = await createGroupSession("daily", 500, 1800, ["uid_a", "uid_b"]);
+    const result = await createGroupSession("daily", 500, 1800, [
+      "uid_a",
+      "uid_b",
+    ]);
 
     const [url, options] = mockFetch.mock.calls[0];
     expect(getFunctionName(url)).toBe("createGroupSession");
@@ -555,29 +598,41 @@ describe("createGroupSession", () => {
 
 describe("respondToGroupInvite", () => {
   it("calls respondToGroupInvite with { inviteId, accept: true }", async () => {
-    mockFetch.mockResolvedValue(mockOkResponse({ success: true, sessionStatus: "ready" }));
+    mockFetch.mockResolvedValue(
+      mockOkResponse({ success: true, sessionStatus: "ready" }),
+    );
 
     const result = await respondToGroupInvite("inv_123", true);
 
     const [url, options] = mockFetch.mock.calls[0];
     expect(getFunctionName(url)).toBe("respondToGroupInvite");
-    expect(JSON.parse(options.body)).toEqual({ inviteId: "inv_123", accept: true });
+    expect(JSON.parse(options.body)).toEqual({
+      inviteId: "inv_123",
+      accept: true,
+    });
     expect(result).toEqual({ success: true, sessionStatus: "ready" });
   });
 
   it("handles decline (accept: false)", async () => {
-    mockFetch.mockResolvedValue(mockOkResponse({ success: true, sessionStatus: "cancelled" }));
+    mockFetch.mockResolvedValue(
+      mockOkResponse({ success: true, sessionStatus: "cancelled" }),
+    );
 
     await respondToGroupInvite("inv_456", false);
 
     const [, options] = mockFetch.mock.calls[0];
-    expect(JSON.parse(options.body)).toEqual({ inviteId: "inv_456", accept: false });
+    expect(JSON.parse(options.body)).toEqual({
+      inviteId: "inv_456",
+      accept: false,
+    });
   });
 });
 
 describe("markOnlineForSession", () => {
   it("calls markOnlineForSession with { sessionId }", async () => {
-    mockFetch.mockResolvedValue(mockOkResponse({ success: true, allOnline: false }));
+    mockFetch.mockResolvedValue(
+      mockOkResponse({ success: true, allOnline: false }),
+    );
 
     const result = await markOnlineForSession("gsess_5");
 
@@ -605,14 +660,21 @@ describe("startGroupSessionCF", () => {
 
 describe("reportSessionStatus", () => {
   it("calls reportSessionStatus with { sessionId, action: 'complete' }", async () => {
-    const payload = { success: true, sessionComplete: true, payouts: { u1: 750, u2: 250 } };
+    const payload = {
+      success: true,
+      sessionComplete: true,
+      payouts: { u1: 750, u2: 250 },
+    };
     mockFetch.mockResolvedValue(mockOkResponse(payload));
 
     const result = await reportSessionStatus("gsess_7", "complete");
 
     const [url, options] = mockFetch.mock.calls[0];
     expect(getFunctionName(url)).toBe("reportSessionStatus");
-    expect(JSON.parse(options.body)).toEqual({ sessionId: "gsess_7", action: "complete" });
+    expect(JSON.parse(options.body)).toEqual({
+      sessionId: "gsess_7",
+      action: "complete",
+    });
     expect(result).toEqual(payload);
   });
 
@@ -624,13 +686,18 @@ describe("reportSessionStatus", () => {
     await reportSessionStatus("gsess_8", "surrender");
 
     const [, options] = mockFetch.mock.calls[0];
-    expect(JSON.parse(options.body)).toEqual({ sessionId: "gsess_8", action: "surrender" });
+    expect(JSON.parse(options.body)).toEqual({
+      sessionId: "gsess_8",
+      action: "surrender",
+    });
   });
 });
 
 describe("cancelGroupSession", () => {
   it("calls cancelGroupSession with { sessionId }", async () => {
-    mockFetch.mockResolvedValue(mockOkResponse({ success: true, refundedCount: 3 }));
+    mockFetch.mockResolvedValue(
+      mockOkResponse({ success: true, refundedCount: 3 }),
+    );
 
     const result = await cancelGroupSession("gsess_9");
 
@@ -665,9 +732,9 @@ describe("error handling across wrappers", () => {
   it("distributeGroupPayouts throws on 401 error", async () => {
     mockFetch.mockResolvedValue(mockErrorResponse(401, "Unauthorized"));
 
-    await expect(
-      distributeGroupPayouts("sess", 100, []),
-    ).rejects.toThrow("[distributeGroupPayouts] 401: Unauthorized");
+    await expect(distributeGroupPayouts("sess", 100, [])).rejects.toThrow(
+      "[distributeGroupPayouts] 401: Unauthorized",
+    );
   });
 
   it("requestWithdrawal propagates network errors", async () => {
@@ -681,7 +748,9 @@ describe("error handling across wrappers", () => {
   it("followUserCF error includes Cloud Function name (followUserFn)", async () => {
     mockFetch.mockResolvedValue(mockErrorResponse(500, "server error"));
 
-    await expect(followUserCF("uid")).rejects.toThrow("[followUserFn] 500: server error");
+    await expect(followUserCF("uid")).rejects.toThrow(
+      "[followUserFn] 500: server error",
+    );
   });
 
   it("startGroupSessionCF error includes Cloud Function name (startGroupSession)", async () => {

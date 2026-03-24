@@ -11,7 +11,9 @@ import { render, screen, fireEvent, act } from "@testing-library/react-native";
 // --- Mocks for the screentime config module ---
 const mockIsScreenTimeAvailable = { value: true };
 const mockGetScreenTimeAuthStatus = jest.fn(() => "notDetermined" as const);
-const mockGetSavedAppSelection = jest.fn(() => null as { appCount: number } | null);
+const mockGetSavedAppSelection = jest.fn(
+  () => null as { appCount: number } | null,
+);
 const mockRequestScreenTimeAuth = jest.fn();
 const mockPresentAppPicker = jest.fn();
 
@@ -21,10 +23,8 @@ jest.mock("../../../config/screentime", () => ({
   },
   getScreenTimeAuthStatus: (...args: any[]) =>
     mockGetScreenTimeAuthStatus(...args),
-  getSavedAppSelection: (...args: any[]) =>
-    mockGetSavedAppSelection(...args),
-  requestScreenTimeAuth: (...args: any[]) =>
-    mockRequestScreenTimeAuth(...args),
+  getSavedAppSelection: (...args: any[]) => mockGetSavedAppSelection(...args),
+  requestScreenTimeAuth: (...args: any[]) => mockRequestScreenTimeAuth(...args),
   presentAppPicker: (...args: any[]) => mockPresentAppPicker(...args),
 }));
 

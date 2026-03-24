@@ -27,9 +27,7 @@ const makeReputation = (
 describe("ReputationCard", () => {
   describe("header", () => {
     it("renders 'Social Credit' title", () => {
-      render(
-        <ReputationCard reputation={makeReputation()} partnerCount={2} />,
-      );
+      render(<ReputationCard reputation={makeReputation()} partnerCount={2} />);
       expect(screen.getByText("Social Credit")).toBeTruthy();
     });
 
@@ -72,9 +70,7 @@ describe("ReputationCard", () => {
 
   describe("progress bar labels", () => {
     it("renders Seed and Oak labels", () => {
-      render(
-        <ReputationCard reputation={makeReputation()} partnerCount={0} />,
-      );
+      render(<ReputationCard reputation={makeReputation()} partnerCount={0} />);
       expect(screen.getByText("Seed")).toBeTruthy();
       expect(screen.getByText("Oak")).toBeTruthy();
     });

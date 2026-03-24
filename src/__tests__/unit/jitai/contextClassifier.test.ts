@@ -36,7 +36,9 @@ function makeEpisode(overrides: Partial<UsageEpisode> = {}): UsageEpisode {
 }
 
 /** Build ContextFeatures with explicit values (no randomness). */
-function makeFeatures(overrides: Partial<ContextFeatures> = {}): ContextFeatures {
+function makeFeatures(
+  overrides: Partial<ContextFeatures> = {},
+): ContextFeatures {
   return {
     timeSinceLastPickup: 900,
     hourOfDay: 12,
@@ -734,9 +736,13 @@ describe("updateWeightsFromFeedback", () => {
     );
 
     // "productivity" is an active feature, should be boosted for intentional_task
-    expect(updated.adjustments.intentional_task!["productivity"]).toBeCloseTo(0.1);
+    expect(updated.adjustments.intentional_task!["productivity"]).toBeCloseTo(
+      0.1,
+    );
     // "short_duration" is active (30 < 60)
-    expect(updated.adjustments.intentional_task!["short_duration"]).toBeCloseTo(0.1);
+    expect(updated.adjustments.intentional_task!["short_duration"]).toBeCloseTo(
+      0.1,
+    );
   });
 
   it("suppresses predicted (wrong) context weights at half the learning rate", () => {
@@ -754,7 +760,9 @@ describe("updateWeightsFromFeedback", () => {
     );
 
     // "productivity" should be suppressed for boredom_habit at -0.1 * 0.5 = -0.05
-    expect(updated.adjustments.boredom_habit!["productivity"]).toBeCloseTo(-0.05);
+    expect(updated.adjustments.boredom_habit!["productivity"]).toBeCloseTo(
+      -0.05,
+    );
   });
 
   it("accumulates adjustments over multiple corrections", () => {
@@ -821,9 +829,13 @@ describe("updateWeightsFromFeedback", () => {
     );
 
     // Boost: +0.05 for corrected context
-    expect(updated.adjustments.boredom_habit!["social_media"]).toBeCloseTo(0.05);
+    expect(updated.adjustments.boredom_habit!["social_media"]).toBeCloseTo(
+      0.05,
+    );
     // Suppress: -0.05 * 0.5 = -0.025 for predicted context
-    expect(updated.adjustments.intentional_task!["social_media"]).toBeCloseTo(-0.025);
+    expect(updated.adjustments.intentional_task!["social_media"]).toBeCloseTo(
+      -0.025,
+    );
   });
 
   it("handles all active features from a complex feature set", () => {
@@ -879,7 +891,9 @@ describe("updateWeightsFromFeedback", () => {
       0.1,
     );
 
-    expect(updated.adjustments.social_response!["notification"]).toBeCloseTo(0.1);
+    expect(updated.adjustments.social_response!["notification"]).toBeCloseTo(
+      0.1,
+    );
     // no_trigger should NOT be present since notificationTriggered=true
     expect(updated.adjustments.social_response!["no_trigger"]).toBeUndefined();
   });
@@ -902,7 +916,99 @@ describe("updateWeightsFromFeedback", () => {
       0.1,
     );
 
-    expect(updated.adjustments.transition_moment!["commute_hours"]).toBeCloseTo(0.1);
+    expect(updated.adjustments.transition_moment!["commute_hours"]).toBeCloseTo(
+      0.1,
+    );
+  });
+
+  it("activates 'utility' feature for appCategory = utility", () => {
+    const weights = defaultWeights();
+    const features = makeFeatures({
+      appCategory: "utility",
+      timeSinceLastPickup: 500,
+      currentDuration: 200,
+      recentPickupCount: 5,
+      hourOfDay: 12,
+    });
+
+    const updated = updateWeightsFromFeedback(
+      weights,
+      features,
+      "boredom_habit",
+      "intentional_task",
+      0.1,
+    );
+
+    expect(updated.adjustments.intentional_task!["utility"]).toBeCloseTo(0.1);
+  });
+
+  it("activates 'entertainment' feature for appCategory = entertainment", () => {
+    const weights = defaultWeights();
+    const features = makeFeatures({
+      appCategory: "entertainment",
+      timeSinceLastPickup: 500,
+      currentDuration: 200,
+      recentPickupCount: 5,
+      hourOfDay: 12,
+    });
+
+    const updated = updateWeightsFromFeedback(
+      weights,
+      features,
+      "intentional_task",
+      "work_break",
+      0.1,
+    );
+
+    expect(updated.adjustments.work_break!["entertainment"]).toBeCloseTo(0.1);
+  });
+
+  it("activates 'long_gap' feature when timeSinceLastPickup > 1800", () => {
+    const weights = defaultWeights();
+    const features = makeFeatures({
+      appCategory: "productivity",
+      timeSinceLastPickup: 2000, // > 1800
+      currentDuration: 200,
+      recentPickupCount: 5,
+      hourOfDay: 12,
+    });
+
+    const updated = updateWeightsFromFeedback(
+      weights,
+      features,
+      "boredom_habit",
+      "intentional_task",
+      0.1,
+    );
+
+    expect(updated.adjustments.intentional_task!["long_gap"]).toBeCloseTo(0.1);
+  });
+
+  it("activates 'commute_hours' feature for afternoon commute (hour 16-18)", () => {
+    const weights = defaultWeights();
+    const features = makeFeatures({
+      hourOfDay: 17, // afternoon commute (16-18)
+      appCategory: "unknown",
+      timeSinceLastPickup: 500,
+      currentDuration: 200,
+      recentPickupCount: 5,
+    });
+
+    const updated = updateWeightsFromFeedback(
+      weights,
+      features,
+      "unknown",
+      "transition_moment",
+      0.1,
+    );
+
+    expect(updated.adjustments.transition_moment!["commute_hours"]).toBeCloseTo(
+      0.1,
+    );
+    // Hour 17 is also in work_hours (9-17), so work_hours should be active too
+    expect(updated.adjustments.transition_moment!["work_hours"]).toBeCloseTo(
+      0.1,
+    );
   });
 });
 
@@ -1056,7 +1162,9 @@ describe("edge cases", () => {
 
     // Both boost (+0.1) and suppress (-0.05) apply to the same context
     // Net effect: +0.1 - 0.05 = +0.05 per active feature
-    expect(updated.adjustments.intentional_task!["productivity"]).toBeCloseTo(0.05);
+    expect(updated.adjustments.intentional_task!["productivity"]).toBeCloseTo(
+      0.05,
+    );
     expect(updated.correctionCount).toBe(1);
   });
 });

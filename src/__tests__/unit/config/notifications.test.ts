@@ -45,9 +45,7 @@ describe("notifications", () => {
   beforeEach(() => {
     // Re-wire messaging() to return the shared instance with fresh mocks
     sharedInstance.requestPermission = jest.fn(() => Promise.resolve(1));
-    sharedInstance.getToken = jest.fn(() =>
-      Promise.resolve("mock-fcm-token"),
-    );
+    sharedInstance.getToken = jest.fn(() => Promise.resolve("mock-fcm-token"));
     sharedInstance.registerDeviceForRemoteMessages = jest.fn(() =>
       Promise.resolve(),
     );
@@ -127,9 +125,7 @@ describe("notifications", () => {
 
       await registerFCMToken();
 
-      expect(
-        sharedInstance.registerDeviceForRemoteMessages,
-      ).toHaveBeenCalled();
+      expect(sharedInstance.registerDeviceForRemoteMessages).toHaveBeenCalled();
       expect(sharedInstance.getToken).toHaveBeenCalled();
       expect(setDoc).toHaveBeenCalledWith(
         expect.anything(),
@@ -249,9 +245,9 @@ describe("notifications", () => {
     it("registers background message handler", () => {
       setupBackgroundHandler();
 
-      expect(
-        sharedInstance.setBackgroundMessageHandler,
-      ).toHaveBeenCalledWith(expect.any(Function));
+      expect(sharedInstance.setBackgroundMessageHandler).toHaveBeenCalledWith(
+        expect.any(Function),
+      );
     });
   });
 

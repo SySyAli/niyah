@@ -63,9 +63,7 @@ const mockedUpdateAdaptation = updateAdaptation as jest.MockedFunction<
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeIntervention(
-  overrides: Partial<Intervention> = {},
-): Intervention {
+function makeIntervention(overrides: Partial<Intervention> = {}): Intervention {
   return {
     id: "int-001",
     timestamp: "2026-03-24T10:00:00.000Z",
@@ -206,10 +204,7 @@ describe("processFeedback", () => {
       makeAdaptationState(),
     );
 
-    expect(mockedExtractFeatures).toHaveBeenCalledWith(
-      episode,
-      recentEpisodes,
-    );
+    expect(mockedExtractFeatures).toHaveBeenCalledWith(episode, recentEpisodes);
     expect(mockedUpdateWeightsFromFeedback).toHaveBeenCalledWith(
       weights,
       expect.any(Object),
@@ -494,9 +489,7 @@ describe("generateFeedbackPrompt", () => {
       "transition_moment",
     );
 
-    expect(prompt.contextLabel).toBe(
-      "We thought this was: Between activities",
-    );
+    expect(prompt.contextLabel).toBe("We thought this was: Between activities");
   });
 
   it("includes the display name for unknown in contextLabel", () => {
@@ -978,5 +971,41 @@ describe("generateAdaptationSummary", () => {
 
     // 66.7% should be displayed as "67%" (toFixed(0))
     expect(summary).toContain("67%");
+  });
+});
+
+// ── computeAdaptationMetrics edge cases (coverage) ──────────────────────────
+
+describe("computeAdaptationMetrics edge cases", () => {
+  it("handles exactly 1 feedback item (secondHalf.length > 0 branch)", () => {
+    const history = [
+      {
+        feedback: makeFeedback({ helpful: false }),
+        outcome: "continued_usage" as InterventionOutcome,
+        timestamp: "2026-03-24T10:00:00.000Z",
+      },
+    ];
+
+    const metrics = computeAdaptationMetrics(history);
+
+    // With 1 item: mid=0, firstHalf=[], secondHalf=[item]
+    // firstHalfPositiveRate=0, secondHalfPositiveRate=0 (continued_usage+unhelpful)
+    expect(metrics.totalFeedback).toBe(1);
+    expect(metrics.outcomeImprovement).toBe(0);
+    expect(metrics.adaptationPhase).toBe("learning");
+  });
+});
+
+// ── generateFeedbackPrompt edge cases (coverage) ────────────────────────────
+
+describe("generateFeedbackPrompt edge cases", () => {
+  it("returns 'Unknown' for an unrecognized context value", () => {
+    // Cast an invalid string as UsageContext to test the fallback branch
+    const prompt = generateFeedbackPrompt(
+      makeIntervention(),
+      "nonexistent_context" as UsageContext,
+    );
+
+    expect(prompt.contextLabel).toBe("We thought this was: Unknown");
   });
 });

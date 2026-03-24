@@ -38,13 +38,10 @@ const mockReportStatus = jest.fn(() =>
 const mockCancelSession = jest.fn(() =>
   Promise.resolve({ success: true, refundedCount: 3 }),
 );
-const mockDistributePayouts = jest.fn(() =>
-  Promise.resolve({ success: true }),
-);
+const mockDistributePayouts = jest.fn(() => Promise.resolve({ success: true }));
 
 jest.mock("../../../config/functions", () => ({
-  createGroupSession: (...args: unknown[]) =>
-    mockCreateGroupSession(...args),
+  createGroupSession: (...args: unknown[]) => mockCreateGroupSession(...args),
   respondToGroupInvite: (...args: unknown[]) =>
     mockRespondToGroupInvite(...args),
   markOnlineForSession: (...args: unknown[]) => mockMarkOnline(...args),
@@ -665,9 +662,9 @@ describe("groupSessionStore — parsing, subscriptions, Cloud Function actions",
         updatedAt: new Date(),
       });
 
-      expect(
-        useGroupSessionStore.getState().activeSession!.transfers,
-      ).toEqual([]);
+      expect(useGroupSessionStore.getState().activeSession!.transfers).toEqual(
+        [],
+      );
     });
 
     it("sets activeSession to null when callback receives null", () => {
@@ -1252,9 +1249,9 @@ describe("groupSessionStore — parsing, subscriptions, Cloud Function actions",
       ]);
 
       // user-a is the current user but is not in the results
-      const result = useGroupSessionStore.getState().completeGroupSession([
-        { userId: "user-b", completed: true },
-      ]);
+      const result = useGroupSessionStore
+        .getState()
+        .completeGroupSession([{ userId: "user-b", completed: true }]);
 
       // Should mark the session status as surrendered since current user
       // defaults to completed: false

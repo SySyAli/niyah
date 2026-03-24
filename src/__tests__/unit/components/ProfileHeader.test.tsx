@@ -56,11 +56,7 @@ describe("ProfileHeader", () => {
   describe("user info display", () => {
     it("renders user name and email", () => {
       render(
-        <ProfileHeader
-          user={makeUser()}
-          followingCount={5}
-          partnerCount={2}
-        />,
+        <ProfileHeader user={makeUser()} followingCount={5} partnerCount={2} />,
       );
       expect(screen.getByText("Alice")).toBeTruthy();
       expect(screen.getByText("alice@test.com")).toBeTruthy();
@@ -78,18 +74,14 @@ describe("ProfileHeader", () => {
     });
 
     it("shows '?' when user is null", () => {
-      render(
-        <ProfileHeader user={null} followingCount={0} partnerCount={0} />,
-      );
+      render(<ProfileHeader user={null} followingCount={0} partnerCount={0} />);
       expect(screen.getByText("?")).toBeTruthy();
     });
 
     it("shows '?' when user name is undefined", () => {
       // Force name to be undefined via type assertion
       const user = makeUser({ name: undefined as unknown as string });
-      render(
-        <ProfileHeader user={user} followingCount={0} partnerCount={0} />,
-      );
+      render(<ProfileHeader user={user} followingCount={0} partnerCount={0} />);
       expect(screen.getByText("?")).toBeTruthy();
     });
   });
@@ -112,9 +104,7 @@ describe("ProfileHeader", () => {
       const user = makeUser();
       // Remove reputation entirely
       (user as any).reputation = undefined;
-      render(
-        <ProfileHeader user={user} followingCount={0} partnerCount={0} />,
-      );
+      render(<ProfileHeader user={user} followingCount={0} partnerCount={0} />);
       expect(screen.getByText("Sapling - 50/100")).toBeTruthy();
     });
 
@@ -163,11 +153,7 @@ describe("ProfileHeader", () => {
 
     it("renders zero counts", () => {
       render(
-        <ProfileHeader
-          user={makeUser()}
-          followingCount={0}
-          partnerCount={0}
-        />,
+        <ProfileHeader user={makeUser()} followingCount={0} partnerCount={0} />,
       );
       expect(screen.getAllByText("0")).toHaveLength(2);
     });
@@ -176,11 +162,7 @@ describe("ProfileHeader", () => {
   describe("navigation on stat press", () => {
     it("navigates to friends tab with 'following' param when following is pressed", () => {
       render(
-        <ProfileHeader
-          user={makeUser()}
-          followingCount={5}
-          partnerCount={2}
-        />,
+        <ProfileHeader user={makeUser()} followingCount={5} partnerCount={2} />,
       );
       fireEvent.press(screen.getByText("Following"));
       expect(mockPush).toHaveBeenCalledWith({
@@ -191,11 +173,7 @@ describe("ProfileHeader", () => {
 
     it("navigates to friends tab with 'partners' param when partners is pressed", () => {
       render(
-        <ProfileHeader
-          user={makeUser()}
-          followingCount={5}
-          partnerCount={2}
-        />,
+        <ProfileHeader user={makeUser()} followingCount={5} partnerCount={2} />,
       );
       fireEvent.press(screen.getByText("Partners"));
       expect(mockPush).toHaveBeenCalledWith({

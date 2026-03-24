@@ -24,6 +24,7 @@ module.exports = {
     "!src/components/MoneyPlant.tsx",
     "!src/components/PeachAvatar.tsx",
     "!src/components/BottomTabs.tsx",
+    "!src/jitai/types.ts",
   ],
   testTimeout: 15000,
   // Watchman requires Full Disk Access on macOS; skip it and use the Node

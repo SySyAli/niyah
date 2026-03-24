@@ -42,9 +42,7 @@ describe("PaymentHandlesCard", () => {
     });
 
     it("shows venmo handle when provided", () => {
-      render(
-        <PaymentHandlesCard {...defaultProps} venmoHandle="@alice-pay" />,
-      );
+      render(<PaymentHandlesCard {...defaultProps} venmoHandle="@alice-pay" />);
       expect(screen.getByText("@alice-pay")).toBeTruthy();
       // Only Zelle should show placeholder
       expect(screen.getAllByText("Tap Edit to add")).toHaveLength(1);
@@ -52,10 +50,7 @@ describe("PaymentHandlesCard", () => {
 
     it("shows zelle handle when provided", () => {
       render(
-        <PaymentHandlesCard
-          {...defaultProps}
-          zelleHandle="alice@email.com"
-        />,
+        <PaymentHandlesCard {...defaultProps} zelleHandle="alice@email.com" />,
       );
       expect(screen.getByText("alice@email.com")).toBeTruthy();
       // Only Venmo should show placeholder

@@ -224,6 +224,17 @@ describe("walletStore", () => {
       const expectedBalance = INITIAL_BALANCE - 100 - 200;
       expect(useWalletStore.getState().balance).toBe(expectedBalance);
     });
+
+    it("should throw when deducting more than available balance", () => {
+      const store = useWalletStore.getState();
+
+      // Set balance to a known small amount
+      useWalletStore.setState({ balance: 200 });
+
+      expect(() => {
+        store.deductStake(500, "session-over");
+      }).toThrow("Insufficient balance: need 500 cents but have 200");
+    });
   });
 
   describe("creditPayout", () => {

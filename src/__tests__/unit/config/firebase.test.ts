@@ -98,8 +98,7 @@ const mockWhere = where as jest.Mock;
 const mockLimit = limit as jest.Mock;
 const mockSignInWithCredential = signInWithCredential as jest.Mock;
 const mockSendSignInLinkToEmail = sendSignInLinkToEmail as jest.Mock;
-const mockRnfbIsSignInWithEmailLink =
-  rnfbIsSignInWithEmailLink as jest.Mock;
+const mockRnfbIsSignInWithEmailLink = rnfbIsSignInWithEmailLink as jest.Mock;
 const mockRnfbSignInWithEmailLink = rnfbSignInWithEmailLink as jest.Mock;
 const mockRnfbSignOut = rnfbSignOut as jest.Mock;
 const mockRnfbOnAuthStateChanged = rnfbOnAuthStateChanged as jest.Mock;
@@ -864,11 +863,7 @@ describe("firebase config layer", () => {
     it("calls setDoc with merge and adds updatedAt timestamp", async () => {
       await updateUserDoc("uid-u", { handle: "@newhandle", level: "oak" });
 
-      expect(mockDoc).toHaveBeenCalledWith(
-        expect.anything(),
-        "users",
-        "uid-u",
-      );
+      expect(mockDoc).toHaveBeenCalledWith(expect.anything(), "users", "uid-u");
       expect(mockSetDoc).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({

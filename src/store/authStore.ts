@@ -17,6 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   REFERRAL_REPUTATION_BOOST,
   CURRENT_LEGAL_VERSION,
+  DEMO_MODE,
 } from "../constants/config";
 import { logger } from "../utils/logger";
 
@@ -475,6 +476,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     set({ isSigningOut: true });
 
+    // Clean up FCM token BEFORE signing out (needs valid auth session)
+    const uid = get().user?.id;
+    if (uid) {
+      await cleanupNotifications(uid).catch((err) =>
+        logger.error("Failed to clean up FCM token:", err),
+      );
+    }
+
     // Clear all user-scoped stores before signing out
     const { resetAllUserStores } = require("./resetCoordinator") as {
       resetAllUserStores: () => void;
@@ -485,14 +494,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await signOut();
     } catch (error) {
       logger.error("Logout error:", error);
-    }
-
-    // Clean up FCM token and group session subscriptions
-    const uid = get().user?.id;
-    if (uid) {
-      cleanupNotifications(uid).catch((err) =>
-        logger.error("Failed to clean up FCM token:", err),
-      );
     }
     // Unsubscribe from group session listeners
     try {
@@ -607,12 +608,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (!user) throw new Error("Not authenticated");
 
-    // Lazy import to avoid circular dependency
-    const { acceptLegalTerms } = require("../config/functions") as {
-      acceptLegalTerms: (version: string) => Promise<{ success: boolean }>;
-    };
+    // Cloud Function call — skip in demo mode (no deployed functions)
+    if (!DEMO_MODE) {
+      // Lazy import to avoid circular dependency
+      const { acceptLegalTerms } = require("../config/functions") as {
+        acceptLegalTerms: (version: string) => Promise<{ success: boolean }>;
+      };
 
-    await acceptLegalTerms(CURRENT_LEGAL_VERSION);
+      await acceptLegalTerms(CURRENT_LEGAL_VERSION);
+    }
 
     set({
       user: {

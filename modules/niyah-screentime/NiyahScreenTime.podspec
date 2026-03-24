@@ -13,7 +13,10 @@ Pod::Spec.new do |s|
 
   s.dependency 'ExpoModulesCore'
 
-  s.source_files   = 'ios/**/*.swift'
+  # Only include top-level module files. Extension subdirectories
+  # (NiyahShieldConfiguration, NiyahShieldAction, NiyahDeviceActivityMonitor)
+  # are compiled by their own extension targets, not the pod.
+  s.source_files   = 'ios/*.swift'
 
   # Screen Time frameworks are system frameworks -- no CocoaPods deps needed.
   # They are linked via weak_framework so the app still launches on iOS < 16

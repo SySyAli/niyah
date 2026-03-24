@@ -35,6 +35,7 @@ const SHIELD_CONFIG = {
   sourceFile: "ShieldConfigurationExtension.swift",
   extensionPoint: "com.apple.managed-settings.shield-config",
   principalClass: "$(PRODUCT_MODULE_NAME).NiyahShieldConfigurationDataSource",
+  frameworks: ["ShieldConfiguration", "ManagedSettings", "UIKit"],
 };
 
 const SHIELD_ACTION = {
@@ -43,6 +44,7 @@ const SHIELD_ACTION = {
   sourceFile: "ShieldActionExtension.swift",
   extensionPoint: "com.apple.managed-settings.shield-action",
   principalClass: "$(PRODUCT_MODULE_NAME).NiyahShieldActionExtension",
+  frameworks: ["ManagedSettings", "DeviceActivity"],
 };
 
 const EXTENSIONS = [SHIELD_CONFIG, SHIELD_ACTION];
@@ -146,7 +148,9 @@ function withShieldExtensions(config) {
     },
   ]);
 
-  // ── Step 2: Add extension targets + embed phases to Xcode project ──────────
+  // ── Step 2: Add extension targets to Xcode project ─────────────────────────
+  // NOTE: addTarget() with type "app_extension" automatically creates a
+  // "Copy Files" embed phase on the main target, so we must NOT add our own.
   config = withXcodeProject(config, (config) => {
     const project = config.modResults;
     const mainTarget = project.getFirstTarget();
@@ -160,6 +164,8 @@ function withShieldExtensions(config) {
       }
 
       // --- Create the extension target ---
+      // This also creates a "Copy Files" phase on the main target that
+      // embeds the .appex into the app bundle (dstSubfolderSpec 13).
       const target = project.addTarget(
         ext.name,
         "app_extension",
@@ -188,6 +194,10 @@ function withShieldExtensions(config) {
           buildConfig.buildSettings.PRODUCT_BUNDLE_IDENTIFIER ===
             `"${extensionBundleId}"`
         ) {
+          // Build the -weak_framework linker flags for Screen Time frameworks
+          const frameworkFlags = ext.frameworks
+            .map((fw) => `-weak_framework ${fw}`)
+            .join(" ");
           Object.assign(buildConfig.buildSettings, {
             IPHONEOS_DEPLOYMENT_TARGET: "16.0",
             SWIFT_VERSION: "5.9",
@@ -201,26 +211,16 @@ function withShieldExtensions(config) {
             // Shield extensions use ManagedSettings — device-only framework.
             // Restricting to iphoneos prevents simulator build failures.
             SUPPORTED_PLATFORMS: "iphoneos",
+            SDKROOT: "iphoneos",
             LD_RUNPATH_SEARCH_PATHS:
               '"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"',
+            OTHER_LDFLAGS: `"$(inherited) ${frameworkFlags}"`,
           });
         }
       }
 
       // --- Add target dependency so extensions build before the main app ---
       project.addTargetDependency(mainTarget.uuid, [target.uuid]);
-
-      // --- Embed the .appex in the main app bundle ---
-      // This is what iOS uses to discover the shield extensions at runtime.
-      // We use "Embed App Extensions" build phase (dstSubfolderSpec 13).
-      project.addBuildPhase(
-        [`${ext.name}.appex`],
-        "PBXCopyFilesBuildPhase",
-        "Embed App Extensions",
-        mainTarget.uuid,
-        "app_extension",
-        ext.name,
-      );
 
       console.log(`[withShieldExtensions] Registered ${ext.name} in Xcode`);
     }

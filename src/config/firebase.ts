@@ -535,6 +535,7 @@ export const subscribeToGroupInvites = (
     where("status", "==", "pending"),
   );
   return onSnapshot(q, (snap) => {
+    if (!snap) return callback([]);
     const invites = snap.docs.map(
       (d: FirebaseFirestoreTypes.QueryDocumentSnapshot) => ({
         __id: d.id,
@@ -559,6 +560,7 @@ export const subscribeToActiveGroupSessions = (
     where("status", "in", ["pending", "ready", "active"]),
   );
   return onSnapshot(q, (snap) => {
+    if (!snap) return callback([]);
     const sessions = snap.docs.map(
       (d: FirebaseFirestoreTypes.QueryDocumentSnapshot) => ({
         __id: d.id,

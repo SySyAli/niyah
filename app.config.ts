@@ -43,7 +43,9 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.niyah.app",
-      googleServicesFile: "./firebase/GoogleService-Info.plist",
+      googleServicesFile:
+        process.env.GOOGLE_SERVICE_INFO_PLIST ||
+        "./firebase/GoogleService-Info.plist",
       usesAppleSignIn: true,
       associatedDomains: [`applinks:${firebaseProjectId}.firebaseapp.com`],
       infoPlist: {
@@ -53,7 +55,8 @@ export default {
       },
     },
     android: {
-      googleServicesFile: "./firebase/google-services.json",
+      googleServicesFile:
+        process.env.GOOGLE_SERVICES_JSON || "./firebase/google-services.json",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#1A1714",

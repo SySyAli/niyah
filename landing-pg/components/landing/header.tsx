@@ -10,7 +10,7 @@ export function Header() {
         </Link>
 
         <Button size="sm" asChild>
-          <a href="#" target="_blank" rel="noopener noreferrer">
+          <a href="https://forms.gle/xC4qzpmwWwDD7Z5VA" target="_blank" rel="noopener noreferrer">
             Join the Waitlist
           </a>
         </Button>

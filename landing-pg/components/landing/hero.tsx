@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 
-const GOOGLE_FORM_URL = "#" // TODO: Replace with actual Google Form URL
+const GOOGLE_FORM_URL = "https://forms.gle/xC4qzpmwWwDD7Z5VA"
 
 const screenshots = [
   { src: "/app-screen-1.svg", alt: "Welcome to Niyah" },

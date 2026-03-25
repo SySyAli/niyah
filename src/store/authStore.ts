@@ -484,6 +484,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       );
     }
 
+    // Tear down Firestore listeners BEFORE signOut — after signOut the auth
+    // token is revoked and any still-active listener will receive PERMISSION_DENIED.
+    try {
+      const { useGroupSessionStore } = require("./groupSessionStore") as {
+        useGroupSessionStore: {
+          getState: () => { unsubscribeAll: () => void };
+        };
+      };
+      useGroupSessionStore.getState().unsubscribeAll();
+    } catch {
+      // Store may not be initialized
+    }
+
     // Clear all user-scoped stores before signing out
     const { resetAllUserStores } = require("./resetCoordinator") as {
       resetAllUserStores: () => void;
@@ -494,17 +507,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await signOut();
     } catch (error) {
       logger.error("Logout error:", error);
-    }
-    // Unsubscribe from group session listeners
-    try {
-      const { useGroupSessionStore } = require("./groupSessionStore") as {
-        useGroupSessionStore: {
-          getState: () => { unsubscribeAll: () => void };
-        };
-      };
-      useGroupSessionStore.getState().unsubscribeAll();
-    } catch {
-      // Store may not be initialized
     }
 
     // Clear local auth state after signOut

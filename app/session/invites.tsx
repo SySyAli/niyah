@@ -19,7 +19,9 @@ import {
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
 import { Card, Button } from "../../src/components";
+import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
 import type { GroupInvite } from "../../src/types";
 
@@ -48,6 +50,8 @@ export default function GroupInvitesScreen() {
 
   const { pendingInvites, acceptInvite, declineInvite } =
     useGroupSessionStore();
+  const hydrateWallet = useWalletStore((state) => state.hydrate);
+  const userId = useAuthStore((state) => state.user?.id);
 
   const [loadingAccept, setLoadingAccept] = useState<string | null>(null);
   const [loadingDecline, setLoadingDecline] = useState<string | null>(null);
@@ -59,6 +63,8 @@ export default function GroupInvitesScreen() {
       setLoadingAccept(inviteId);
       try {
         await acceptInvite(inviteId);
+        // CF deducted stake from Firestore wallet — sync local balance.
+        if (userId) hydrateWallet(userId);
         router.replace(
           `/session/waiting-room?sessionId=${invite.sessionId}` as RelativePathString,
         );
@@ -70,7 +76,7 @@ export default function GroupInvitesScreen() {
         setLoadingAccept(null);
       }
     },
-    [acceptInvite, pendingInvites, router],
+    [acceptInvite, hydrateWallet, pendingInvites, router, userId],
   );
 
   const handleDecline = useCallback(

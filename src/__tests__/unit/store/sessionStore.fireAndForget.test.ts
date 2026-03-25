@@ -374,7 +374,7 @@ describe("sessionStore — recoverActiveSession", () => {
     );
   });
 
-  it("auto-complete handles updateSession rejection gracefully", async () => {
+  it("auto-complete skips local credit when updateSession rejects (prevents double-credit)", async () => {
     jest
       .mocked(updateSession)
       .mockRejectedValueOnce(new Error("Firestore offline"));
@@ -391,13 +391,18 @@ describe("sessionStore — recoverActiveSession", () => {
 
     jest.mocked(getActiveSession).mockResolvedValueOnce(expiredSession);
 
+    const balanceBefore = useWalletStore.getState().balance;
+
     // Should not throw
     await useSessionStore.getState().recoverActiveSession("test-user");
 
-    // Session should still be completed locally
-    expect(useSessionStore.getState().sessionHistory[0].status).toBe(
-      "completed",
-    );
+    // Session should NOT be completed locally — Firestore still has status: "active",
+    // so the next restart will safely retry the recovery.
+    expect(useSessionStore.getState().sessionHistory).toHaveLength(0);
+    expect(useSessionStore.getState().currentSession).toBeNull();
+
+    // Wallet should NOT be credited (prevents double-credit on next restart)
+    expect(useWalletStore.getState().balance).toBe(balanceBefore);
 
     await flushPromises();
   });

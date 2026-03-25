@@ -235,6 +235,22 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           actualPayout: payout,
         };
 
+        // Mark the session as completed in Firestore FIRST. If this fails
+        // (e.g. network timeout), we skip the local payout so the next app
+        // restart will find the same "active" session and retry — preventing
+        // duplicate local credits.
+        try {
+          await updateSession(activeSession.id, {
+            status: "completed",
+            completedAt,
+          });
+        } catch (err) {
+          logger.error("Failed to auto-complete expired session:", err);
+          // Firestore still has status: "active", so the next restart will
+          // retry. Don't credit the payout locally to avoid double-counting.
+          return;
+        }
+
         const authStore = useAuthStore.getState();
         const newStreak = (authStore.user?.currentStreak || 0) + 1;
         authStore.updateUser({
@@ -254,14 +270,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         set((state) => ({
           sessionHistory: [completedSession, ...state.sessionHistory],
         }));
-
-        // actualPayout is written by Cloud Functions only — not sent from client.
-        updateSession(activeSession.id, {
-          status: "completed",
-          completedAt,
-        }).catch((err) =>
-          logger.error("Failed to auto-complete expired session:", err),
-        );
 
         if (!DEMO_MODE) {
           cloudComplete(activeSession.id, activeSession.stakeAmount).catch(

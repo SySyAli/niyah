@@ -18,6 +18,7 @@ import {
 import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
 import type { GroupSessionDoc, SessionTransfer } from "../../src/types";
 
@@ -333,6 +334,7 @@ export default function CompleteScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const hydrateWallet = useWalletStore((state) => state.hydrate);
   const {
     groupSessionHistory,
     activeSession: firestoreSession,
@@ -398,6 +400,15 @@ export default function CompleteScreen() {
       return () => clearTimeout(timer);
     }
   }, [didComplete]);
+
+  // Re-sync wallet balance once the CF has finalized the session and credited payouts.
+  // The CF writes status="completed" and debits/credits wallets atomically, so this
+  // is the correct trigger point. walletStore is local-only and doesn't auto-update.
+  useEffect(() => {
+    if (firestoreSession?.status === "completed" && user?.id) {
+      hydrateWallet(user.id);
+    }
+  }, [firestoreSession?.status, user?.id, hydrateWallet]);
 
   const handleDone = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

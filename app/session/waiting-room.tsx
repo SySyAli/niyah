@@ -19,6 +19,7 @@ import { useColors } from "../../src/hooks/useColors";
 import { Card, Button } from "../../src/components";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
+import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney, formatTime } from "../../src/utils/format";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -229,6 +230,7 @@ export default function WaitingRoomScreen() {
   const router = useRouter();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const userId = useAuthStore((state) => state.user?.id);
+  const hydrateWallet = useWalletStore((state) => state.hydrate);
 
   const {
     activeSession,
@@ -294,6 +296,7 @@ export default function WaitingRoomScreen() {
     if (!activeSession) return;
 
     if (activeSession.status === "cancelled") {
+      if (userId) hydrateWallet(userId);
       Alert.alert("Session Cancelled", "This session has been cancelled.", [
         { text: "OK", onPress: () => router.dismissAll() },
       ]);
@@ -303,7 +306,7 @@ export default function WaitingRoomScreen() {
       router.replace("/session/active");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSession?.status, router]);
+  }, [activeSession?.status, router, userId, hydrateWallet]);
 
   // Derived state
   const participants = activeSession

@@ -674,8 +674,15 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
 
   reset: () => {
     set({
+      // Firestore-backed state
+      activeSession: null,
+      pendingInvites: [],
+      activeGroupSessions: [],
+      // Legacy local state
       activeGroupSession: null,
       groupSessionHistory: [],
     });
+    // Note: subscriptions (_unsubSession etc.) are torn down by unsubscribeAll(),
+    // which is called separately in the logout flow.
   },
 }));

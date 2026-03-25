@@ -23,6 +23,7 @@ import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -294,6 +295,7 @@ export default function ProposeSessionScreen() {
   const { partners } = usePartnerStore();
   const { following, profiles } = useSocialStore();
   const { proposeSession } = useGroupSessionStore();
+  const hydrateWallet = useWalletStore((state) => state.hydrate);
 
   // Stake
   const [stake, setStake] = useState<number | null>(null);
@@ -383,6 +385,9 @@ export default function ProposeSessionScreen() {
         inviteeIds: selectedPeople,
         customStake: true,
       });
+
+      // CF deducted A's stake from Firestore wallet — sync local balance.
+      if (user?.id) hydrateWallet(user.id);
 
       // Replace so the user can't back-navigate to the form after staking.
       router.replace(

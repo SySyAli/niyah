@@ -46,5 +46,5 @@ export function Story() {
         </div>
       </div>
     </section>
-  )
+  );
 }

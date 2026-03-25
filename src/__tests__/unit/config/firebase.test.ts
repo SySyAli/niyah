@@ -208,9 +208,10 @@ describe("firebase config layer", () => {
       mockGoogleSignIn.mockResolvedValue({ type: "cancelled" });
       mockIsSuccessResponse.mockReturnValue(false);
 
-      await expect(signInWithGoogle()).rejects.toThrow(
-        "Google Sign-In was cancelled",
-      );
+      await expect(signInWithGoogle()).rejects.toMatchObject({
+        message: "Google Sign-In was cancelled",
+        code: "SIGN_IN_CANCELLED",
+      });
     });
 
     it("throws when idToken is missing", async () => {

@@ -1,4 +1,4 @@
-import { Smartphone, TrendingUp, Users, Zap } from "lucide-react"
+import { Smartphone, TrendingUp, Users, Zap } from "lucide-react";
 
 export function BentoGrid() {
   return (
@@ -44,8 +44,8 @@ export function BentoGrid() {
             </h3>
             <p className="text-[oklch(0.93_0.01_80)]/55">
               Uses Apple&apos;s own Screen Time framework. This isn&apos;t a
-              nudge — it&apos;s a real block that persists even if you delete the
-              app.
+              nudge — it&apos;s a real block that persists even if you delete
+              the app.
             </p>
           </div>
 
@@ -103,5 +103,5 @@ export function BentoGrid() {
         </div>
       </div>
     </section>
-  )
+  );
 }

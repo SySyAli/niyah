@@ -28,6 +28,10 @@ import {
 import { useAuthStore } from "../../src/store/authStore";
 import { generateNonce, sha256 } from "../../src/config/firebase";
 import { logger } from "../../src/utils/logger";
+import {
+  getErrorMessage,
+  isUserCancellationError,
+} from "../../src/utils/errors";
 
 // ---------------------------------------------------------------------------
 // Icons
@@ -89,10 +93,11 @@ export default function AuthEntryScreen() {
         router.replace("/(tabs)");
       }
     } catch (e: unknown) {
-      const err = e as { code?: string; message?: string };
-      if (err?.code !== "SIGN_IN_CANCELLED") {
+      if (!isUserCancellationError(e)) {
         logger.error("Google Sign-In error:", e);
-        setError(err?.message || "Google Sign-In failed. Please try again.");
+        setError(
+          getErrorMessage(e, "Google Sign-In failed. Please try again."),
+        );
       }
     } finally {
       setGoogleLoading(false);
@@ -142,12 +147,9 @@ export default function AuthEntryScreen() {
         router.replace("/(tabs)");
       }
     } catch (e: unknown) {
-      const err = e as { code?: string; message?: string };
-      if (err?.code === "ERR_REQUEST_CANCELED") {
-        // User cancelled - do nothing
-      } else {
+      if (!isUserCancellationError(e)) {
         logger.error("Apple Sign-In error:", e);
-        setError(err?.message || "Apple Sign-In failed. Please try again.");
+        setError(getErrorMessage(e, "Apple Sign-In failed. Please try again."));
       }
     } finally {
       setAppleLoading(false);
@@ -170,10 +172,9 @@ export default function AuthEntryScreen() {
         params: { email },
       });
     } catch (e: unknown) {
-      const err = e as { message?: string };
       logger.error("Magic link error:", e);
       setError(
-        err?.message || "Failed to send sign-in link. Please try again.",
+        getErrorMessage(e, "Failed to send sign-in link. Please try again."),
       );
     }
   };

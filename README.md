@@ -112,6 +112,7 @@ pnpm install
 ```
 
 Set up config files (never commit these):
+
 - `.env` — copy `.env.example`, fill in values from [Firebase Console](https://console.firebase.google.com/) and [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 - `firebase/GoogleService-Info.plist` — Firebase Console > Project Settings > Your Apps > iOS > download
 - `firebase/google-services.json` — Firebase Console > Project Settings > Your Apps > Android > download
@@ -160,6 +161,7 @@ open ios/NIYAH.xcworkspace
 ```
 
 In Xcode:
+
 1. Set destination to **Any iOS Device (arm64)**
 2. **Product > Archive**
 3. **Distribute App > Release Testing > Export**
@@ -216,6 +218,7 @@ npx expo run:ios
 ```
 
 **Metro won't connect on Windows:**
+
 - Make sure `wsl_dev_setup.ps1` ran after last restart
 - Check that phone and laptop are on the same WiFi
 - Try entering the URL manually: `http://<wifi-ip>:8081`

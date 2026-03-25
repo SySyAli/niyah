@@ -1,5 +1,5 @@
-import { Header } from "@/components/landing/header"
-import { Hero } from "@/components/landing/hero"
+import { Header } from "@/components/landing/header";
+import { Hero } from "@/components/landing/hero";
 
 export default function LandingPage() {
   return (
@@ -9,5 +9,5 @@ export default function LandingPage() {
         <Hero />
       </main>
     </div>
-  )
+  );
 }

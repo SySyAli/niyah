@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -15,12 +15,12 @@
   --primary: oklch(0.35 0.09 150);
   --primary-foreground: oklch(0.96 0.005 80);
   --secondary: oklch(0.89 0.015 80);
-  --secondary-foreground: oklch(0.20 0.03 150);
+  --secondary-foreground: oklch(0.2 0.03 150);
   --muted: oklch(0.87 0.015 80);
-  --muted-foreground: oklch(0.40 0.025 150);
+  --muted-foreground: oklch(0.4 0.025 150);
   --accent: oklch(0.35 0.09 150);
   --accent-foreground: oklch(0.96 0.005 80);
-  --destructive: oklch(0.50 0.24 27);
+  --destructive: oklch(0.5 0.24 27);
   --destructive-foreground: oklch(0.96 0.005 80);
   --border: oklch(0.82 0.02 80);
   --input: oklch(0.87 0.015 80);
@@ -41,21 +41,23 @@
   --secondary-foreground: oklch(0.93 0.01 80);
   --muted: oklch(0.22 0.04 150);
   --muted-foreground: oklch(0.65 0.02 80);
-  --accent: oklch(0.50 0.12 150);
+  --accent: oklch(0.5 0.12 150);
   --accent-foreground: oklch(0.93 0.01 80);
-  --destructive: oklch(0.50 0.22 27);
+  --destructive: oklch(0.5 0.22 27);
   --destructive-foreground: oklch(0.93 0.01 80);
   --border: oklch(0.26 0.04 150);
   --input: oklch(0.22 0.04 150);
-  --ring: oklch(0.50 0.12 150);
+  --ring: oklch(0.5 0.12 150);
 }
 
 @theme inline {
-  --font-sans: 'SF Pro Rounded', 'SF Pro Display', 'SF Pro', ui-rounded,
-    -apple-system, BlinkMacSystemFont, system-ui, 'Helvetica Neue', sans-serif;
-  --font-serif: 'SF Pro Rounded', 'SF Pro Display', ui-rounded,
-    -apple-system, system-ui, sans-serif;
-  --font-mono: 'SF Mono', ui-monospace, 'Menlo', monospace;
+  --font-sans:
+    "SF Pro Rounded", "SF Pro Display", "SF Pro", ui-rounded, -apple-system,
+    BlinkMacSystemFont, system-ui, "Helvetica Neue", sans-serif;
+  --font-serif:
+    "SF Pro Rounded", "SF Pro Display", ui-rounded, -apple-system, system-ui,
+    sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "Menlo", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

@@ -216,6 +216,19 @@ describe("callFunction (core behaviour)", () => {
     );
   });
 
+  it("normalizes HTML auth errors from protected function endpoints", async () => {
+    mockFetch.mockResolvedValue(
+      mockErrorResponse(
+        403,
+        "<html><body><h1>Error: Forbidden</h1></body></html>",
+      ),
+    );
+
+    await expect(createPaymentIntent(500)).rejects.toThrow(
+      "[createPaymentIntent] 403: Function endpoint is not publicly accessible",
+    );
+  });
+
   it("propagates network errors from fetch", async () => {
     mockFetch.mockRejectedValue(new TypeError("Network request failed"));
 

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@/components/ui/accordion";
 
 const faqs = [
   {
@@ -43,7 +43,7 @@ const faqs = [
     answer:
       "That's entirely up to you. Small daily stakes ($1–5) work great for building habits. Larger weekly or monthly stakes ($10–50) are better for serious commitments. The key is that the amount needs to be meaningful enough to you that you'll actually follow through.",
   },
-]
+];
 
 export function FAQ() {
   return (
@@ -72,5 +72,5 @@ export function FAQ() {
         </Accordion>
       </div>
     </section>
-  )
+  );
 }

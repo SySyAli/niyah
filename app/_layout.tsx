@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ComponentProps, type ReactElement } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Text, TextInput, Platform } from "react-native";
@@ -20,10 +20,26 @@ const STRIPE_PK = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
 // Lazily import StripeProvider only when Stripe is active (non-demo mode + key present).
 // This prevents crashes on dev client builds that don't yet have the native Stripe module linked.
-const StripeWrapper =
-  !DEMO_MODE && STRIPE_PK
-    ? require("@stripe/stripe-react-native").StripeProvider
-    : ({ children }: { children: React.ReactNode }) => <>{children}</>;
+type StripeWrapperProps = ComponentProps<
+  typeof import("@stripe/stripe-react-native").StripeProvider
+>;
+
+const FallbackStripeWrapper = ({ children }: StripeWrapperProps) => (
+  <>{children}</>
+);
+
+let StripeWrapper: (props: StripeWrapperProps) => ReactElement | null =
+  FallbackStripeWrapper;
+
+if (!DEMO_MODE && STRIPE_PK) {
+  try {
+    StripeWrapper = (
+      require("@stripe/stripe-react-native") as typeof import("@stripe/stripe-react-native")
+    ).StripeProvider;
+  } catch (error) {
+    logger.warn("Stripe SDK unavailable in this build:", error);
+  }
+}
 
 // Apply SF Pro Rounded globally as the default font family
 if (Platform.OS === "ios" && BaseFontFamily) {

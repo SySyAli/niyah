@@ -37,10 +37,12 @@ import type { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 import {
   GoogleSignin,
   isSuccessResponse,
+  statusCodes,
 } from "@react-native-google-signin/google-signin";
 import * as Linking from "expo-linking";
 import * as Crypto from "expo-crypto";
 import { logger } from "../utils/logger";
+import { createErrorWithCode, getErrorCode } from "../utils/errors";
 
 // ---------------------------------------------------------------------------
 // Firestore collection name constants
@@ -107,19 +109,33 @@ GoogleSignin.configure({
 export const signInWithGoogle = async (): Promise<FirebaseUser> => {
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-  const response = await GoogleSignin.signIn();
-  if (!isSuccessResponse(response)) {
-    throw new Error("Google Sign-In was cancelled");
-  }
+  try {
+    const response = await GoogleSignin.signIn();
+    if (!isSuccessResponse(response)) {
+      throw createErrorWithCode(
+        "Google Sign-In was cancelled",
+        statusCodes.SIGN_IN_CANCELLED,
+      );
+    }
 
-  const idToken = response.data?.idToken;
-  if (!idToken) {
-    throw new Error("Failed to get ID token from Google");
-  }
+    const idToken = response.data?.idToken;
+    if (!idToken) {
+      throw new Error("Failed to get ID token from Google");
+    }
 
-  const credential = GoogleAuthProvider.credential(idToken);
-  const result = await signInWithCredential(authInstance, credential);
-  return mapUser(result.user, result.additionalUserInfo?.isNewUser ?? false);
+    const credential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(authInstance, credential);
+    return mapUser(result.user, result.additionalUserInfo?.isNewUser ?? false);
+  } catch (error) {
+    if (getErrorCode(error) === statusCodes.SIGN_IN_CANCELLED) {
+      throw createErrorWithCode(
+        "Google Sign-In was cancelled",
+        statusCodes.SIGN_IN_CANCELLED,
+      );
+    }
+
+    throw error;
+  }
 };
 
 export const signOutGoogle = async () => {

@@ -6,10 +6,13 @@
  *
  * Firebase messaging is mocked globally in jest.setup.ts. Since clearMocks
  * resets implementations between tests, we re-configure the shared mock
- * instance in beforeEach so every call to messaging() returns it.
+ * instance in beforeEach so every call to getMessaging() returns it.
  */
 
-import messaging from "@react-native-firebase/messaging";
+import {
+  getMessaging,
+  AuthorizationStatus,
+} from "@react-native-firebase/messaging";
 import { getAuth } from "@react-native-firebase/auth";
 import { setDoc } from "@react-native-firebase/firestore";
 import { Platform } from "react-native";
@@ -27,10 +30,11 @@ import {
   initializeNotifications,
 } from "../../../config/notifications";
 
-// Shared mock instance — messaging() always returns this same object.
+// Shared mock instance — getMessaging() always returns this same object.
 const sharedInstance: Record<string, jest.Mock> = {
   requestPermission: jest.fn(() => Promise.resolve(1)),
   getToken: jest.fn(() => Promise.resolve("mock-fcm-token")),
+  getAPNSToken: jest.fn(() => Promise.resolve("mock-apns-token")),
   registerDeviceForRemoteMessages: jest.fn(() => Promise.resolve()),
   onTokenRefresh: jest.fn(() => jest.fn()),
   onMessage: jest.fn(() => jest.fn()),
@@ -43,9 +47,12 @@ describe("notifications", () => {
   const originalOS = Platform.OS;
 
   beforeEach(() => {
-    // Re-wire messaging() to return the shared instance with fresh mocks
+    // Re-wire getMessaging() to return the shared instance with fresh mocks
     sharedInstance.requestPermission = jest.fn(() => Promise.resolve(1));
     sharedInstance.getToken = jest.fn(() => Promise.resolve("mock-fcm-token"));
+    sharedInstance.getAPNSToken = jest.fn(() =>
+      Promise.resolve("mock-apns-token"),
+    );
     sharedInstance.registerDeviceForRemoteMessages = jest.fn(() =>
       Promise.resolve(),
     );
@@ -57,7 +64,7 @@ describe("notifications", () => {
       Promise.resolve(null),
     );
 
-    (messaging as unknown as jest.Mock).mockReturnValue(sharedInstance);
+    (getMessaging as unknown as jest.Mock).mockReturnValue(sharedInstance);
   });
 
   afterEach(() => {
@@ -69,7 +76,7 @@ describe("notifications", () => {
   describe("requestNotificationPermission", () => {
     it("returns true when AUTHORIZED", async () => {
       sharedInstance.requestPermission.mockResolvedValue(
-        messaging.AuthorizationStatus.AUTHORIZED,
+        AuthorizationStatus.AUTHORIZED,
       );
 
       const result = await requestNotificationPermission();
@@ -78,7 +85,7 @@ describe("notifications", () => {
 
     it("returns true when PROVISIONAL", async () => {
       sharedInstance.requestPermission.mockResolvedValue(
-        messaging.AuthorizationStatus.PROVISIONAL,
+        AuthorizationStatus.PROVISIONAL,
       );
 
       const result = await requestNotificationPermission();
@@ -87,7 +94,7 @@ describe("notifications", () => {
 
     it("returns false when DENIED", async () => {
       sharedInstance.requestPermission.mockResolvedValue(
-        messaging.AuthorizationStatus.DENIED,
+        AuthorizationStatus.DENIED,
       );
 
       const result = await requestNotificationPermission();
@@ -96,7 +103,7 @@ describe("notifications", () => {
 
     it("returns false when NOT_DETERMINED", async () => {
       sharedInstance.requestPermission.mockResolvedValue(
-        messaging.AuthorizationStatus.NOT_DETERMINED,
+        AuthorizationStatus.NOT_DETERMINED,
       );
 
       const result = await requestNotificationPermission();
@@ -116,16 +123,17 @@ describe("notifications", () => {
       expect(setDoc).not.toHaveBeenCalled();
     });
 
-    it("registers device and writes token on iOS", async () => {
+    it("writes token on iOS", async () => {
       Platform.OS = "ios" as typeof Platform.OS;
       (getAuth as jest.Mock).mockReturnValue({
         currentUser: { uid: "user-123" },
       });
+      sharedInstance.getAPNSToken.mockResolvedValue("ios-apns-token");
       sharedInstance.getToken.mockResolvedValue("ios-fcm-token");
 
       await registerFCMToken();
 
-      expect(sharedInstance.registerDeviceForRemoteMessages).toHaveBeenCalled();
+      expect(sharedInstance.getAPNSToken).toHaveBeenCalled();
       expect(sharedInstance.getToken).toHaveBeenCalled();
       expect(setDoc).toHaveBeenCalledWith(
         expect.anything(),
@@ -145,10 +153,24 @@ describe("notifications", () => {
 
       await registerFCMToken();
 
+      expect(sharedInstance.getAPNSToken).not.toHaveBeenCalled();
       expect(
         sharedInstance.registerDeviceForRemoteMessages,
       ).not.toHaveBeenCalled();
       expect(setDoc).toHaveBeenCalled();
+    });
+
+    it("no-ops on iOS when APNS token is unavailable", async () => {
+      Platform.OS = "ios" as typeof Platform.OS;
+      (getAuth as jest.Mock).mockReturnValue({
+        currentUser: { uid: "user-apns" },
+      });
+      sharedInstance.getAPNSToken.mockResolvedValue(null as any);
+
+      await registerFCMToken();
+
+      expect(sharedInstance.getToken).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
     });
 
     it("no-ops when getToken returns null", async () => {
@@ -382,7 +404,7 @@ describe("notifications", () => {
   describe("initializeNotifications", () => {
     it("returns cleanup function that calls all unsubs", async () => {
       sharedInstance.requestPermission.mockResolvedValue(
-        messaging.AuthorizationStatus.AUTHORIZED,
+        AuthorizationStatus.AUTHORIZED,
       );
       (getAuth as jest.Mock).mockReturnValue({
         currentUser: { uid: "user-init" },
@@ -414,7 +436,7 @@ describe("notifications", () => {
 
     it("returns noop when permission is denied", async () => {
       sharedInstance.requestPermission.mockResolvedValue(
-        messaging.AuthorizationStatus.DENIED,
+        AuthorizationStatus.DENIED,
       );
 
       const cleanup = await initializeNotifications();

@@ -1,7 +1,7 @@
-import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 
-const GOOGLE_FORM_URL = "https://forms.gle/xC4qzpmwWwDD7Z5VA"
+const GOOGLE_FORM_URL = "https://forms.gle/xC4qzpmwWwDD7Z5VA";
 
 export function CTA() {
   return (
@@ -35,5 +35,5 @@ export function CTA() {
         </p>
       </div>
     </section>
-  )
+  );
 }

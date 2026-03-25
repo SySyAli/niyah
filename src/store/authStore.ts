@@ -617,7 +617,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         acceptLegalTerms: (version: string) => Promise<{ success: boolean }>;
       };
 
-      await acceptLegalTerms(CURRENT_LEGAL_VERSION);
+      try {
+        await acceptLegalTerms(CURRENT_LEGAL_VERSION);
+      } catch (error) {
+        logger.warn(
+          "acceptLegalTerms Cloud Function unavailable, falling back to Firestore:",
+          error,
+        );
+        await updateUserDoc(user.id, {
+          legalAcceptanceVersion: CURRENT_LEGAL_VERSION,
+          legalAcceptedAt: new Date(),
+        });
+      }
     }
 
     set({

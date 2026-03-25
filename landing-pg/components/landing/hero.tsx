@@ -1,30 +1,30 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
+import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 
-const GOOGLE_FORM_URL = "https://forms.gle/xC4qzpmwWwDD7Z5VA"
+const GOOGLE_FORM_URL = "https://forms.gle/xC4qzpmwWwDD7Z5VA";
 
 const screenshots = [
   { src: "/app-screen-1.svg", alt: "Welcome to Niyah" },
   { src: "/app-screen-2.svg", alt: "How it works" },
   { src: "/app-screen-3.svg", alt: "Active session" },
   { src: "/app-screen-4.svg", alt: "Session complete" },
-]
+];
 
 export function Hero() {
-  const [current, setCurrent] = useState(0)
+  const [current, setCurrent] = useState(0);
 
   const next = useCallback(() => {
-    setCurrent((prev) => (prev + 1) % screenshots.length)
-  }, [])
+    setCurrent((prev) => (prev + 1) % screenshots.length);
+  }, []);
 
   useEffect(() => {
-    if (screenshots.length <= 1) return
-    const timer = setInterval(next, 4000)
-    return () => clearInterval(timer)
-  }, [next])
+    if (screenshots.length <= 1) return;
+    const timer = setInterval(next, 4000);
+    return () => clearInterval(timer);
+  }, [next]);
 
   return (
     <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-visible px-6 py-12 md:py-16">
@@ -92,9 +92,7 @@ export function Hero() {
                         key={i}
                         onClick={() => setCurrent(i)}
                         className={`h-2 rounded-full transition-all ${
-                          i === current
-                            ? "w-6 bg-white"
-                            : "w-2 bg-white/40"
+                          i === current ? "w-6 bg-white" : "w-2 bg-white/40"
                         }`}
                         aria-label={`Go to screenshot ${i + 1}`}
                       />
@@ -107,5 +105,5 @@ export function Hero() {
         </div>
       </div>
     </section>
-  )
+  );
 }

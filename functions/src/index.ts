@@ -12,6 +12,13 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import Stripe from "stripe";
 import type { Response } from "express";
+import {
+  buildStoredPayouts,
+  calculateGroupSessionPayouts,
+  calculateReferralReputation,
+  decideReferralClaim,
+  isValidFirebaseUid,
+} from "./security";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -20,6 +27,24 @@ const db = admin.firestore();
 // Set with: firebase functions:secrets:set STRIPE_SECRET_KEY
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
+
+const PUBLIC_HTTP_OPTIONS = {
+  cors: true,
+  region: "us-central1",
+  invoker: "public" as const,
+};
+
+const PUBLIC_STRIPE_HTTP_OPTIONS = {
+  ...PUBLIC_HTTP_OPTIONS,
+  secrets: [STRIPE_SECRET_KEY],
+};
+
+const PUBLIC_STRIPE_WEBHOOK_OPTIONS = {
+  cors: false,
+  region: "us-central1",
+  invoker: "public" as const,
+  secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET],
+};
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -45,6 +70,137 @@ async function verifyAuth(req: Request): Promise<string> {
 
 function sendError(res: Response, code: number, message: string): void {
   res.status(code).json({ error: message });
+}
+
+async function recordGroupSessionPayout(
+  sessionId: string,
+  payout: { userId: string; amount: number },
+  stripeTransferId?: string,
+): Promise<void> {
+  const txnRef = db
+    .collection("transactions")
+    .doc(`group_session_payout_${sessionId}_${payout.userId}`);
+  const walletRef = db.collection("wallets").doc(payout.userId);
+
+  await db.runTransaction(async (txn) => {
+    const payoutTxnSnap = await txn.get(txnRef);
+    if (payoutTxnSnap.exists) {
+      return;
+    }
+
+    const walletSnap = await txn.get(walletRef);
+    const currentBalance: number = walletSnap.data()?.balance ?? 0;
+    const nextBalance = currentBalance + payout.amount;
+
+    if (walletSnap.exists) {
+      txn.update(walletRef, {
+        balance: nextBalance,
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      txn.set(
+        walletRef,
+        {
+          balance: nextBalance,
+          pendingBalance: 0,
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    }
+
+    txn.set(txnRef, {
+      userId: payout.userId,
+      type: "payout",
+      amount: payout.amount,
+      description: "Group session payout",
+      sessionId,
+      stripeTransferId: stripeTransferId ?? null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+async function settleGroupSessionPayouts(
+  sessionId: string,
+  payouts: Array<{ userId: string; amount: number }>,
+  initiatorUid: string,
+): Promise<string[]> {
+  const stripe = getStripe();
+  const sessionRef = db.collection("groupSessions").doc(sessionId);
+  const transferIds: string[] = [];
+  const failedRecipients: string[] = [];
+
+  for (const payout of payouts) {
+    if (payout.amount <= 0) {
+      continue;
+    }
+
+    try {
+      const recipientDoc = await db
+        .collection("users")
+        .doc(payout.userId)
+        .get();
+      const connectAccountId: string =
+        recipientDoc.data()?.stripeAccountId ?? "";
+
+      let stripeTransferId: string | undefined;
+
+      if (connectAccountId) {
+        const transfer = await stripe.transfers.create(
+          {
+            amount: payout.amount,
+            currency: "usd",
+            destination: connectAccountId,
+            metadata: {
+              sessionId,
+              recipientUid: payout.userId,
+              initiatorUid,
+              type: "group_session_payout",
+            },
+          },
+          {
+            idempotencyKey: `group_session_payout:${sessionId}:${payout.userId}:${payout.amount}`,
+          },
+        );
+
+        stripeTransferId = transfer.id;
+        transferIds.push(transfer.id);
+      }
+
+      await recordGroupSessionPayout(sessionId, payout, stripeTransferId);
+    } catch (err) {
+      console.error(
+        `Failed to settle payout for session=${sessionId}, user=${payout.userId}:`,
+        err,
+      );
+      failedRecipients.push(payout.userId);
+    }
+  }
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  if (transferIds.length > 0) {
+    updateData.transferIds = admin.firestore.FieldValue.arrayUnion(
+      ...transferIds,
+    );
+  }
+
+  if (failedRecipients.length === 0) {
+    updateData.payoutsSettledAt = admin.firestore.FieldValue.serverTimestamp();
+  }
+
+  await sessionRef.set(updateData, { merge: true });
+
+  if (failedRecipients.length > 0) {
+    throw new Error(
+      `Payout settlement requires reconciliation for: ${failedRecipients.join(", ")}`,
+    );
+  }
+
+  return transferIds;
 }
 
 // ─── Rate Limiting ──────────────────────────────────────────────────────────
@@ -131,7 +287,7 @@ const RATE_LIMITS = {
  * Returns: { clientSecret: string, paymentIntentId: string }
  */
 export const createPaymentIntent = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -186,10 +342,13 @@ export const createPaymentIntent = onRequest(
           name: userData.name ?? undefined,
         });
         customerId = customer.id;
-        await db
-          .collection("users")
-          .doc(uid)
-          .update({ stripeCustomerId: customerId });
+        await db.collection("users").doc(uid).set(
+          {
+            stripeCustomerId: customerId,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
       }
 
       const paymentIntent = await stripe.paymentIntents.create({
@@ -225,7 +384,7 @@ export const createPaymentIntent = onRequest(
  * The stripeWebhook handles payment_intent.succeeded for ACH async crediting.
  */
 export const verifyAndCreditDeposit = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -310,7 +469,24 @@ export const verifyAndCreditDeposit = onRequest(
         const walletSnap = await txn.get(walletRef);
         const current: number = walletSnap.data()?.balance ?? 0;
         const updated = current + amount;
-        txn.update(walletRef, { balance: updated });
+
+        if (walletSnap.exists) {
+          txn.update(walletRef, {
+            balance: updated,
+            lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } else {
+          txn.set(
+            walletRef,
+            {
+              balance: updated,
+              pendingBalance: 0,
+              lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
+
         txn.set(txnRef, {
           userId: uid,
           type: "deposit",
@@ -337,7 +513,7 @@ export const verifyAndCreditDeposit = onRequest(
  * Returns: { accountId: string }
  */
 export const createConnectAccount = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -409,7 +585,7 @@ export const createConnectAccount = onRequest(
  * links for other users' Stripe accounts.
  */
 export const createAccountLink = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -471,7 +647,7 @@ export const createAccountLink = onRequest(
  * Returns: { chargesEnabled, payoutsEnabled, detailsSubmitted, status }
  */
 export const getConnectAccountStatus = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -545,7 +721,7 @@ export const getConnectAccountStatus = onRequest(
  * Validates session ownership, status, and that the timer has expired.
  */
 export const handleSessionComplete = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -686,7 +862,7 @@ export const handleSessionComplete = onRequest(
  * Validates session ownership and status.
  */
 export const handleSessionForfeit = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -808,7 +984,7 @@ export const handleSessionForfeit = onRequest(
  * Returns: { success, transferId, payoutId?, estimatedArrival }
  */
 export const requestWithdrawal = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -960,22 +1136,19 @@ export const requestWithdrawal = onRequest(
 
 // ─── distributeGroupPayouts ─────────────────────────────────────────────────
 /**
- * Distributes group session payouts via Stripe Connect transfers.
- * Called by the host when the session ends.
+ * Distributes or reconciles stored group session payouts via Stripe Connect.
+ * Called by the proposer after a session is completed.
  *
- * Body: {
- *   sessionId: string,
- *   stakePerParticipant: number,
- *   results: { userId: string, completed: boolean }[]
- * }
+ * Body: { sessionId: string }
  * Returns: { success: boolean, transfers: string[], payouts: { userId: string, amount: number }[] }
  *
- * SECURITY: Payout amounts are calculated SERVER-SIDE using the same algorithm
- * as the client, based on the results array. The client cannot dictate payout amounts.
- * Individual payout amounts are capped and total pool is validated.
+ * SECURITY: Ignores client-supplied payout inputs and only uses the
+ * server-recorded payouts from the completed session document. Wallet credits
+ * and Stripe transfers are idempotent, so this endpoint can safely reconcile a
+ * partially-settled session without double-paying anyone.
  */
 export const distributeGroupPayouts = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -1001,111 +1174,64 @@ export const distributeGroupPayouts = onRequest(
       return;
     }
 
-    const { sessionId, stakePerParticipant, results } = req.body as {
-      sessionId: string;
-      stakePerParticipant: number;
-      results: { userId: string; completed: boolean }[];
-    };
+    const { sessionId } = req.body as { sessionId?: unknown };
 
-    if (!sessionId || !stakePerParticipant || !results?.length) {
-      sendError(res, 400, "Missing required fields");
-      return;
-    }
-
-    // Validate stake amount is within allowed range (100 cents to $10,000)
-    if (stakePerParticipant < 100 || stakePerParticipant > 1_000_000) {
-      sendError(res, 400, "Invalid stake amount");
-      return;
-    }
-
-    // Validate participant count (2-20 for group sessions)
-    if (results.length < 2 || results.length > 20) {
-      sendError(res, 400, "Invalid number of participants");
+    if (typeof sessionId !== "string" || !sessionId) {
+      sendError(res, 400, "Missing sessionId");
       return;
     }
 
     try {
-      // ── Server-side payout calculation ──────────────────────────────
-      // Mirrors client-side calculatePayouts() in payoutAlgorithm.ts.
-      // Completers split the full pool. Surrenderers get 0.
-      const completers = results.filter((r) => r.completed);
-      const totalPool = results.length * stakePerParticipant;
+      const sessionRef = db.collection("groupSessions").doc(sessionId);
+      const sessionSnap = await sessionRef.get();
 
-      let serverPayouts: { userId: string; amount: number }[];
-      if (completers.length === 0) {
-        // All surrendered — nobody gets anything (NIYAH keeps the pool)
-        serverPayouts = results.map((r) => ({
-          userId: r.userId,
-          amount: 0,
-        }));
-      } else {
-        const payoutPerCompleter = Math.floor(totalPool / completers.length);
-        serverPayouts = results.map((r) => ({
-          userId: r.userId,
-          amount: r.completed ? payoutPerCompleter : 0,
-        }));
-      }
-
-      // Validate total payouts don't exceed pool
-      const totalPayouts = serverPayouts.reduce((sum, p) => sum + p.amount, 0);
-      if (totalPayouts > totalPool) {
-        sendError(res, 400, "Calculated payouts exceed pool — aborting");
+      if (!sessionSnap.exists) {
+        sendError(res, 404, "Session not found");
         return;
       }
 
-      // ── Execute Stripe transfers ───────────────────────────────────
-      const stripe = getStripe();
-      const transferIds: string[] = [];
+      const sessionData = sessionSnap.data()!;
 
-      for (const payout of serverPayouts) {
-        if (payout.amount <= 0) continue; // No transfer needed
-
-        // Get the recipient's Stripe Connect account
-        const recipientDoc = await db
-          .collection("users")
-          .doc(payout.userId)
-          .get();
-        const connectAccountId: string =
-          recipientDoc.data()?.stripeAccountId ?? "";
-
-        if (!connectAccountId) {
-          console.warn(
-            `User ${payout.userId} has no Connect account — skipping transfer`,
-          );
-          continue;
-        }
-
-        const transfer = await stripe.transfers.create({
-          amount: payout.amount,
-          currency: "usd",
-          destination: connectAccountId,
-          metadata: {
-            sessionId,
-            recipientUid: payout.userId,
-            initiatorUid: uid,
-          },
-        });
-
-        transferIds.push(transfer.id);
-
-        // Credit recipient's wallet balance (wallets collection, not users)
-        const txnRef = db.collection("transactions").doc();
-        const walletRef = db.collection("wallets").doc(payout.userId);
-        await db.runTransaction(async (txn) => {
-          const snap = await txn.get(walletRef);
-          const current: number = snap.data()?.balance ?? 0;
-          txn.update(walletRef, { balance: current + payout.amount });
-          txn.set(txnRef, {
-            userId: payout.userId,
-            type: "payout",
-            amount: payout.amount,
-            description: "Group session payout",
-            sessionId,
-            stripeTransferId: transfer.id,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        });
+      if (sessionData.proposerId !== uid) {
+        sendError(res, 403, "Only the proposer can reconcile payouts");
+        return;
       }
+
+      if (sessionData.status !== "completed") {
+        sendError(
+          res,
+          409,
+          "Session must be completed before payouts can be reconciled",
+        );
+        return;
+      }
+
+      const participantIds = Array.isArray(sessionData.participantIds)
+        ? sessionData.participantIds.filter(
+            (participantId): participantId is string =>
+              typeof participantId === "string" && participantId.length > 0,
+          )
+        : [];
+
+      if (participantIds.length === 0) {
+        sendError(res, 500, "Session participants are missing");
+        return;
+      }
+
+      const rawPayouts = sessionData.payouts as
+        | Record<string, unknown>
+        | undefined;
+      if (!rawPayouts) {
+        sendError(res, 409, "Session payouts are not available yet");
+        return;
+      }
+
+      const serverPayouts = buildStoredPayouts(participantIds, rawPayouts);
+      const transferIds = await settleGroupSessionPayouts(
+        sessionId,
+        serverPayouts,
+        uid,
+      );
 
       res.json({
         success: true,
@@ -1130,10 +1256,11 @@ export const distributeGroupPayouts = onRequest(
  * SECURITY: Previously, awardReferralToUser() in firebase.ts wrote directly
  * to another user's document from the client, and the Firestore rule allowed
  * any authenticated user to modify any user's reputation field. This Cloud
- * Function replaces that pattern — only the admin SDK can now modify reputation.
+ * Function replaces that pattern, blocks self-referrals, and allows each user
+ * to claim a referral only once.
  */
 export const awardReferral = onRequest(
-  { cors: true, region: "us-central1" },
+  PUBLIC_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -1153,61 +1280,94 @@ export const awardReferral = onRequest(
       return;
     }
 
-    const { referrerUid } = req.body as { referrerUid: string };
-    if (!referrerUid || typeof referrerUid !== "string") {
+    const { referrerUid } = req.body as { referrerUid?: unknown };
+    if (!referrerUid) {
       sendError(res, 400, "Missing referrerUid");
       return;
     }
 
     // Validate referrerUid format (Firebase UIDs are alphanumeric, 1-128 chars)
-    if (!/^[a-zA-Z0-9]{1,128}$/.test(referrerUid)) {
+    if (!isValidFirebaseUid(referrerUid)) {
       sendError(res, 400, "Invalid referrerUid format");
       return;
     }
 
+    if (referrerUid === uid) {
+      sendError(res, 400, "Cannot refer yourself");
+      return;
+    }
+
     try {
+      const callerRef = db.collection("users").doc(uid);
       const referrerRef = db.collection("users").doc(referrerUid);
 
-      await db.runTransaction(async (txn) => {
-        const snap = await txn.get(referrerRef);
-        if (!snap.exists) return; // Referrer doesn't exist — silently succeed
-
-        const docData = snap.data() ?? {};
-        const rep = (docData.reputation as Record<string, number>) ?? {};
-
-        const referralCount = (rep.referralCount ?? 0) + 1;
-        const paymentsCompleted = rep.paymentsCompleted ?? 0;
-        const paymentsMissed = rep.paymentsMissed ?? 0;
-        const totalPayments = paymentsCompleted + paymentsMissed;
-
-        let score = 50;
-        if (totalPayments > 0) {
-          const successRate = paymentsCompleted / totalPayments;
-          score = Math.round(50 + (successRate - 0.5) * 100);
-          score = Math.max(0, Math.min(100, score));
+      const result = await db.runTransaction(async (txn) => {
+        const callerSnap = await txn.get(callerRef);
+        if (!callerSnap.exists) {
+          throw new Error("Caller profile not found");
         }
-        score = Math.min(100, score + referralCount * 10);
 
-        const level =
-          score <= 20
-            ? "seed"
-            : score <= 40
-              ? "sprout"
-              : score <= 60
-                ? "sapling"
-                : score <= 80
-                  ? "tree"
-                  : "oak";
+        const referrerSnap = await txn.get(referrerRef);
+        if (!referrerSnap.exists) {
+          throw new Error("Referrer not found");
+        }
 
-        txn.update(referrerRef, {
-          reputation: { ...rep, referralCount, score, level },
-        });
+        const claimDecision = decideReferralClaim(
+          callerSnap.data()?.referredByUid,
+          referrerUid,
+        );
+
+        if (claimDecision.status === "already_claimed") {
+          return claimDecision;
+        }
+
+        const docData = referrerSnap.data() ?? {};
+        const rep = (docData.reputation as Record<string, unknown>) ?? {};
+        const nextReputation = calculateReferralReputation(rep);
+
+        txn.set(
+          callerRef,
+          {
+            referredByUid: referrerUid,
+            referralAwardedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+
+        txn.set(
+          referrerRef,
+          {
+            reputation: { ...rep, ...nextReputation },
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
+
+        return claimDecision;
       });
+
+      if (result.status === "already_claimed") {
+        res.json({
+          success: true,
+          alreadyClaimed: true,
+          sameReferrer: result.sameReferrer,
+        });
+        return;
+      }
 
       res.json({ success: true });
     } catch (err) {
-      console.error("awardReferral error:", err);
-      sendError(res, 500, "Failed to award referral");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (
+        message === "Caller profile not found" ||
+        message === "Referrer not found"
+      ) {
+        sendError(res, 404, message);
+      } else {
+        console.error("awardReferral error:", err);
+        sendError(res, 500, "Failed to award referral");
+      }
     }
   },
 );
@@ -1225,62 +1385,59 @@ export const awardReferral = onRequest(
  * to modify any user's followers array. This Cloud Function replaces that
  * pattern — ensures only the caller's own UID is added.
  */
-export const followUserFn = onRequest(
-  { cors: true, region: "us-central1" },
-  async (req, res) => {
-    if (req.method !== "POST") {
-      sendError(res, 405, "Method not allowed");
-      return;
-    }
+export const followUserFn = onRequest(PUBLIC_HTTP_OPTIONS, async (req, res) => {
+  if (req.method !== "POST") {
+    sendError(res, 405, "Method not allowed");
+    return;
+  }
 
-    let uid: string;
-    try {
-      uid = await verifyAuth(req);
-    } catch {
-      sendError(res, 401, "Unauthorized");
-      return;
-    }
+  let uid: string;
+  try {
+    uid = await verifyAuth(req);
+  } catch {
+    sendError(res, 401, "Unauthorized");
+    return;
+  }
 
-    if (await checkRateLimit(uid, "followUserFn", RATE_LIMITS.followUserFn)) {
-      sendError(res, 429, "Too many requests — try again later");
-      return;
-    }
+  if (await checkRateLimit(uid, "followUserFn", RATE_LIMITS.followUserFn)) {
+    sendError(res, 429, "Too many requests — try again later");
+    return;
+  }
 
-    const { targetUid } = req.body as { targetUid: string };
-    if (!targetUid || typeof targetUid !== "string") {
-      sendError(res, 400, "Missing targetUid");
-      return;
-    }
+  const { targetUid } = req.body as { targetUid: string };
+  if (!targetUid || typeof targetUid !== "string") {
+    sendError(res, 400, "Missing targetUid");
+    return;
+  }
 
-    if (uid === targetUid) {
-      sendError(res, 400, "Cannot follow yourself");
-      return;
-    }
+  if (uid === targetUid) {
+    sendError(res, 400, "Cannot follow yourself");
+    return;
+  }
 
-    try {
-      const batch = db.batch();
-      const myRef = db.collection("userFollows").doc(uid);
-      const targetRef = db.collection("userFollows").doc(targetUid);
+  try {
+    const batch = db.batch();
+    const myRef = db.collection("userFollows").doc(uid);
+    const targetRef = db.collection("userFollows").doc(targetUid);
 
-      batch.set(
-        myRef,
-        { following: admin.firestore.FieldValue.arrayUnion(targetUid) },
-        { merge: true },
-      );
-      batch.set(
-        targetRef,
-        { followers: admin.firestore.FieldValue.arrayUnion(uid) },
-        { merge: true },
-      );
+    batch.set(
+      myRef,
+      { following: admin.firestore.FieldValue.arrayUnion(targetUid) },
+      { merge: true },
+    );
+    batch.set(
+      targetRef,
+      { followers: admin.firestore.FieldValue.arrayUnion(uid) },
+      { merge: true },
+    );
 
-      await batch.commit();
-      res.json({ success: true });
-    } catch (err) {
-      console.error("followUser error:", err);
-      sendError(res, 500, "Failed to follow user");
-    }
-  },
-);
+    await batch.commit();
+    res.json({ success: true });
+  } catch (err) {
+    console.error("followUser error:", err);
+    sendError(res, 500, "Failed to follow user");
+  }
+});
 
 // ─── unfollowUser ───────────────────────────────────────────────────────────
 /**
@@ -1291,7 +1448,7 @@ export const followUserFn = onRequest(
  * Returns: { success: boolean }
  */
 export const unfollowUserFn = onRequest(
-  { cors: true, region: "us-central1" },
+  PUBLIC_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -1351,11 +1508,7 @@ export const unfollowUserFn = onRequest(
  * Events handled: payment_intent.succeeded, account.updated
  */
 export const stripeWebhook = onRequest(
-  {
-    cors: false,
-    region: "us-central1",
-    secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET],
-  },
+  PUBLIC_STRIPE_WEBHOOK_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -1453,7 +1606,7 @@ export const stripeWebhook = onRequest(
  * to the user document for tamper-resistance.
  */
 export const acceptLegalTerms = onRequest(
-  { cors: true },
+  PUBLIC_HTTP_OPTIONS,
   async (req: Request, res: Response) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -1506,7 +1659,7 @@ export const acceptLegalTerms = onRequest(
  * Fetches invitee profiles server-side to populate participant data.
  */
 export const createGroupSession = onRequest(
-  { cors: true, region: "us-central1" },
+  PUBLIC_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -1744,7 +1897,7 @@ export const createGroupSession = onRequest(
  * via Firestore transaction on accept. Handles cascade logic (cancel if < 2).
  */
 export const respondToGroupInvite = onRequest(
-  { cors: true, region: "us-central1" },
+  PUBLIC_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -1801,9 +1954,9 @@ export const respondToGroupInvite = onRequest(
         return;
       }
 
-      const sessionRef = db.collection("groupSessions").doc(
-        inviteData.sessionId,
-      );
+      const sessionRef = db
+        .collection("groupSessions")
+        .doc(inviteData.sessionId);
       const sessionSnap = await sessionRef.get();
       const sessionData = sessionSnap.data()!;
 
@@ -1960,7 +2113,7 @@ export const respondToGroupInvite = onRequest(
  * Returns: { success: true, allOnline: boolean }
  */
 export const markOnlineForSession = onRequest(
-  { cors: true, region: "us-central1" },
+  PUBLIC_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -2050,7 +2203,7 @@ export const markOnlineForSession = onRequest(
  * Returns: { success: true, endsAt: number }
  */
 export const startGroupSession = onRequest(
-  { cors: true, region: "us-central1" },
+  PUBLIC_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -2141,7 +2294,8 @@ export const startGroupSession = onRequest(
 // ─── reportSessionStatus ────────────────────────────────────────────────────
 /**
  * Reports a participant's completion or surrender for an active group session.
- * If all participants have reported, finalizes the session and distributes payouts.
+ * If all participants have reported, finalizes the session atomically and then
+ * settles payouts using idempotent Stripe transfers and wallet credits.
  * Body: { sessionId: string, action: "complete" | "surrender" }
  * Returns: { success: true, sessionComplete: boolean, payouts?: Record<string, number> }
  *
@@ -2149,7 +2303,7 @@ export const startGroupSession = onRequest(
  * Payout calculation is done server-side.
  */
 export const reportSessionStatus = onRequest(
-  { cors: true, region: "us-central1", secrets: [STRIPE_SECRET_KEY] },
+  PUBLIC_STRIPE_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -2192,194 +2346,168 @@ export const reportSessionStatus = onRequest(
 
     try {
       const sessionRef = db.collection("groupSessions").doc(sessionId);
-      const sessionSnap = await sessionRef.get();
+      const outcome = await db.runTransaction(async (txn) => {
+        const sessionSnap = await txn.get(sessionRef);
 
-      if (!sessionSnap.exists) {
-        sendError(res, 404, "Session not found");
-        return;
-      }
-
-      const sessionData = sessionSnap.data()!;
-
-      if (sessionData.status !== "active") {
-        sendError(
-          res,
-          400,
-          `Session is not active (current status: ${sessionData.status})`,
-        );
-        return;
-      }
-
-      if (!sessionData.participantIds.includes(uid)) {
-        sendError(res, 403, "Not a participant in this session");
-        return;
-      }
-
-      // Check if user has already reported
-      const participant = sessionData.participants[uid];
-      if (participant?.completed || participant?.surrendered) {
-        sendError(res, 400, "Already reported status for this session");
-        return;
-      }
-
-      if (action === "complete") {
-        // Validate timer: endsAt - 60s grace period for cold starts
-        const endsAt = sessionData.endsAt?.toDate?.()
-          ? sessionData.endsAt.toDate()
-          : new Date(sessionData.endsAt);
-        const gracePeriodMs = 60_000; // 60 seconds
-        if (endsAt.getTime() - gracePeriodMs > Date.now()) {
-          sendError(res, 400, "Session has not ended yet");
-          return;
+        if (!sessionSnap.exists) {
+          throw new Error("Session not found");
         }
 
-        await sessionRef.update({
-          [`participants.${uid}.completed`]: true,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      } else {
-        // Surrender
-        await sessionRef.update({
-          [`participants.${uid}.surrendered`]: true,
-          [`participants.${uid}.surrenderedAt`]:
-            admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      }
+        const sessionData = sessionSnap.data()!;
+        const participantIds = Array.isArray(sessionData.participantIds)
+          ? sessionData.participantIds.filter(
+              (participantId): participantId is string =>
+                typeof participantId === "string" && participantId.length > 0,
+            )
+          : [];
 
-      // Check if all participants have reported — and atomically claim
-      // finalization rights to prevent double-payout if two reports arrive
-      // simultaneously and both see allReported = true.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let updatedData: { [key: string]: any } | null = null;
-      try {
-        updatedData = await db.runTransaction(async (txn) => {
-          const snap = await txn.get(sessionRef);
-          const data = snap.data()!;
-
-          // If already finalized or being finalized, bail out.
-          if (data.status !== "active" || data.finalizing) return null;
-
-          const reported = data.participantIds.every((pid: string) => {
-            const p = data.participants[pid];
-            return p?.completed || p?.surrendered;
-          });
-          if (!reported) return null;
-
-          // Atomically claim finalization — only one CF instance will succeed.
-          txn.update(sessionRef, { finalizing: true });
-          return data;
-        });
-      } catch (txnErr) {
-        console.error("reportSessionStatus: finalization claim failed:", txnErr);
-        res.json({ success: true, sessionComplete: false });
-        return;
-      }
-
-      if (!updatedData) {
-        console.log(
-          `reportSessionStatus: session=${sessionId}, user=${uid}, action=${action}, allReported=false or already finalizing`,
-        );
-        res.json({ success: true, sessionComplete: false });
-        return;
-      }
-
-      // ── Finalize session: calculate and distribute payouts ──────────
-      console.log(
-        `reportSessionStatus: session=${sessionId} — all reported, finalizing`,
-      );
-
-      const completers = updatedData.participantIds.filter(
-        (pid: string) => updatedData.participants[pid]?.completed,
-      );
-      const totalPool =
-        updatedData.participantIds.length * updatedData.stakePerParticipant;
-
-      const payouts: Record<string, number> = {};
-
-      if (completers.length === 0) {
-        // All surrendered — NIYAH keeps the pool
-        for (const pid of updatedData.participantIds) {
-          payouts[pid] = 0;
+        if (!participantIds.includes(uid)) {
+          throw new Error("Not a participant in this session");
         }
-      } else {
-        const payoutPerCompleter = Math.floor(totalPool / completers.length);
-        for (const pid of updatedData.participantIds) {
-          payouts[pid] = updatedData.participants[pid]?.completed
-            ? payoutPerCompleter
-            : 0;
+
+        const rawPayouts = sessionData.payouts as
+          | Record<string, unknown>
+          | undefined;
+
+        if (sessionData.status === "completed") {
+          if (!rawPayouts) {
+            throw new Error("Session completed without recorded payouts");
+          }
+
+          return {
+            sessionComplete: true,
+            participantIds,
+            payouts: rawPayouts as Record<string, number>,
+            shouldSettle: !sessionData.payoutsSettledAt,
+          };
         }
-      }
 
-      // Execute Stripe transfers and credit wallets
-      const stripe = getStripe();
+        if (sessionData.status !== "active") {
+          throw new Error(
+            `Session is not active (current status: ${sessionData.status})`,
+          );
+        }
 
-      for (const pid of updatedData.participantIds) {
-        if (payouts[pid] <= 0) continue;
+        const participant = sessionData.participants[uid];
+        if (participant?.completed || participant?.surrendered) {
+          throw new Error("Already reported status for this session");
+        }
 
-        const recipientDoc = await db.collection("users").doc(pid).get();
-        const connectAccountId: string =
-          recipientDoc.data()?.stripeAccountId ?? "";
+        if (action === "complete") {
+          const endsAt = sessionData.endsAt?.toDate?.()
+            ? sessionData.endsAt.toDate()
+            : new Date(sessionData.endsAt);
+          const gracePeriodMs = 60_000;
 
-        if (connectAccountId) {
-          try {
-            await stripe.transfers.create({
-              amount: payouts[pid],
-              currency: "usd",
-              destination: connectAccountId,
-              metadata: {
-                sessionId,
-                recipientUid: pid,
-                type: "group_session_payout",
-              },
-            });
-          } catch (transferErr) {
-            console.error(
-              `Stripe transfer failed for user ${pid}:`,
-              transferErr,
-            );
+          if (endsAt.getTime() - gracePeriodMs > Date.now()) {
+            throw new Error("Session has not ended yet");
           }
         }
 
-        // Credit wallet and record transaction
-        const walletRef = db.collection("wallets").doc(pid);
-        const txnRef = db.collection("transactions").doc();
-        await db.runTransaction(async (txn) => {
-          const snap = await txn.get(walletRef);
-          const current: number = snap.data()?.balance ?? 0;
-          txn.update(walletRef, { balance: current + payouts[pid] });
-          txn.set(txnRef, {
-            userId: pid,
-            type: "payout",
-            amount: payouts[pid],
-            description: "Group session payout",
-            sessionId,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        });
-      }
+        const updatedParticipants = {
+          ...sessionData.participants,
+          [uid]: {
+            ...participant,
+            completed: action === "complete",
+            surrendered: action === "surrender",
+            surrenderedAt:
+              action === "surrender"
+                ? admin.firestore.FieldValue.serverTimestamp()
+                : undefined,
+          },
+        };
 
-      // Mark session completed
-      await sessionRef.update({
-        status: "completed",
-        payouts,
-        completedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        const updateData: Record<string, unknown> = {
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        if (action === "complete") {
+          updateData[`participants.${uid}.completed`] = true;
+        } else {
+          updateData[`participants.${uid}.surrendered`] = true;
+          updateData[`participants.${uid}.surrenderedAt`] =
+            admin.firestore.FieldValue.serverTimestamp();
+        }
+
+        const allReported = participantIds.every((participantId) => {
+          const currentParticipant = updatedParticipants[participantId];
+          return (
+            currentParticipant?.completed || currentParticipant?.surrendered
+          );
+        });
+
+        if (!allReported) {
+          txn.update(sessionRef, updateData);
+          return { sessionComplete: false };
+        }
+
+        const payouts = calculateGroupSessionPayouts(
+          participantIds,
+          updatedParticipants,
+          sessionData.stakePerParticipant,
+        );
+
+        txn.update(sessionRef, {
+          ...updateData,
+          status: "completed",
+          payouts,
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return {
+          sessionComplete: true,
+          participantIds,
+          payouts,
+          shouldSettle: true,
+        };
       });
 
-      console.log(
-        `reportSessionStatus: session=${sessionId} completed, payouts=${JSON.stringify(payouts)}`,
+      if (!outcome.sessionComplete) {
+        console.log(
+          `reportSessionStatus: session=${sessionId}, user=${uid}, action=${action}, allReported=false`,
+        );
+        res.json({ success: true, sessionComplete: false });
+        return;
+      }
+
+      if (!outcome.participantIds || !outcome.payouts) {
+        throw new Error("Session completed without recorded payouts");
+      }
+
+      const payoutList = buildStoredPayouts(
+        outcome.participantIds,
+        outcome.payouts,
       );
 
-      res.json({ success: true, sessionComplete: true, payouts });
+      if (outcome.shouldSettle) {
+        await settleGroupSessionPayouts(sessionId, payoutList, uid);
+      }
+
+      console.log(
+        `reportSessionStatus: session=${sessionId} completed, payouts=${JSON.stringify(outcome.payouts)}`,
+      );
+
+      res.json({
+        success: true,
+        sessionComplete: true,
+        payouts: outcome.payouts,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       if (
         message.includes("not found") ||
         message.includes("not active") ||
-        message.includes("not ended")
+        message.includes("not ended") ||
+        message.includes("Not a participant") ||
+        message.includes("Already reported") ||
+        message.includes("without recorded payouts")
       ) {
-        sendError(res, 400, message);
+        const statusCode = message.includes("not found")
+          ? 404
+          : message.includes("Not a participant")
+            ? 403
+            : 400;
+        sendError(res, statusCode, message);
       } else {
         console.error("reportSessionStatus error:", err);
         sendError(res, 500, "Failed to report session status");
@@ -2398,7 +2526,7 @@ export const reportSessionStatus = onRequest(
  * SECURITY: Refunds all accepted participants' stakes.
  */
 export const cancelGroupSession = onRequest(
-  { cors: true, region: "us-central1" },
+  PUBLIC_HTTP_OPTIONS,
   async (req, res) => {
     if (req.method !== "POST") {
       sendError(res, 405, "Method not allowed");
@@ -2446,7 +2574,10 @@ export const cancelGroupSession = onRequest(
         return;
       }
 
-      if (sessionData.status === "active" || sessionData.status === "completed") {
+      if (
+        sessionData.status === "active" ||
+        sessionData.status === "completed"
+      ) {
         sendError(
           res,
           400,

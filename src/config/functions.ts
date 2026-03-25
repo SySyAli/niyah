@@ -1,8 +1,29 @@
-import { getAuth } from "@react-native-firebase/auth";
+import { getAuth, getIdToken } from "@react-native-firebase/auth";
 
-const FUNCTIONS_BASE =
+const FUNCTIONS_BASE = (
   process.env.EXPO_PUBLIC_FUNCTIONS_URL ||
-  `https://us-central1-${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
+  `https://us-central1-${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`
+).replace(/\/+$/, "");
+
+const normalizeErrorBody = (status: number, body: string): string => {
+  const trimmed = body.trim();
+
+  if (!trimmed) {
+    return "Request failed";
+  }
+
+  if (/^<!doctype html>|^<html[\s>]/i.test(trimmed)) {
+    if (status === 401 || status === 403) {
+      return "Function endpoint is not publicly accessible";
+    }
+
+    return status === 404
+      ? "Function endpoint not found"
+      : "Server returned an HTML error page";
+  }
+
+  return trimmed;
+};
 
 // ─── Core fetch wrapper ──────────────────────────────────────────────────────
 
@@ -12,7 +33,8 @@ async function callFunction<T>(
 ): Promise<T> {
   let idToken: string | null = null;
   try {
-    idToken = (await getAuth().currentUser?.getIdToken()) ?? null;
+    const currentUser = getAuth().currentUser;
+    idToken = currentUser ? await getIdToken(currentUser) : null;
   } catch {
     // unauthenticated — server will reject if auth is required
   }
@@ -28,7 +50,9 @@ async function callFunction<T>(
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`[${name}] ${response.status}: ${errorBody}`);
+    throw new Error(
+      `[${name}] ${response.status}: ${normalizeErrorBody(response.status, errorBody)}`,
+    );
   }
 
   return response.json() as Promise<T>;
@@ -39,7 +63,7 @@ async function callFunction<T>(
 export interface CreatePaymentIntentResult {
   clientSecret: string;
   paymentIntentId: string;
-  customerId: string;
+  customerId?: string;
 }
 
 /** Amount in cents. */
@@ -195,8 +219,9 @@ export interface GroupPayoutResult {
 }
 
 /**
- * Distributes group session payouts. The Cloud Function recalculates payouts
- * server-side — clients cannot dictate payout amounts.
+ * Reconciles group session payouts from the server-recorded completed session.
+ * Legacy callers still pass stake/results, but the backend ignores client-
+ * supplied payout inputs and settles only from stored session data.
  */
 export async function distributeGroupPayouts(
   sessionId: string,

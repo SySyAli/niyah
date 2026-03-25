@@ -9,7 +9,18 @@
  * - Deep link navigation from notifications
  */
 
-import messaging from "@react-native-firebase/messaging";
+import {
+  getMessaging,
+  requestPermission,
+  AuthorizationStatus,
+  getToken,
+  getAPNSToken,
+  onTokenRefresh as subscribeToTokenRefresh,
+  onMessage as subscribeToMessages,
+  setBackgroundMessageHandler,
+  getInitialNotification,
+  onNotificationOpenedApp,
+} from "@react-native-firebase/messaging";
 import { getAuth } from "@react-native-firebase/auth";
 import {
   getFirestore,
@@ -19,19 +30,43 @@ import {
   arrayUnion,
   arrayRemove,
 } from "@react-native-firebase/firestore";
-import { Platform, Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import { router, type RelativePathString } from "expo-router";
 import { logger } from "../utils/logger";
 
 const db = getFirestore();
 
+const getMessagingInstance = () => getMessaging();
+
+function isMissingAPNSTokenError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes("No APNS token specified before fetching FCM Token")
+  );
+}
+
+async function getCurrentFCMToken(): Promise<string | null> {
+  const messaging = getMessagingInstance();
+
+  if (Platform.OS === "ios") {
+    const apnsToken = await getAPNSToken(messaging);
+
+    if (!apnsToken) {
+      logger.info("APNS token not ready yet; waiting for FCM token refresh");
+      return null;
+    }
+  }
+
+  return getToken(messaging);
+}
+
 // ─── Permission ─────────────────────────────────────────────────────────────
 
 export async function requestNotificationPermission(): Promise<boolean> {
-  const authStatus = await messaging().requestPermission();
+  const authStatus = await requestPermission(getMessagingInstance());
   const enabled =
-    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    authStatus === AuthorizationStatus.AUTHORIZED ||
+    authStatus === AuthorizationStatus.PROVISIONAL;
 
   if (!enabled) {
     logger.warn("Notification permission not granted");
@@ -48,12 +83,7 @@ export async function registerFCMToken(): Promise<void> {
     const user = getAuth().currentUser;
     if (!user) return;
 
-    // On iOS, must register for remote notifications first
-    if (Platform.OS === "ios") {
-      await messaging().registerDeviceForRemoteMessages();
-    }
-
-    const token = await messaging().getToken();
+    const token = await getCurrentFCMToken();
     if (!token) return;
 
     // Store token in user doc (array of tokens for multi-device support)
@@ -68,6 +98,11 @@ export async function registerFCMToken(): Promise<void> {
 
     logger.info("FCM token registered");
   } catch (error) {
+    if (Platform.OS === "ios" && isMissingAPNSTokenError(error)) {
+      logger.info("APNS token not ready yet; waiting for FCM token refresh");
+      return;
+    }
+
     logger.error("Failed to register FCM token:", error);
   }
 }
@@ -75,7 +110,7 @@ export async function registerFCMToken(): Promise<void> {
 /** Remove the current device's FCM token on logout. */
 export async function removeFCMToken(uid: string): Promise<void> {
   try {
-    const token = await messaging().getToken();
+    const token = await getCurrentFCMToken();
     if (!token) return;
 
     await setDoc(
@@ -89,13 +124,18 @@ export async function removeFCMToken(uid: string): Promise<void> {
 
     logger.info("FCM token removed");
   } catch (error) {
+    if (Platform.OS === "ios" && isMissingAPNSTokenError(error)) {
+      logger.info("APNS token not ready yet; skipping FCM token removal");
+      return;
+    }
+
     logger.error("Failed to remove FCM token:", error);
   }
 }
 
 /** Listen for token refreshes and update Firestore. */
 export function onTokenRefresh(): () => void {
-  return messaging().onTokenRefresh(async (newToken) => {
+  return subscribeToTokenRefresh(getMessagingInstance(), async (newToken) => {
     const user = getAuth().currentUser;
     if (!user) return;
 
@@ -146,7 +186,7 @@ function handleNotificationNavigation(
 
 /** Set up foreground message handler — shows in-app alert. */
 export function setupForegroundHandler(): () => void {
-  return messaging().onMessage(async (remoteMessage) => {
+  return subscribeToMessages(getMessagingInstance(), async (remoteMessage) => {
     const { notification, data } = remoteMessage;
     if (!notification) return;
 
@@ -164,7 +204,7 @@ export function setupForegroundHandler(): () => void {
 
 /** Set up background message handler. Must be called at app entry point. */
 export function setupBackgroundHandler(): void {
-  messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  setBackgroundMessageHandler(getMessagingInstance(), async (remoteMessage) => {
     logger.info("Background message received:", remoteMessage.messageId);
     // Background messages are handled by the system notification tray.
     // Navigation happens via onNotificationOpenedApp when user taps.
@@ -173,7 +213,9 @@ export function setupBackgroundHandler(): void {
 
 /** Check if app was opened from a notification (cold start). */
 export async function checkInitialNotification(): Promise<void> {
-  const initialNotification = await messaging().getInitialNotification();
+  const initialNotification = await getInitialNotification(
+    getMessagingInstance(),
+  );
   if (initialNotification) {
     handleNotificationNavigation(
       initialNotification.data as Record<string, string>,
@@ -183,7 +225,7 @@ export async function checkInitialNotification(): Promise<void> {
 
 /** Set up handler for notification taps when app is in background. */
 export function setupNotificationOpenHandler(): () => void {
-  return messaging().onNotificationOpenedApp((remoteMessage) => {
+  return onNotificationOpenedApp(getMessagingInstance(), (remoteMessage) => {
     handleNotificationNavigation(remoteMessage.data as Record<string, string>);
   });
 }
@@ -198,9 +240,8 @@ export async function initializeNotifications(): Promise<() => void> {
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return () => {};
 
-  await registerFCMToken();
-
   const unsubTokenRefresh = onTokenRefresh();
+  await registerFCMToken();
   const unsubForeground = setupForegroundHandler();
   const unsubOpen = setupNotificationOpenHandler();
 

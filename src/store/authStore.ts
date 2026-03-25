@@ -19,6 +19,11 @@ import {
   CURRENT_LEGAL_VERSION,
   DEMO_MODE,
 } from "../constants/config";
+import {
+  generateBlobAvatarPreset,
+  normalizeBlobAvatarConfig,
+  type BlobAvatarConfig,
+} from "../constants/blobAvatar";
 import { logger } from "../utils/logger";
 
 // Lazy import to break circular dependency (walletStore imports authStore)
@@ -108,6 +113,7 @@ interface AuthState {
   updateReputation: (updates: Partial<UserReputation>) => void;
   setVenmoHandle: (handle: string) => void;
   setZelleHandle: (handle: string) => void;
+  setBlobAvatar: (blobAvatar: BlobAvatarConfig) => void;
   acceptLegal: () => Promise<void>;
 }
 
@@ -147,6 +153,10 @@ const buildUser = (
         (firestoreData.profileImage as string) ||
         firebaseUser.photoURL ||
         undefined,
+      blobAvatar: normalizeBlobAvatarConfig(
+        firestoreData.blobAvatar as Partial<BlobAvatarConfig> | undefined,
+        firebaseUser.uid,
+      ),
       balance: 0, // Wallet is separate (walletStore)
       currentStreak: stats.currentStreak || 0,
       longestStreak: stats.longestStreak || 0,
@@ -196,6 +206,7 @@ const buildUser = (
     email: firebaseUser.email || "",
     name: firebaseUser.displayName || "",
     profileImage: firebaseUser.photoURL || undefined,
+    blobAvatar: generateBlobAvatarPreset(firebaseUser.uid),
     balance: 0,
     currentStreak: 0,
     longestStreak: 0,
@@ -455,6 +466,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: firebaseUser.email || "",
         phone: data.phone,
         profileImage: firebaseUser.photoURL || undefined,
+        blobAvatar: generateBlobAvatarPreset(firebaseUser.uid),
         authProvider,
       });
 
@@ -600,6 +612,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Sync to Firestore (fire-and-forget)
       updateUserDoc(user.id, { zelleHandle: handle }).catch((err) =>
         logger.error("Failed to sync zelleHandle to Firestore:", err),
+      );
+    }
+  },
+
+  setBlobAvatar: (blobAvatar: BlobAvatarConfig) => {
+    const { user } = get();
+    if (user) {
+      set({ user: { ...user, blobAvatar } });
+
+      updateUserDoc(user.id, { blobAvatar }).catch((err) =>
+        logger.error("Failed to sync blobAvatar to Firestore:", err),
       );
     }
   },

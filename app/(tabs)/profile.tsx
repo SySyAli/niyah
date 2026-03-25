@@ -47,7 +47,8 @@ export default function ProfileScreen() {
   const Colors = useColors();
   const { theme, toggleTheme } = useThemeStore();
   const router = useRouter();
-  const { user, logout, setVenmoHandle, setZelleHandle } = useAuthStore();
+  const { user, logout, setVenmoHandle, setZelleHandle, setBlobAvatar } =
+    useAuthStore();
   const { balance, transactions, pendingWithdrawal } = useWalletStore();
   const { partners } = usePartnerStore();
   const { following, loadMyFollows } = useSocialStore();
@@ -98,6 +99,7 @@ export default function ProfileScreen() {
           user={user}
           followingCount={following.length}
           partnerCount={partners.length}
+          onBlobAvatarChange={setBlobAvatar}
         />
 
         <ReputationCard

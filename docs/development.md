@@ -45,8 +45,9 @@ eas secret:create --scope project --name GOOGLE_SERVICES_JSON --type file --valu
 ### Development Server
 
 ```bash
-pnpm start             # Start dev server (requires dev client build first)
-pnpm start:device      # Start with USB port forwarding (physical device)
+pnpm start             # Start dev server over LAN (requires dev client build first)
+pnpm start:tunnel      # Start dev server over Expo tunnel (best for Windows+iPhone)
+pnpm start:device      # Start with USB port forwarding (physical device, Mac only)
 pnpm ios               # Start with iOS simulator
 pnpm android           # Start with Android emulator
 npx expo start --clear # Clear cache and start
@@ -83,19 +84,34 @@ pnpm build:local:sim   # iOS local build to Simulator
 pnpm build:dev         # iOS dev build via EAS (cloud)
 pnpm build:dev:android # Android dev build via EAS (cloud)
 pnpm build:dev:device  # iOS device-specific dev build via EAS
+pnpm build:dev:device:local # iOS device-specific dev build via local EAS on Mac
 pnpm build:preview     # Preview build (all platforms)
 pnpm build:production  # Production build (all platforms)
 ```
 
 **Important**: This project uses `expo-dev-client`, NOT Expo Go. Build a dev client first (`pnpm build:local` or `pnpm build:dev`) before running `pnpm start`.
 
+**Important**: Windows/Linux developers cannot build iPhone binaries locally. Use a shared `development-device` build from EAS or a Mac, then connect that app to Metro for day-to-day JS/TS work.
+
 ## Physical Device Development
 
 Two approaches for iOS device testing:
 
+### Tunnel (recommended for Windows + iPhone)
+
+This avoids same-WiFi discovery issues and most WSL2/firewall problems.
+
+```bash
+pnpm start:tunnel
+```
+
+If Expo asks for ngrok, install it once with `npm i -g @expo/ngrok` and rerun the command.
+
+Open the installed dev client on your iPhone and scan the QR code or open the recent project.
+
 ### WiFi (simpler)
 
-Ensure phone and laptop are on the same WiFi network, then `pnpm start`. The dev client auto-discovers the server.
+Ensure phone and laptop are on the same WiFi network, then `pnpm start`. The dev client auto-discovers the server. This is faster than tunneling, but WSL2 and Windows firewall settings can block LAN access.
 
 ### USB (scripts/dev-device.sh)
 
@@ -106,6 +122,14 @@ brew install libimobiledevice  # one-time
 pnpm build:local               # build + install on device
 pnpm start:device              # connect via USB (skips build)
 ```
+
+## Windows + iPhone teammate workflow
+
+1. A Mac owner or EAS cloud creates an iPhone dev client with `pnpm build:dev:device` or `pnpm build:dev:device:local`.
+2. Each teammate device must be registered first with `eas device:create` so Apple includes it in the provisioning profile.
+3. Teammates install that build once on their iPhones, then develop with `pnpm start:tunnel` (recommended) or `pnpm start` plus `scripts/wsl_dev_setup.ps1` for LAN.
+4. If the installed app behaves like a fixed standalone app and never connects to Metro, it was built as a regular release/archive build instead of a `development-device` build and must be rebuilt.
+5. JS/TS changes hot-reload immediately. Native dependency, config-plugin, entitlement, or Info.plist changes require a fresh iPhone dev-client build from EAS or a Mac.
 
 ## Cloud Functions
 

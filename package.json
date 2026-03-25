@@ -5,6 +5,7 @@
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "start": "node scripts/print-dev-url.js & expo start --dev-client",
+    "start:tunnel": "expo start --dev-client --tunnel",
     "start:device": "SKIP_BUILD=true bash scripts/dev-device.sh",
     "start:go": "expo start --go",
     "android": "expo start --android --dev-client",
@@ -15,6 +16,7 @@
     "build:dev": "eas build --profile development --platform ios",
     "build:dev:android": "eas build --profile development --platform android",
     "build:dev:device": "eas build --profile development-device --platform ios",
+    "build:dev:device:local": "eas build --profile development-device --platform ios --local",
     "build:preview": "eas build --profile preview --platform all",
     "build:production": "eas build --profile production --platform all",
     "test": "cross-env EXPO_PUBLIC_DEMO_MODE=true jest",

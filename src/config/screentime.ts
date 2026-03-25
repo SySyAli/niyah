@@ -10,9 +10,14 @@ import {
 // Feature availability
 // ---------------------------------------------------------------------------
 
+const isScreenTimeEnabled =
+  process.env.EXPO_PUBLIC_ENABLE_SCREEN_TIME !== "false";
+
 // iOS 16+ physical device only.
 export const isScreenTimeAvailable =
-  Platform.OS === "ios" && parseInt(Platform.Version as string, 10) >= 16;
+  isScreenTimeEnabled &&
+  Platform.OS === "ios" &&
+  parseInt(Platform.Version as string, 10) >= 16;
 
 // ---------------------------------------------------------------------------
 // Authorization

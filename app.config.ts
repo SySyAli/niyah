@@ -17,6 +17,7 @@ function env(name: string, fallback?: string): string {
 
 const firebaseProjectId = env("EXPO_PUBLIC_FIREBASE_PROJECT_ID");
 const googleIosClientId = env("EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID");
+const enableScreenTime = process.env.EXPO_PUBLIC_ENABLE_SCREEN_TIME !== "false";
 // iosUrlScheme needs just the numeric ID (e.g. "714...-42pm..."), not the full
 // "714...-42pm....apps.googleusercontent.com" form stored in the env var.
 const googleIosShortId = googleIosClientId.replace(
@@ -106,9 +107,13 @@ export default {
       "./plugins/withGoogleServicesPlist",
       "./plugins/withGoogleServicesJson",
       "./plugins/withFirebaseStaticFrameworks",
-      "./plugins/withScreenTimeEntitlement",
-      "./plugins/withDeviceActivityMonitor",
-      "./plugins/withShieldExtensions",
+      ...(enableScreenTime
+        ? [
+            "./plugins/withScreenTimeEntitlement",
+            "./plugins/withDeviceActivityMonitor",
+            "./plugins/withShieldExtensions",
+          ]
+        : []),
     ],
     experiments: {
       typedRoutes: true,

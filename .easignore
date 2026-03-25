@@ -64,4 +64,6 @@ landing-pg/node_modules/
 
 expo-env.d.ts
 # @end expo-cli
-.vercel
+
+!firebase/GoogleService-Info.plist
+!firebase/google-services.json

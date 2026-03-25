@@ -18,14 +18,18 @@ function withGoogleServicesJson(config) {
       const projectRoot = config.modRequest.projectRoot;
       const androidRoot = config.modRequest.platformProjectRoot;
 
-      const src = path.join(projectRoot, "firebase", "google-services.json");
+      const configuredPath =
+        config.android?.googleServicesFile || "./firebase/google-services.json";
+      const src = path.isAbsolute(configuredPath)
+        ? configuredPath
+        : path.join(projectRoot, configuredPath);
       const dest = path.join(androidRoot, "app", "google-services.json");
 
       if (fs.existsSync(src)) {
         fs.copyFileSync(src, dest);
       } else {
         console.warn(
-          "[withGoogleServicesJson] google-services.json not found at firebase/google-services.json",
+          `[withGoogleServicesJson] google-services.json not found at ${src}`,
         );
       }
 

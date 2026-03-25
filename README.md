@@ -92,13 +92,21 @@ pnpm ci          # Full CI: lint + typecheck + test
 
 ## Teammate Setup (Windows + iPhone, no Mac needed)
 
-The Mac owner builds the app once and shares an install link. Teammates install it on their iPhones and code with live hot-reload from their Windows laptops.
+The Mac owner (or EAS cloud) must create a real iPhone development build and share that install link. Teammates then install it on their iPhones and code with live hot-reload from their Windows laptops.
+
+Do not share a plain Xcode archive/release IPA for daily development. If the installed app behaves like a fixed standalone app and never connects to Metro, it is the wrong build. Teammates need an Expo `development-device` build instead.
 
 ### 1. Install the app on your iPhone
 
 - Open the install link you received in **Safari** on your iPhone
 - Tap **Install** when prompted
 - Go to **Settings > General > VPN & Device Management** > tap the developer certificate > **Trust**
+
+Your device must be registered in Apple Developer first. If install fails, ask the Mac owner to run:
+
+```bash
+eas device:create
+```
 
 ### 2. Set up your dev environment (one-time)
 
@@ -119,7 +127,23 @@ Set up config files (never commit these):
 
 You need to be added to the Firebase project first — ask the team lead.
 
-### 3. Network setup (every Windows restart)
+### 3. Start coding (recommended: tunnel)
+
+Inside WSL:
+
+```bash
+pnpm start:tunnel
+```
+
+If Expo asks for ngrok, install it once:
+
+```bash
+npm i -g @expo/ngrok
+```
+
+Open the NIYAH dev client on your iPhone and scan the QR code or open the recent project.
+
+### 4. LAN fallback for WSL2 (same WiFi, every Windows restart)
 
 Open **PowerShell as Administrator** on the Windows side:
 
@@ -129,15 +153,15 @@ Open **PowerShell as Administrator** on the Windows side:
 
 Note the Wi-Fi IP it prints at the end.
 
-### 4. Start coding
+Then inside WSL:
 
 ```bash
-pnpm start   # inside WSL
+pnpm start
 ```
 
 Open the NIYAH app on your iPhone. Enter the Metro URL: `http://<your-wifi-ip>:8081`
 
-All JS/TS code changes hot-reload instantly on your phone.
+All JS/TS code changes hot-reload instantly on your phone. Native iOS changes still require the Mac owner or EAS to generate and share a new `development-device` build.
 
 ---
 
@@ -152,20 +176,15 @@ eas build --profile development-device --platform ios
 
 EAS gives you an install link at the end. Share it with teammates.
 
-### Option B: Local via Xcode (no queue)
+### Option B: Local EAS build on the Mac (no queue)
 
 ```bash
-npx expo prebuild --platform ios
-cd ios && pod install && cd ..
-open ios/NIYAH.xcworkspace
+pnpm build:dev:device:local
 ```
 
-In Xcode:
+This produces a signed iPhone development build locally on the Mac. You can share the install link directly from EAS, or upload the resulting `.ipa` to [diawi.com](https://diawi.com).
 
-1. Set destination to **Any iOS Device (arm64)**
-2. **Product > Archive**
-3. **Distribute App > Release Testing > Export**
-4. Upload the `.ipa` to [diawi.com](https://diawi.com) and share the link
+Do not use a plain Xcode `Product > Archive` release build for teammate development. That gives teammates a normal installed app, not the shared Expo dev-client workflow that can connect back to each person's Metro server.
 
 ### Registering new devices
 

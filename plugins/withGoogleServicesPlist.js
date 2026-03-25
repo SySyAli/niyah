@@ -22,18 +22,18 @@ function withGoogleServicesPlist(config) {
       const iosRoot = config.modRequest.platformProjectRoot;
       const projectName = config.modRequest.projectName;
 
-      const src = path.join(
-        projectRoot,
-        "firebase",
-        "GoogleService-Info.plist",
-      );
+      const configuredPath =
+        config.ios?.googleServicesFile || "./firebase/GoogleService-Info.plist";
+      const src = path.isAbsolute(configuredPath)
+        ? configuredPath
+        : path.join(projectRoot, configuredPath);
       const dest = path.join(iosRoot, projectName, "GoogleService-Info.plist");
 
       if (fs.existsSync(src)) {
         fs.copyFileSync(src, dest);
       } else {
         console.warn(
-          "[withGoogleServicesPlist] GoogleService-Info.plist not found at firebase/GoogleService-Info.plist",
+          `[withGoogleServicesPlist] GoogleService-Info.plist not found at ${src}`,
         );
       }
 

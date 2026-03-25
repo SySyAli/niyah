@@ -62,7 +62,7 @@ describe("ProfileHeader", () => {
       expect(screen.getByText("alice@test.com")).toBeTruthy();
     });
 
-    it("shows first letter of name in avatar", () => {
+    it("renders blob maker section for signed-in users", () => {
       render(
         <ProfileHeader
           user={makeUser({ name: "Bob" })}
@@ -70,12 +70,13 @@ describe("ProfileHeader", () => {
           partnerCount={0}
         />,
       );
-      expect(screen.getByText("B")).toBeTruthy();
+      expect(screen.getByText("Blob Maker")).toBeTruthy();
     });
 
     it("shows '?' when user is null", () => {
       render(<ProfileHeader user={null} followingCount={0} partnerCount={0} />);
       expect(screen.getByText("?")).toBeTruthy();
+      expect(screen.queryByText("Blob Maker")).toBeNull();
     });
 
     it("shows '?' when user name is undefined", () => {

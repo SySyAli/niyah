@@ -238,6 +238,11 @@ export const saveUserProfile = async (
     email: string;
     phone?: string;
     profileImage?: string;
+    blobAvatar?: {
+      colorPreset: "sunset" | "ocean" | "forest" | "berry";
+      shapePreset: "peach" | "wave" | "petal";
+      eyesPreset: "classic" | "happy" | "wink";
+    };
     authProvider: "google" | "apple" | "email";
   },
 ): Promise<void> => {

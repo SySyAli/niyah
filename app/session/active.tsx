@@ -232,7 +232,8 @@ export default function ActiveSessionScreen() {
 
   // Normalize data from whichever session source is active
   const sessionEndsAtMs =
-    effectiveFirestoreSession?.endsAt?.getTime() ?? activeGroupSession?.endsAt?.getTime();
+    effectiveFirestoreSession?.endsAt?.getTime() ??
+    activeGroupSession?.endsAt?.getTime();
   const sessionStartedAtMs =
     effectiveFirestoreSession?.startedAt?.getTime() ??
     activeGroupSession?.startedAt?.getTime();
@@ -293,7 +294,9 @@ export default function ActiveSessionScreen() {
   // new object on every Firestore snapshot, which would otherwise tear down
   // and re-create the shield listener on every document update — creating a
   // window where a violation could be missed.
-  const hasActiveSession = !!(activeGroupSession?.id ?? effectiveFirestoreSession?.id);
+  const hasActiveSession = !!(
+    activeGroupSession?.id ?? effectiveFirestoreSession?.id
+  );
   useEffect(() => {
     if (!isScreenTimeAvailable || !hasActiveSession) return;
     const unsubscribe = onShieldViolation(() => {
@@ -343,7 +346,10 @@ export default function ActiveSessionScreen() {
       ? sessionEndsAtMs - sessionStartedAtMs
       : (effectiveFirestoreSession?.duration ?? 0);
   const progress = totalDuration > 0 ? 1 - timeRemaining / totalDuration : 0;
-  const progressPercent = Math.min(100, Math.max(0, Math.round(progress * 100)));
+  const progressPercent = Math.min(
+    100,
+    Math.max(0, Math.round(progress * 100)),
+  );
 
   return (
     <SessionScreenScaffold

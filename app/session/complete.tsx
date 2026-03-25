@@ -349,7 +349,9 @@ export default function CompleteScreen() {
 
   // Firestore fallback: used when legacy history is empty (new group session flow)
   const firestoreMyParticipant =
-    user?.id && firestoreSession ? firestoreSession.participants[user.id] : null;
+    user?.id && firestoreSession
+      ? firestoreSession.participants[user.id]
+      : null;
   const didComplete =
     myParticipant?.completed || firestoreMyParticipant?.completed;
 

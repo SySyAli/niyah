@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { View, Text, StyleSheet, Alert, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -260,26 +266,28 @@ export default function WaitingRoomScreen() {
     }
   }, [activeSession?.status, sessionId, markOnline]);
 
+  // Use .getTime() so the effect compares by value, not by reference.
+  // parseGroupSessionDoc creates a new Date object on every snapshot even if
+  // the underlying timestamp is unchanged, which would otherwise reset the
+  // interval on every Firestore update.
+  const autoTimeoutAtMs = activeSession?.autoTimeoutAt?.getTime();
+
   // Countdown timer for auto-timeout
   useEffect(() => {
-    if (!activeSession?.autoTimeoutAt) {
+    if (autoTimeoutAtMs == null) {
       setCountdownMs(null);
       return;
     }
 
     const tick = () => {
-      const remaining = activeSession.autoTimeoutAt!.getTime() - Date.now();
+      const remaining = autoTimeoutAtMs - Date.now();
       setCountdownMs(remaining > 0 ? remaining : 0);
     };
 
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  // Use .getTime() so the effect compares by value, not by reference.
-  // parseGroupSessionDoc creates a new Date object on every snapshot even if
-  // the underlying timestamp is unchanged, which would otherwise reset the
-  // interval on every Firestore update.
-  }, [activeSession?.autoTimeoutAt?.getTime()]);
+  }, [autoTimeoutAtMs]);
 
   // React to session status changes
   useEffect(() => {
@@ -334,7 +342,10 @@ export default function WaitingRoomScreen() {
             try {
               await cancelSession(sessionId);
             } catch {
-              Alert.alert("Error", "Failed to cancel session. Please try again.");
+              Alert.alert(
+                "Error",
+                "Failed to cancel session. Please try again.",
+              );
             }
           },
         },

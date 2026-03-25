@@ -2247,17 +2247,38 @@ export const reportSessionStatus = onRequest(
         });
       }
 
-      // Check if all participants have reported
-      const updatedSnap = await sessionRef.get();
-      const updatedData = updatedSnap.data()!;
-      const allReported = updatedData.participantIds.every((pid: string) => {
-        const p = updatedData.participants[pid];
-        return p?.completed || p?.surrendered;
-      });
+      // Check if all participants have reported — and atomically claim
+      // finalization rights to prevent double-payout if two reports arrive
+      // simultaneously and both see allReported = true.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let updatedData: { [key: string]: any } | null = null;
+      try {
+        updatedData = await db.runTransaction(async (txn) => {
+          const snap = await txn.get(sessionRef);
+          const data = snap.data()!;
 
-      if (!allReported) {
+          // If already finalized or being finalized, bail out.
+          if (data.status !== "active" || data.finalizing) return null;
+
+          const reported = data.participantIds.every((pid: string) => {
+            const p = data.participants[pid];
+            return p?.completed || p?.surrendered;
+          });
+          if (!reported) return null;
+
+          // Atomically claim finalization — only one CF instance will succeed.
+          txn.update(sessionRef, { finalizing: true });
+          return data;
+        });
+      } catch (txnErr) {
+        console.error("reportSessionStatus: finalization claim failed:", txnErr);
+        res.json({ success: true, sessionComplete: false });
+        return;
+      }
+
+      if (!updatedData) {
         console.log(
-          `reportSessionStatus: session=${sessionId}, user=${uid}, action=${action}, allReported=false`,
+          `reportSessionStatus: session=${sessionId}, user=${uid}, action=${action}, allReported=false or already finalizing`,
         );
         res.json({ success: true, sessionComplete: false });
         return;

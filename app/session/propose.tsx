@@ -317,7 +317,7 @@ export default function ProposeSessionScreen() {
 
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [proposed, _setProposed] = useState(false);
-  const [_loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Build inviteable people list: partners + following (deduped)
   const people = useMemo(() => {
@@ -384,8 +384,8 @@ export default function ProposeSessionScreen() {
         customStake: true,
       });
 
-      // Navigate to waiting room instead of showing local success
-      router.push(
+      // Replace so the user can't back-navigate to the form after staking.
+      router.replace(
         `/session/waiting-room?sessionId=${sessionId}` as RelativePathString,
       );
     } catch {
@@ -447,7 +447,8 @@ export default function ProposeSessionScreen() {
           <Button
             title="Propose Challenge"
             onPress={handlePropose}
-            disabled={!canPropose}
+            disabled={!canPropose || loading}
+            loading={loading}
             size="large"
           />
           {!canPropose && (

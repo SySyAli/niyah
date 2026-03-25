@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
@@ -214,6 +214,7 @@ export default function ActiveSessionScreen() {
     activeGroupSession,
     completeGroupSession,
     activeSession,
+    activeGroupSessions,
     reportCompletion,
     reportSurrender,
     subscribeToSession,
@@ -221,12 +222,31 @@ export default function ActiveSessionScreen() {
   // Tracks intentional navigation away (complete or surrender) so the
   // useEffect guard doesn't redirect home when activeGroupSession clears.
   const isNavigatingAwayRef = useRef(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [pauseStartedAt, setPauseStartedAt] = useState<number | null>(null);
-  const [totalPausedMs, setTotalPausedMs] = useState(0);
   const [violationCount, setViolationCount] = useState(0);
 
-  const { timeRemaining, start, stop } = useCountdown({
+  // Only use activeSession if it's currently running. A stale completed/cancelled
+  // session must not poison derived values — especially sessionEndsAtMs, which
+  // would make the timer start at 0ms and fire onComplete immediately.
+  const effectiveFirestoreSession =
+    activeSession?.status === "active" ? activeSession : null;
+
+  // Normalize data from whichever session source is active
+  const sessionEndsAtMs =
+    effectiveFirestoreSession?.endsAt?.getTime() ?? activeGroupSession?.endsAt?.getTime();
+  const sessionStartedAtMs =
+    effectiveFirestoreSession?.startedAt?.getTime() ??
+    activeGroupSession?.startedAt?.getTime();
+  const stakeAmount =
+    effectiveFirestoreSession?.stakePerParticipant ??
+    activeGroupSession?.stakePerParticipant ??
+    0;
+  const poolTotal =
+    effectiveFirestoreSession?.poolTotal ?? activeGroupSession?.poolTotal ?? 0;
+  const participantCount = effectiveFirestoreSession
+    ? Object.keys(effectiveFirestoreSession.participants).length
+    : (activeGroupSession?.participants.length ?? 0);
+
+  const { timeRemaining, start } = useCountdown({
     onComplete: () => {
       isNavigatingAwayRef.current = true;
       if (isScreenTimeAvailable) {
@@ -235,7 +255,8 @@ export default function ActiveSessionScreen() {
       // Delay one render cycle so the drain animation reaches 100% before navigating.
       setTimeout(async () => {
         const store = useGroupSessionStore.getState();
-        const firestoreSession = store.activeSession;
+        const firestoreSession =
+          store.activeSession?.status === "active" ? store.activeSession : null;
         const session = store.activeGroupSession;
 
         // If this is a Firestore-backed session, report to server
@@ -268,14 +289,19 @@ export default function ActiveSessionScreen() {
     },
   });
 
+  // Use stable identifiers rather than object references. activeSession is a
+  // new object on every Firestore snapshot, which would otherwise tear down
+  // and re-create the shield listener on every document update — creating a
+  // window where a violation could be missed.
+  const hasActiveSession = !!(activeGroupSession?.id ?? effectiveFirestoreSession?.id);
   useEffect(() => {
-    if (!isScreenTimeAvailable || !activeGroupSession) return;
+    if (!isScreenTimeAvailable || !hasActiveSession) return;
     const unsubscribe = onShieldViolation(() => {
       setViolationCount((prev) => prev + 1);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     });
     return unsubscribe;
-  }, [activeGroupSession]);
+  }, [hasActiveSession]);
 
   // Subscribe to Firestore session for real-time participant updates
   useEffect(() => {
@@ -285,50 +311,39 @@ export default function ActiveSessionScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSession?.id]);
 
+  // Recovery: if the app was force-quit during an active session, activeSession is
+  // null on restart even though activeGroupSessions has the session. Subscribe so
+  // the screen can render.
+  const recoverySessionId = !effectiveFirestoreSession?.id
+    ? activeGroupSessions?.find((s) => s.status === "active")?.id
+    : undefined;
   useEffect(() => {
-    if (activeGroupSession) {
-      if (isPaused) {
-        stop();
-      } else {
-        start(new Date(activeGroupSession.endsAt.getTime() + totalPausedMs));
-      }
+    if (recoverySessionId) {
+      subscribeToSession(recoverySessionId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recoverySessionId]);
+
+  useEffect(() => {
+    if (sessionEndsAtMs) {
+      start(new Date(sessionEndsAtMs));
     } else if (!isNavigatingAwayRef.current) {
       // No active session and we didn't navigate here intentionally — stale route.
       router.dismissAll();
     }
-  }, [activeGroupSession, isPaused, router, start, stop, totalPausedMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionEndsAtMs, router]);
 
-  if (!activeGroupSession) {
+  if (!activeGroupSession && !effectiveFirestoreSession) {
     return null;
   }
 
-  const handlePauseResume = () => {
-    if (isPaused) {
-      const pausedAt = pauseStartedAt ?? Date.now();
-      const pausedDuration = Date.now() - pausedAt;
-      setTotalPausedMs((previous) => previous + pausedDuration);
-      setPauseStartedAt(null);
-      setIsPaused(false);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } else {
-      setPauseStartedAt(Date.now());
-      setIsPaused(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-  };
-
-  const currentPauseMs =
-    isPaused && pauseStartedAt ? Date.now() - pauseStartedAt : 0;
   const totalDuration =
-    activeGroupSession.endsAt.getTime() -
-    activeGroupSession.startedAt.getTime() +
-    totalPausedMs +
-    currentPauseMs;
-  const progress = 1 - timeRemaining / totalDuration;
-  const progressPercent = Math.min(
-    100,
-    Math.max(0, Math.round(progress * 100)),
-  );
+    sessionEndsAtMs && sessionStartedAtMs
+      ? sessionEndsAtMs - sessionStartedAtMs
+      : (effectiveFirestoreSession?.duration ?? 0);
+  const progress = totalDuration > 0 ? 1 - timeRemaining / totalDuration : 0;
+  const progressPercent = Math.min(100, Math.max(0, Math.round(progress * 100)));
 
   return (
     <SessionScreenScaffold
@@ -337,42 +352,45 @@ export default function ActiveSessionScreen() {
       stickyFooter={true}
       footer={
         <>
-          <View style={styles.footerButtonsRow}>
-            <View style={styles.footerButton}>
-              <Button
-                title={isPaused ? "Resume" : "Pause"}
-                onPress={handlePauseResume}
-                variant="secondary"
-                size="medium"
-              />
-            </View>
-            <View style={styles.footerButton}>
-              <Button
-                title="Surrender"
-                onPress={async () => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                  isNavigatingAwayRef.current = true;
-                  if (isScreenTimeAvailable) {
-                    stopBlocking().catch(() => {});
-                  }
-                  // Report surrender to Firestore if server-backed
-                  if (activeSession) {
-                    try {
-                      await reportSurrender(activeSession.id);
-                    } catch (err) {
-                      console.warn("Server surrender report failed:", err);
-                    }
-                  }
-                  router.push("/session/surrender");
-                }}
-                variant="outline"
-                size="medium"
-              />
-            </View>
-          </View>
+          <Button
+            title="Surrender"
+            onPress={() => {
+              Alert.alert(
+                "Surrender Session?",
+                `You will forfeit your ${formatMoney(stakeAmount)} stake. This cannot be undone.`,
+                [
+                  { text: "Keep Going", style: "cancel" },
+                  {
+                    text: "Surrender",
+                    style: "destructive",
+                    onPress: async () => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                      isNavigatingAwayRef.current = true;
+                      if (isScreenTimeAvailable) {
+                        stopBlocking().catch(() => {});
+                      }
+                      if (effectiveFirestoreSession) {
+                        // Firestore-backed: report to server, then go to complete screen
+                        try {
+                          await reportSurrender(effectiveFirestoreSession.id);
+                        } catch (err) {
+                          console.warn("Server surrender report failed:", err);
+                        }
+                        router.replace("/session/complete");
+                      } else {
+                        // Legacy flow: surrender screen handles payment + local state
+                        router.push("/session/surrender");
+                      }
+                    },
+                  },
+                ],
+              );
+            }}
+            variant="outline"
+            size="large"
+          />
           <Text style={styles.warningText}>
-            Warning: Surrendering forfeits your{" "}
-            {formatMoney(activeGroupSession.stakePerParticipant)} stake
+            Warning: Surrendering forfeits your {formatMoney(stakeAmount)} stake
           </Text>
         </>
       }
@@ -380,24 +398,11 @@ export default function ActiveSessionScreen() {
       {/* Status Header */}
       <View style={styles.header}>
         <View style={styles.statusBadge}>
-          <View
-            style={[
-              styles.statusDot,
-              isPaused && { backgroundColor: Colors.warning },
-            ]}
-          />
-          <Text
-            style={[styles.statusText, isPaused && { color: Colors.warning }]}
-          >
-            {isPaused ? "SESSION PAUSED" : "SESSION ACTIVE"}
-          </Text>
+          <View style={styles.statusDot} />
+          <Text style={styles.statusText}>SESSION ACTIVE</Text>
         </View>
         <Text style={styles.title}>Stay Focused</Text>
-        <Text style={styles.subtitle}>
-          {isPaused
-            ? "Timer is paused — resume when you're ready"
-            : "Distracting apps are blocked"}
-        </Text>
+        <Text style={styles.subtitle}>Distracting apps are blocked</Text>
       </View>
 
       {/* Timer */}
@@ -424,12 +429,9 @@ export default function ActiveSessionScreen() {
       <Card style={styles.payoutCard}>
         <Text style={styles.payoutLabel}>Complete to earn</Text>
         <Text style={styles.payoutAmount}>
-          {activeGroupSession.participants.length <= 1
-            ? formatMoney(
-                activeGroupSession.stakePerParticipant *
-                  SOLO_COMPLETION_MULTIPLIER,
-              )
-            : `Up to ${formatMoney(activeGroupSession.poolTotal)}`}
+          {participantCount <= 1
+            ? formatMoney(stakeAmount * SOLO_COMPLETION_MULTIPLIER)
+            : `Up to ${formatMoney(poolTotal)}`}
         </Text>
       </Card>
 

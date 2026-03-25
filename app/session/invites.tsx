@@ -6,9 +6,10 @@ import {
   Pressable,
   ScrollView,
   Image,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, type RelativePathString } from "expo-router";
 import {
   Typography,
   Spacing,
@@ -53,16 +54,23 @@ export default function GroupInvitesScreen() {
 
   const handleAccept = useCallback(
     async (inviteId: string) => {
+      const invite = pendingInvites.find((i) => i.id === inviteId);
+      if (!invite) return;
       setLoadingAccept(inviteId);
       try {
         await acceptInvite(inviteId);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        router.push("/session/waiting" as any);
+        router.replace(
+          `/session/waiting-room?sessionId=${invite.sessionId}` as RelativePathString,
+        );
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to accept invite.";
+        Alert.alert("Could Not Accept", message);
       } finally {
         setLoadingAccept(null);
       }
     },
-    [acceptInvite, router],
+    [acceptInvite, pendingInvites, router],
   );
 
   const handleDecline = useCallback(
@@ -70,6 +78,8 @@ export default function GroupInvitesScreen() {
       setLoadingDecline(inviteId);
       try {
         await declineInvite(inviteId);
+      } catch {
+        Alert.alert("Error", "Failed to decline invite. Please try again.");
       } finally {
         setLoadingDecline(null);
       }

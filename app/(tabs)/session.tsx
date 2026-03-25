@@ -174,8 +174,12 @@ const CadenceCard: React.FC<CadenceCardProps> = ({
 export default function SessionTabScreen() {
   const Colors = useColors();
   const router = useRouter();
-  const { activeGroupSession, pendingInvites, activeGroupSessions } =
-    useGroupSessionStore();
+  const {
+    activeGroupSession,
+    pendingInvites,
+    activeGroupSessions,
+    subscribeToSession,
+  } = useGroupSessionStore();
   const userId = useAuthStore((state) => state.user?.id);
   const balance = useWalletStore((state) => state.balance);
 
@@ -477,31 +481,36 @@ export default function SessionTabScreen() {
 
         {activeGroupSessions &&
           activeGroupSessions.length > 0 &&
-          activeGroupSessions
-            .filter((s) => s.status === "pending" || s.status === "ready")
-            .map((session) => (
-              <Pressable
-                key={session.id}
-                onPress={() =>
+          activeGroupSessions.map((session) => (
+            <Pressable
+              key={session.id}
+              onPress={() => {
+                if (session.status === "active") {
+                  // Subscribe to the session so active.tsx can render on recovery
+                  subscribeToSession(session.id);
+                  router.push("/session/active");
+                } else {
                   router.push(
                     `/session/waiting-room?sessionId=${session.id}` as RelativePathString,
-                  )
+                  );
                 }
-                style={{ marginBottom: Spacing.sm }}
-              >
-                <Card variant="interactive">
-                  <View style={styles.inviteBannerContent}>
-                    <Text
-                      style={[styles.inviteBannerTitle, { color: Colors.text }]}
-                    >
-                      Group Session{" "}
-                      {session.status === "ready" ? "Ready" : "Pending"}
-                    </Text>
-                    <Text style={{ color: Colors.primary }}>View →</Text>
-                  </View>
-                </Card>
-              </Pressable>
-            ))}
+              }}
+              style={{ marginBottom: Spacing.sm }}
+            >
+              <Card variant="interactive">
+                <View style={styles.inviteBannerContent}>
+                  <Text
+                    style={[styles.inviteBannerTitle, { color: Colors.text }]}
+                  >
+                    {session.status === "active"
+                      ? "Session Active"
+                      : `Group Session ${session.status === "ready" ? "Ready" : "Pending"}`}
+                  </Text>
+                  <Text style={{ color: Colors.primary }}>View →</Text>
+                </View>
+              </Card>
+            </Pressable>
+          ))}
 
         {/* Challenge a Friend */}
         <Pressable

@@ -19,7 +19,7 @@ import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { formatMoney } from "../../src/utils/format";
-import type { SessionTransfer } from "../../src/types";
+import type { GroupSessionDoc, SessionTransfer } from "../../src/types";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -104,6 +104,12 @@ const makeStyles = (Colors: ThemeColors) =>
     },
     badgeTextFailed: {
       color: Colors.loss,
+    },
+    badgePending: {
+      backgroundColor: Colors.backgroundTertiary,
+    },
+    badgeTextPending: {
+      color: Colors.textSecondary,
     },
     payoutValue: {
       fontSize: Typography.bodyMedium,
@@ -245,6 +251,83 @@ const makeStyles = (Colors: ThemeColors) =>
     },
   });
 
+// ─── FirestoreResultsCard ─────────────────────────────────────────────────────
+
+interface FirestoreResultsCardProps {
+  session: GroupSessionDoc;
+  userId: string | undefined;
+  styles: ReturnType<typeof makeStyles>;
+}
+
+function FirestoreResultsCard({
+  session,
+  userId,
+  styles,
+}: FirestoreResultsCardProps) {
+  const participants = Object.entries(session.participants);
+  return (
+    <Card style={styles.resultsCard}>
+      <Text style={styles.sectionTitle}>Results</Text>
+      {participants.map(([uid, p]) => {
+        const completed = p.completed === true;
+        const surrendered = p.surrendered === true;
+        const inProgress = !completed && !surrendered;
+        const payout = session.payouts?.[uid];
+        return (
+          <View key={uid} style={styles.participantRow}>
+            <View style={styles.participantLeft}>
+              <Text style={styles.participantName}>
+                {uid === userId ? "You" : p.name}
+              </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  completed
+                    ? styles.badgeCompleted
+                    : inProgress
+                      ? styles.badgePending
+                      : styles.badgeFailed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    completed
+                      ? styles.badgeTextCompleted
+                      : inProgress
+                        ? styles.badgeTextPending
+                        : styles.badgeTextFailed,
+                  ]}
+                >
+                  {completed
+                    ? "Completed"
+                    : inProgress
+                      ? "In Progress"
+                      : "Surrendered"}
+                </Text>
+              </View>
+            </View>
+            <Text
+              style={[
+                styles.payoutValue,
+                completed ? styles.payoutGain : styles.payoutNeutral,
+              ]}
+            >
+              {completed
+                ? payout != null
+                  ? `+${formatMoney(payout)}`
+                  : "Pending"
+                : inProgress
+                  ? "–"
+                  : "Forfeited"}
+            </Text>
+          </View>
+        );
+      })}
+    </Card>
+  );
+}
+
 export default function CompleteScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -252,19 +335,37 @@ export default function CompleteScreen() {
   const user = useAuthStore((state) => state.user);
   const {
     groupSessionHistory,
+    activeSession: firestoreSession,
     markTransferConfirmed,
     markTransferPaid,
     getVenmoPayLink,
   } = useGroupSessionStore();
-  const [showConfetti, setShowConfetti] = useState(true);
 
+  // Legacy local history (demo/legacy sessions)
   const lastSession = groupSessionHistory[0];
   const myParticipant = lastSession?.participants.find(
     (p) => p.userId === user?.id,
   );
+
+  // Firestore fallback: used when legacy history is empty (new group session flow)
+  const firestoreMyParticipant =
+    user?.id && firestoreSession ? firestoreSession.participants[user.id] : null;
+  const didComplete =
+    myParticipant?.completed || firestoreMyParticipant?.completed;
+
   const activeTransfers =
-    lastSession?.transfers.filter((t) => t.status !== "none") ?? [];
-  const isSoloSession = (lastSession?.participants.length ?? 0) <= 1;
+    lastSession?.transfers.filter((t) => t.status !== "none") ??
+    (firestoreSession?.transfers ?? []).filter((t) => t.status !== "none");
+
+  const isSoloSession = lastSession
+    ? (lastSession.participants.length ?? 0) <= 1
+    : Object.keys(firestoreSession?.participants ?? {}).length <= 1;
+
+  // Only celebrate if the current user actually completed.
+  // Initialized to false because the Firestore snapshot confirming completion
+  // may arrive after the screen first renders (CF writes → snapshot is async).
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiStartedRef = useRef(false);
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -284,9 +385,17 @@ export default function CompleteScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-    const timer = setTimeout(() => setShowConfetti(false), 4000);
-    return () => clearTimeout(timer);
   }, [opacityAnim, scaleAnim]);
+
+  // Start confetti once didComplete becomes true (may be after initial render).
+  useEffect(() => {
+    if (didComplete && !confettiStartedRef.current) {
+      confettiStartedRef.current = true;
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [didComplete]);
 
   const handleDone = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -365,7 +474,7 @@ export default function CompleteScreen() {
           </View>
           <Text style={styles.title}>Session Complete</Text>
           <Text style={styles.subtitle}>
-            {myParticipant?.completed
+            {didComplete
               ? isSoloSession
                 ? "You stayed focused — stake returned!"
                 : "You stayed focused!"
@@ -374,7 +483,7 @@ export default function CompleteScreen() {
         </Animated.View>
 
         {/* Results: who completed and what they earned */}
-        {lastSession && (
+        {lastSession ? (
           <Card style={styles.resultsCard}>
             <Text style={styles.sectionTitle}>Results</Text>
             {lastSession.participants.map((p) => (
@@ -416,7 +525,13 @@ export default function CompleteScreen() {
               </View>
             ))}
           </Card>
-        )}
+        ) : firestoreSession ? (
+          <FirestoreResultsCard
+            session={firestoreSession}
+            userId={user?.id}
+            styles={styles}
+          />
+        ) : null}
 
         {/* Payments: who owes who and current state */}
         <View style={styles.paymentsSection}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { View, Text, StyleSheet, Alert, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -233,14 +233,32 @@ export default function WaitingRoomScreen() {
   } = useGroupSessionStore();
 
   const [countdownMs, setCountdownMs] = useState<number | null>(null);
+  // Prevent calling markOnline more than once per session
+  const hasMarkedOnlineRef = useRef(false);
 
-  // Subscribe to Firestore session on mount
+  // Subscribe to Firestore session on mount.
+  // subscribeToSession manages its own unsubscribe token in the store;
+  // calling it again tears down the previous subscription automatically.
   useEffect(() => {
     if (!sessionId) return;
-    const unsubscribe = subscribeToSession(sessionId);
-    markOnline(sessionId);
-    return unsubscribe;
-  }, [sessionId, subscribeToSession, markOnline]);
+    subscribeToSession(sessionId);
+  }, [sessionId, subscribeToSession]);
+
+  // markOnlineForSession CF requires status === "ready" (all participants accepted).
+  // Call it when the session first reaches "ready" status, not on mount — the session
+  // may still be "pending" (awaiting other accepts) when we first land here.
+  useEffect(() => {
+    if (
+      activeSession?.status === "ready" &&
+      sessionId &&
+      !hasMarkedOnlineRef.current
+    ) {
+      hasMarkedOnlineRef.current = true;
+      markOnline(sessionId).catch(() => {
+        // Non-critical: status will show as not online, user can try again
+      });
+    }
+  }, [activeSession?.status, sessionId, markOnline]);
 
   // Countdown timer for auto-timeout
   useEffect(() => {
@@ -257,7 +275,11 @@ export default function WaitingRoomScreen() {
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [activeSession?.autoTimeoutAt]);
+  // Use .getTime() so the effect compares by value, not by reference.
+  // parseGroupSessionDoc creates a new Date object on every snapshot even if
+  // the underlying timestamp is unchanged, which would otherwise reset the
+  // interval on every Firestore update.
+  }, [activeSession?.autoTimeoutAt?.getTime()]);
 
   // React to session status changes
   useEffect(() => {
@@ -289,9 +311,13 @@ export default function WaitingRoomScreen() {
 
   const isProposer = activeSession?.proposerId === userId;
 
-  const handleStart = useCallback(() => {
+  const handleStart = useCallback(async () => {
     if (!sessionId) return;
-    startSession(sessionId);
+    try {
+      await startSession(sessionId);
+    } catch {
+      Alert.alert("Error", "Failed to start session. Please try again.");
+    }
   }, [sessionId, startSession]);
 
   const handleCancel = useCallback(() => {
@@ -304,7 +330,13 @@ export default function WaitingRoomScreen() {
         {
           text: "Cancel Session",
           style: "destructive",
-          onPress: () => cancelSession(sessionId),
+          onPress: async () => {
+            try {
+              await cancelSession(sessionId);
+            } catch {
+              Alert.alert("Error", "Failed to cancel session. Please try again.");
+            }
+          },
         },
       ],
     );

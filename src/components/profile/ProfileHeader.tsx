@@ -78,8 +78,8 @@ export function ProfileHeader({
   return (
     <View style={styles.header}>
       <BlobAvatar size={92} config={avatarConfig} />
-      <Text style={styles.name}>{user?.name}</Text>
-      <Text style={styles.email}>{user?.email}</Text>
+      <Text style={styles.name}>{user?.name || "?"}</Text>
+      <Text style={styles.email}>{user?.email || ""}</Text>
 
       <View style={styles.reputationBadge}>
         <View
@@ -126,90 +126,92 @@ export function ProfileHeader({
         </Pressable>
       </View>
 
-      <View style={styles.blobMakerCard}>
-        <Text style={styles.blobMakerTitle}>Blob Maker</Text>
+      {user ? (
+        <View style={styles.blobMakerCard}>
+          <Text style={styles.blobMakerTitle}>Blob Maker</Text>
 
-        <Text style={styles.blobMakerLabel}>Color</Text>
-        <View style={styles.optionsRow}>
-          {BLOB_AVATAR_COLORS.map((option) => {
-            const selected = avatarConfig.colorPreset === option;
-            return (
-              <Pressable
-                key={option}
-                style={[
-                  styles.optionPill,
-                  selected && styles.optionPillSelected,
-                  selected && { borderColor: Colors.primary },
-                ]}
-                onPress={() => updateBlobAvatar("colorPreset", option)}
-              >
-                <Text
+          <Text style={styles.blobMakerLabel}>Color</Text>
+          <View style={styles.optionsRow}>
+            {BLOB_AVATAR_COLORS.map((option) => {
+              const selected = avatarConfig.colorPreset === option;
+              return (
+                <Pressable
+                  key={option}
                   style={[
-                    styles.optionPillText,
-                    selected && styles.optionPillTextSelected,
+                    styles.optionPill,
+                    selected && styles.optionPillSelected,
+                    selected && { borderColor: Colors.primary },
                   ]}
+                  onPress={() => updateBlobAvatar("colorPreset", option)}
                 >
-                  {getPresetLabel(option)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+                  <Text
+                    style={[
+                      styles.optionPillText,
+                      selected && styles.optionPillTextSelected,
+                    ]}
+                  >
+                    {getPresetLabel(option)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-        <Text style={styles.blobMakerLabel}>Shape</Text>
-        <View style={styles.optionsRow}>
-          {BLOB_AVATAR_SHAPES.map((option) => {
-            const selected = avatarConfig.shapePreset === option;
-            return (
-              <Pressable
-                key={option}
-                style={[
-                  styles.optionPill,
-                  selected && styles.optionPillSelected,
-                  selected && { borderColor: Colors.primary },
-                ]}
-                onPress={() => updateBlobAvatar("shapePreset", option)}
-              >
-                <Text
+          <Text style={styles.blobMakerLabel}>Shape</Text>
+          <View style={styles.optionsRow}>
+            {BLOB_AVATAR_SHAPES.map((option) => {
+              const selected = avatarConfig.shapePreset === option;
+              return (
+                <Pressable
+                  key={option}
                   style={[
-                    styles.optionPillText,
-                    selected && styles.optionPillTextSelected,
+                    styles.optionPill,
+                    selected && styles.optionPillSelected,
+                    selected && { borderColor: Colors.primary },
                   ]}
+                  onPress={() => updateBlobAvatar("shapePreset", option)}
                 >
-                  {getPresetLabel(option)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+                  <Text
+                    style={[
+                      styles.optionPillText,
+                      selected && styles.optionPillTextSelected,
+                    ]}
+                  >
+                    {getPresetLabel(option)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-        <Text style={styles.blobMakerLabel}>Eyes</Text>
-        <View style={styles.optionsRow}>
-          {BLOB_AVATAR_EYES.map((option) => {
-            const selected = avatarConfig.eyesPreset === option;
-            return (
-              <Pressable
-                key={option}
-                style={[
-                  styles.optionPill,
-                  selected && styles.optionPillSelected,
-                  selected && { borderColor: Colors.primary },
-                ]}
-                onPress={() => updateBlobAvatar("eyesPreset", option)}
-              >
-                <Text
+          <Text style={styles.blobMakerLabel}>Eyes</Text>
+          <View style={styles.optionsRow}>
+            {BLOB_AVATAR_EYES.map((option) => {
+              const selected = avatarConfig.eyesPreset === option;
+              return (
+                <Pressable
+                  key={option}
                   style={[
-                    styles.optionPillText,
-                    selected && styles.optionPillTextSelected,
+                    styles.optionPill,
+                    selected && styles.optionPillSelected,
+                    selected && { borderColor: Colors.primary },
                   ]}
+                  onPress={() => updateBlobAvatar("eyesPreset", option)}
                 >
-                  {getPresetLabel(option)}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    style={[
+                      styles.optionPillText,
+                      selected && styles.optionPillTextSelected,
+                    ]}
+                  >
+                    {getPresetLabel(option)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
-      </View>
+      ) : null}
     </View>
   );
 }

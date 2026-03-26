@@ -1,0 +1,93 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Deeper warm tones — darker cream bg, richer forest green */
+  --background: oklch(0.93 0.012 80);
+  --foreground: oklch(0.15 0.03 150);
+  --card: oklch(0.95 0.008 80);
+  --card-foreground: oklch(0.15 0.03 150);
+  --popover: oklch(0.95 0.008 80);
+  --popover-foreground: oklch(0.15 0.03 150);
+  /* Deep forest green primary */
+  --primary: oklch(0.35 0.09 150);
+  --primary-foreground: oklch(0.96 0.005 80);
+  --secondary: oklch(0.89 0.015 80);
+  --secondary-foreground: oklch(0.2 0.03 150);
+  --muted: oklch(0.87 0.015 80);
+  --muted-foreground: oklch(0.4 0.025 150);
+  --accent: oklch(0.35 0.09 150);
+  --accent-foreground: oklch(0.96 0.005 80);
+  --destructive: oklch(0.5 0.24 27);
+  --destructive-foreground: oklch(0.96 0.005 80);
+  --border: oklch(0.82 0.02 80);
+  --input: oklch(0.87 0.015 80);
+  --ring: oklch(0.35 0.09 150);
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: oklch(0.14 0.04 150);
+  --foreground: oklch(0.93 0.01 80);
+  --card: oklch(0.18 0.04 150);
+  --card-foreground: oklch(0.93 0.01 80);
+  --popover: oklch(0.18 0.04 150);
+  --popover-foreground: oklch(0.93 0.01 80);
+  --primary: oklch(0.82 0.07 80);
+  --primary-foreground: oklch(0.14 0.04 150);
+  --secondary: oklch(0.22 0.04 150);
+  --secondary-foreground: oklch(0.93 0.01 80);
+  --muted: oklch(0.22 0.04 150);
+  --muted-foreground: oklch(0.65 0.02 80);
+  --accent: oklch(0.5 0.12 150);
+  --accent-foreground: oklch(0.93 0.01 80);
+  --destructive: oklch(0.5 0.22 27);
+  --destructive-foreground: oklch(0.93 0.01 80);
+  --border: oklch(0.26 0.04 150);
+  --input: oklch(0.22 0.04 150);
+  --ring: oklch(0.5 0.12 150);
+}
+
+@theme inline {
+  --font-sans:
+    "SF Pro Rounded", "SF Pro Display", "SF Pro", ui-rounded, -apple-system,
+    BlinkMacSystemFont, system-ui, "Helvetica Neue", sans-serif;
+  --font-serif:
+    "SF Pro Rounded", "SF Pro Display", ui-rounded, -apple-system, system-ui,
+    sans-serif;
+  --font-mono: "SF Mono", ui-monospace, "Menlo", monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

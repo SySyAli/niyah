@@ -17,7 +17,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   REFERRAL_REPUTATION_BOOST,
   CURRENT_LEGAL_VERSION,
+  DEMO_MODE,
 } from "../constants/config";
+import {
+  generateBlobAvatarPreset,
+  normalizeBlobAvatarConfig,
+  type BlobAvatarConfig,
+} from "../constants/blobAvatar";
 import { logger } from "../utils/logger";
 
 // Lazy import to break circular dependency (walletStore imports authStore)
@@ -107,6 +113,7 @@ interface AuthState {
   updateReputation: (updates: Partial<UserReputation>) => void;
   setVenmoHandle: (handle: string) => void;
   setZelleHandle: (handle: string) => void;
+  setBlobAvatar: (blobAvatar: BlobAvatarConfig) => void;
   acceptLegal: () => Promise<void>;
 }
 
@@ -146,6 +153,10 @@ const buildUser = (
         (firestoreData.profileImage as string) ||
         firebaseUser.photoURL ||
         undefined,
+      blobAvatar: normalizeBlobAvatarConfig(
+        firestoreData.blobAvatar as Partial<BlobAvatarConfig> | undefined,
+        firebaseUser.uid,
+      ),
       balance: 0, // Wallet is separate (walletStore)
       currentStreak: stats.currentStreak || 0,
       longestStreak: stats.longestStreak || 0,
@@ -195,6 +206,7 @@ const buildUser = (
     email: firebaseUser.email || "",
     name: firebaseUser.displayName || "",
     profileImage: firebaseUser.photoURL || undefined,
+    blobAvatar: generateBlobAvatarPreset(firebaseUser.uid),
     balance: 0,
     currentStreak: 0,
     longestStreak: 0,
@@ -454,6 +466,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: firebaseUser.email || "",
         phone: data.phone,
         profileImage: firebaseUser.photoURL || undefined,
+        blobAvatar: generateBlobAvatarPreset(firebaseUser.uid),
         authProvider,
       });
 
@@ -475,6 +488,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     set({ isSigningOut: true });
 
+    // Clean up FCM token BEFORE signing out (needs valid auth session)
+    const uid = get().user?.id;
+    if (uid) {
+      await cleanupNotifications(uid).catch((err) =>
+        logger.error("Failed to clean up FCM token:", err),
+      );
+    }
+
+    // Tear down Firestore listeners BEFORE signOut — after signOut the auth
+    // token is revoked and any still-active listener will receive PERMISSION_DENIED.
+    try {
+      const { useGroupSessionStore } = require("./groupSessionStore") as {
+        useGroupSessionStore: {
+          getState: () => { unsubscribeAll: () => void };
+        };
+      };
+      useGroupSessionStore.getState().unsubscribeAll();
+    } catch {
+      // Store may not be initialized
+    }
+
     // Clear all user-scoped stores before signing out
     const { resetAllUserStores } = require("./resetCoordinator") as {
       resetAllUserStores: () => void;
@@ -485,25 +519,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await signOut();
     } catch (error) {
       logger.error("Logout error:", error);
-    }
-
-    // Clean up FCM token and group session subscriptions
-    const uid = get().user?.id;
-    if (uid) {
-      cleanupNotifications(uid).catch((err) =>
-        logger.error("Failed to clean up FCM token:", err),
-      );
-    }
-    // Unsubscribe from group session listeners
-    try {
-      const { useGroupSessionStore } = require("./groupSessionStore") as {
-        useGroupSessionStore: {
-          getState: () => { unsubscribeAll: () => void };
-        };
-      };
-      useGroupSessionStore.getState().unsubscribeAll();
-    } catch {
-      // Store may not be initialized
     }
 
     // Clear local auth state after signOut
@@ -603,16 +618,41 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  setBlobAvatar: (blobAvatar: BlobAvatarConfig) => {
+    const { user } = get();
+    if (user) {
+      set({ user: { ...user, blobAvatar } });
+
+      updateUserDoc(user.id, { blobAvatar }).catch((err) =>
+        logger.error("Failed to sync blobAvatar to Firestore:", err),
+      );
+    }
+  },
+
   acceptLegal: async () => {
     const { user } = get();
     if (!user) throw new Error("Not authenticated");
 
-    // Lazy import to avoid circular dependency
-    const { acceptLegalTerms } = require("../config/functions") as {
-      acceptLegalTerms: (version: string) => Promise<{ success: boolean }>;
-    };
+    // Cloud Function call — skip in demo mode (no deployed functions)
+    if (!DEMO_MODE) {
+      // Lazy import to avoid circular dependency
+      const { acceptLegalTerms } = require("../config/functions") as {
+        acceptLegalTerms: (version: string) => Promise<{ success: boolean }>;
+      };
 
-    await acceptLegalTerms(CURRENT_LEGAL_VERSION);
+      try {
+        await acceptLegalTerms(CURRENT_LEGAL_VERSION);
+      } catch (error) {
+        logger.warn(
+          "acceptLegalTerms Cloud Function unavailable, falling back to Firestore:",
+          error,
+        );
+        await updateUserDoc(user.id, {
+          legalAcceptanceVersion: CURRENT_LEGAL_VERSION,
+          legalAcceptedAt: new Date(),
+        });
+      }
+    }
 
     set({
       user: {

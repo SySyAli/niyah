@@ -1,4 +1,4 @@
-import React from "react";
+import * as React from "react";
 
 // Define __DEV__ globally for expo modules that reference it
 // @ts-expect-error __DEV__ is a React Native global
@@ -36,6 +36,7 @@ jest.mock("react-native-svg", () => ({
   Path: mockComponent("Path"),
   G: mockComponent("G"),
   Defs: mockComponent("Defs"),
+  ClipPath: mockComponent("ClipPath"),
   LinearGradient: mockComponent("LinearGradient"),
   Stop: mockComponent("Stop"),
 }));
@@ -196,6 +197,9 @@ jest.mock("@react-native-firebase/auth", () => ({
   __esModule: true,
   // Modular API exports
   getAuth: jest.fn(() => mockAuthInstance),
+  getIdToken: jest.fn((user: { getIdToken: () => Promise<string> }) =>
+    user.getIdToken(),
+  ),
   signInWithCredential: jest.fn(() =>
     Promise.resolve(mockSignInResult("google.com")),
   ),
@@ -303,9 +307,16 @@ jest.mock("@react-native-firebase/firestore", () => ({
 
 // Mock @react-native-firebase/messaging
 jest.mock("@react-native-firebase/messaging", () => {
+  const AuthorizationStatus = {
+    NOT_DETERMINED: -1,
+    DENIED: 0,
+    AUTHORIZED: 1,
+    PROVISIONAL: 2,
+  };
   const mockMessaging: any = jest.fn(() => ({
     requestPermission: jest.fn(() => Promise.resolve(1)),
     getToken: jest.fn(() => Promise.resolve("mock-fcm-token")),
+    getAPNSToken: jest.fn(() => Promise.resolve("mock-apns-token")),
     registerDeviceForRemoteMessages: jest.fn(() => Promise.resolve()),
     onTokenRefresh: jest.fn(() => jest.fn()),
     onMessage: jest.fn(() => jest.fn()),
@@ -313,13 +324,44 @@ jest.mock("@react-native-firebase/messaging", () => {
     setBackgroundMessageHandler: jest.fn(),
     getInitialNotification: jest.fn(() => Promise.resolve(null)),
   }));
-  mockMessaging.AuthorizationStatus = {
-    NOT_DETERMINED: -1,
-    DENIED: 0,
-    AUTHORIZED: 1,
-    PROVISIONAL: 2,
+  mockMessaging.AuthorizationStatus = AuthorizationStatus;
+
+  const getMessaging = jest.fn(() => mockMessaging());
+
+  return {
+    __esModule: true,
+    default: mockMessaging,
+    AuthorizationStatus,
+    getMessaging,
+    requestPermission: jest.fn((instance: any, permissions?: unknown) =>
+      instance.requestPermission(permissions),
+    ),
+    getToken: jest.fn((instance: any, options?: unknown) =>
+      instance.getToken(options),
+    ),
+    getAPNSToken: jest.fn((instance: any) => instance.getAPNSToken()),
+    registerDeviceForRemoteMessages: jest.fn((instance: any) =>
+      instance.registerDeviceForRemoteMessages(),
+    ),
+    onTokenRefresh: jest.fn(
+      (instance: any, listener: (token: string) => void) =>
+        instance.onTokenRefresh(listener),
+    ),
+    onMessage: jest.fn((instance: any, listener: (message: unknown) => void) =>
+      instance.onMessage(listener),
+    ),
+    onNotificationOpenedApp: jest.fn(
+      (instance: any, listener: (message: unknown) => void) =>
+        instance.onNotificationOpenedApp(listener),
+    ),
+    setBackgroundMessageHandler: jest.fn(
+      (instance: any, handler: (message: unknown) => Promise<void>) =>
+        instance.setBackgroundMessageHandler(handler),
+    ),
+    getInitialNotification: jest.fn((instance: any) =>
+      instance.getInitialNotification(),
+    ),
   };
-  return { __esModule: true, default: mockMessaging };
 });
 
 // Mock expo-linking

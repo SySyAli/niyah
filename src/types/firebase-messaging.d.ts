@@ -1,6 +1,3 @@
-// Type declarations for @react-native-firebase/messaging
-// The package doesn't ship .d.ts files, so we declare the module here.
-
 declare module "@react-native-firebase/messaging" {
   export interface RemoteMessage {
     messageId?: string;
@@ -11,18 +8,10 @@ declare module "@react-native-firebase/messaging" {
     data?: Record<string, string>;
   }
 
-  export interface FirebaseMessagingTypes {
-    AuthorizationStatus: {
-      NOT_DETERMINED: -1;
-      DENIED: 0;
-      AUTHORIZED: 1;
-      PROVISIONAL: 2;
-    };
-  }
-
-  interface Messaging {
+  export interface Messaging {
     requestPermission(): Promise<number>;
-    getToken(): Promise<string>;
+    getToken(): Promise<string | null>;
+    getAPNSToken(): Promise<string | null>;
     registerDeviceForRemoteMessages(): Promise<void>;
     onTokenRefresh(listener: (token: string) => void): () => void;
     onMessage(
@@ -37,16 +26,46 @@ declare module "@react-native-firebase/messaging" {
     getInitialNotification(): Promise<RemoteMessage | null>;
   }
 
-  function messaging(): Messaging;
+  export const AuthorizationStatus: {
+    NOT_DETERMINED: -1;
+    DENIED: 0;
+    AUTHORIZED: 1;
+    PROVISIONAL: 2;
+  };
 
-  namespace messaging {
-    const AuthorizationStatus: {
-      NOT_DETERMINED: -1;
-      DENIED: 0;
-      AUTHORIZED: 1;
-      PROVISIONAL: 2;
-    };
+  export function getMessaging(): Messaging;
+  export function requestPermission(messaging: Messaging): Promise<number>;
+  export function getToken(messaging: Messaging): Promise<string | null>;
+  export function getAPNSToken(messaging: Messaging): Promise<string | null>;
+  export function registerDeviceForRemoteMessages(
+    messaging: Messaging,
+  ): Promise<void>;
+  export function onTokenRefresh(
+    messaging: Messaging,
+    listener: (token: string) => void,
+  ): () => void;
+  export function onMessage(
+    messaging: Messaging,
+    listener: (message: RemoteMessage) => Promise<void> | void,
+  ): () => void;
+  export function onNotificationOpenedApp(
+    messaging: Messaging,
+    listener: (message: RemoteMessage) => void,
+  ): () => void;
+  export function setBackgroundMessageHandler(
+    messaging: Messaging,
+    handler: (message: RemoteMessage) => Promise<void>,
+  ): void;
+  export function getInitialNotification(
+    messaging: Messaging,
+  ): Promise<RemoteMessage | null>;
+
+  interface MessagingModule {
+    (): Messaging;
+    AuthorizationStatus: typeof AuthorizationStatus;
   }
+
+  const messaging: MessagingModule;
 
   export default messaging;
 }

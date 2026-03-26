@@ -17,9 +17,9 @@
     "build:dev:device": "eas build --profile development-device --platform ios",
     "build:preview": "eas build --profile preview --platform all",
     "build:production": "eas build --profile production --platform all",
-    "test": "jest",
+    "test": "cross-env EXPO_PUBLIC_DEMO_MODE=true jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "cross-env EXPO_PUBLIC_DEMO_MODE=true jest --coverage",
     "test:unit": "jest --testPathPattern=unit",
     "test:integration": "jest --testPathPattern=integration",
     "test:stores": "jest --testPathPattern=store",
@@ -41,7 +41,7 @@
     "@react-native-firebase/firestore": "^23.8.8",
     "@react-native-firebase/messaging": "^23.8.8",
     "@react-native-google-signin/google-signin": "^14.0.2",
-    "@react-navigation/native": "^7.1.34",
+    "@react-navigation/native": "^7.2.0",
     "@stripe/stripe-react-native": "^0.59.2",
     "expo": "~54.0.33",
     "expo-apple-authentication": "^8.0.8",
@@ -83,6 +83,7 @@
     "@types/jest": "^30.0.0",
     "@types/react": "~19.1.17",
     "babel-preset-expo": "^54.0.10",
+    "cross-env": "^10.1.0",
     "eas": "^0.1.0",
     "eas-cli": "^18.4.0",
     "eslint": "^9.39.4",
@@ -97,7 +98,7 @@
     "react-native-web": "~0.20.0",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.57.1"
+    "typescript-eslint": "^8.57.2"
   },
   "private": true,
   "pnpm": {

@@ -40,9 +40,12 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == uid;
 
       // Allow initial wallet creation only — balance must start at zero.
+      // Enforce numeric types to prevent string "0" bypassing downstream checks.
       allow create: if request.auth != null
         && request.auth.uid == uid
+        && request.resource.data.balance is number
         && request.resource.data.balance == 0
+        && request.resource.data.pendingBalance is number
         && request.resource.data.pendingBalance == 0;
 
       // No client-side updates or deletes — handled exclusively by Cloud Functions.
@@ -60,12 +63,10 @@ service cloud.firestore {
     match /userFollows/{uid} {
       allow read: if request.auth != null;
 
-      // Owner can write their own follows doc freely.
-      allow write: if request.auth != null && request.auth.uid == uid;
-
-      // Cross-user followers updates REMOVED — now handled by Cloud Functions.
-      // The previous rule allowed any authenticated user to manipulate any
-      // user's followers array. See followUser/unfollowUser CFs.
+      // All follow/unfollow writes handled by Cloud Functions (admin SDK).
+      // Previously allowed owner writes for backwards compatibility — removed
+      // because it let users forge follower arrays directly.
+      allow write: if false;
     }
 
     // -------------------------------------------------------------------------
@@ -83,10 +84,15 @@ service cloud.firestore {
       allow read: if request.auth != null
         && resource.data.userId == request.auth.uid;
 
-      // Owner can create sessions (userId must match auth, status must be active)
+      // Owner can create sessions (userId must match auth, status must be active).
+      // Enforce types on financial fields to prevent type-confusion attacks.
       allow create: if request.auth != null
+        && request.resource.data.userId is string
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'active';
+        && request.resource.data.status is string
+        && request.resource.data.status == 'active'
+        && request.resource.data.stakeAmount is number
+        && request.resource.data.stakeAmount > 0;
 
       // Owner can update their own sessions — restricted to status transition
       // fields only. Financial fields (stakeAmount, potentialPayout, endsAt)
@@ -95,7 +101,7 @@ service cloud.firestore {
       allow update: if request.auth != null
         && resource.data.userId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['status', 'completedAt', 'actualPayout', 'updatedAt']);
+             .hasOnly(['status', 'completedAt', 'updatedAt']);
 
       // No client-side deletes
       allow delete: if false;

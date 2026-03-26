@@ -32,6 +32,11 @@ export interface User {
   venmoHandle?: string; // For settlements
   zelleHandle?: string; // Email or phone for Zelle settlements
   profileImage?: string;
+  blobAvatar?: {
+    colorPreset: "sunset" | "ocean" | "forest" | "berry";
+    shapePreset: "peach" | "wave" | "petal";
+    eyesPreset: "classic" | "happy" | "wink";
+  };
   phoneNumber?: string;
   authProvider?: "email" | "google" | "apple";
   // Firebase-backed profile

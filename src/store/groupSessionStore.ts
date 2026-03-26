@@ -22,7 +22,6 @@ import {
 } from "../utils/payoutAlgorithm";
 import { getVenmoPayLink } from "../utils/format";
 import { generateId } from "../utils/id";
-import { distributeGroupPayouts as cloudDistributePayouts } from "../config/functions";
 import {
   createGroupSession as cloudCreateGroupSession,
   respondToGroupInvite as cloudRespondToGroupInvite,
@@ -321,8 +320,11 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
   // ─── Legacy lifecycle (backward compat) ───────────────────────────────────
 
   startGroupSession: (cadence, participants) => {
-    // In live mode, screens should use proposeSession flow instead
-    if (!DEMO_MODE) {
+    const isSoloSession = participants.length <= 1;
+
+    // In live mode, keep the local legacy path for solo sessions until the
+    // dedicated solo backend flow is wired back into the current screens.
+    if (!DEMO_MODE && !isSoloSession) {
       logger.warn(
         "startGroupSession called in live mode — use proposeSession instead",
       );
@@ -459,15 +461,6 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
       activeGroupSession: null,
       groupSessionHistory: [completedSession, ...groupSessionHistory],
     });
-
-    // Sync to server for real-money payouts (non-blocking in DEMO_MODE)
-    if (!DEMO_MODE) {
-      cloudDistributePayouts(
-        activeGroupSession.id,
-        activeGroupSession.stakePerParticipant,
-        results.map((r) => ({ userId: r.userId, completed: r.completed })),
-      ).catch((err) => logger.error("cloudDistributePayouts failed:", err));
-    }
 
     return completedSession;
   },
@@ -674,8 +667,15 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
 
   reset: () => {
     set({
+      // Firestore-backed state
+      activeSession: null,
+      pendingInvites: [],
+      activeGroupSessions: [],
+      // Legacy local state
       activeGroupSession: null,
       groupSessionHistory: [],
     });
+    // Note: subscriptions (_unsubSession etc.) are torn down by unsubscribeAll(),
+    // which is called separately in the logout flow.
   },
 }));

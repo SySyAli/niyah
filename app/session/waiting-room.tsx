@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { View, Text, StyleSheet, Alert, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -13,6 +19,7 @@ import { useColors } from "../../src/hooks/useColors";
 import { Card, Button } from "../../src/components";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
+import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney, formatTime } from "../../src/utils/format";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -223,6 +230,7 @@ export default function WaitingRoomScreen() {
   const router = useRouter();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const userId = useAuthStore((state) => state.user?.id);
+  const hydrateWallet = useWalletStore((state) => state.hydrate);
 
   const {
     activeSession,
@@ -233,37 +241,62 @@ export default function WaitingRoomScreen() {
   } = useGroupSessionStore();
 
   const [countdownMs, setCountdownMs] = useState<number | null>(null);
+  // Prevent calling markOnline more than once per session
+  const hasMarkedOnlineRef = useRef(false);
 
-  // Subscribe to Firestore session on mount
+  // Subscribe to Firestore session on mount.
+  // subscribeToSession manages its own unsubscribe token in the store;
+  // calling it again tears down the previous subscription automatically.
   useEffect(() => {
     if (!sessionId) return;
-    const unsubscribe = subscribeToSession(sessionId);
-    markOnline(sessionId);
-    return unsubscribe;
-  }, [sessionId, subscribeToSession, markOnline]);
+    subscribeToSession(sessionId);
+  }, [sessionId, subscribeToSession]);
+
+  // markOnlineForSession CF requires status === "ready" (all participants accepted).
+  // Call it when the session first reaches "ready" status, not on mount — the session
+  // may still be "pending" (awaiting other accepts) when we first land here.
+  useEffect(() => {
+    if (
+      activeSession?.status === "ready" &&
+      sessionId &&
+      !hasMarkedOnlineRef.current
+    ) {
+      hasMarkedOnlineRef.current = true;
+      markOnline(sessionId).catch(() => {
+        // Non-critical: status will show as not online, user can try again
+      });
+    }
+  }, [activeSession?.status, sessionId, markOnline]);
+
+  // Use .getTime() so the effect compares by value, not by reference.
+  // parseGroupSessionDoc creates a new Date object on every snapshot even if
+  // the underlying timestamp is unchanged, which would otherwise reset the
+  // interval on every Firestore update.
+  const autoTimeoutAtMs = activeSession?.autoTimeoutAt?.getTime();
 
   // Countdown timer for auto-timeout
   useEffect(() => {
-    if (!activeSession?.autoTimeoutAt) {
+    if (autoTimeoutAtMs == null) {
       setCountdownMs(null);
       return;
     }
 
     const tick = () => {
-      const remaining = activeSession.autoTimeoutAt!.getTime() - Date.now();
+      const remaining = autoTimeoutAtMs - Date.now();
       setCountdownMs(remaining > 0 ? remaining : 0);
     };
 
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [activeSession?.autoTimeoutAt]);
+  }, [autoTimeoutAtMs]);
 
   // React to session status changes
   useEffect(() => {
     if (!activeSession) return;
 
     if (activeSession.status === "cancelled") {
+      if (userId) hydrateWallet(userId);
       Alert.alert("Session Cancelled", "This session has been cancelled.", [
         { text: "OK", onPress: () => router.dismissAll() },
       ]);
@@ -273,7 +306,7 @@ export default function WaitingRoomScreen() {
       router.replace("/session/active");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSession?.status, router]);
+  }, [activeSession?.status, router, userId, hydrateWallet]);
 
   // Derived state
   const participants = activeSession
@@ -289,9 +322,13 @@ export default function WaitingRoomScreen() {
 
   const isProposer = activeSession?.proposerId === userId;
 
-  const handleStart = useCallback(() => {
+  const handleStart = useCallback(async () => {
     if (!sessionId) return;
-    startSession(sessionId);
+    try {
+      await startSession(sessionId);
+    } catch {
+      Alert.alert("Error", "Failed to start session. Please try again.");
+    }
   }, [sessionId, startSession]);
 
   const handleCancel = useCallback(() => {
@@ -304,7 +341,16 @@ export default function WaitingRoomScreen() {
         {
           text: "Cancel Session",
           style: "destructive",
-          onPress: () => cancelSession(sessionId),
+          onPress: async () => {
+            try {
+              await cancelSession(sessionId);
+            } catch {
+              Alert.alert(
+                "Error",
+                "Failed to cancel session. Please try again.",
+              );
+            }
+          },
         },
       ],
     );

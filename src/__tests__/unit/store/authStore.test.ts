@@ -29,6 +29,33 @@ jest.mock("../../../config/firebase", () => ({
   onAuthStateChanged: jest.fn(() => jest.fn()), // returns unsubscribe
 }));
 
+// Mock notifications module — authStore lazy-requires this.
+// Use controllable mock fns so individual tests can make them reject.
+const mockInitializeNotifications = jest.fn(() => Promise.resolve(() => {}));
+const mockRemoveFCMToken = jest.fn((_uid?: string) => Promise.resolve());
+jest.mock("../../../config/notifications", () => ({
+  initializeNotifications: mockInitializeNotifications,
+  removeFCMToken: mockRemoveFCMToken,
+}));
+
+// Mock groupSessionStore — authStore lazy-requires this for recovery and logout.
+const mockSubscribeToInvites = jest.fn();
+const mockSubscribeToActiveSessions = jest.fn();
+const mockUnsubscribeAll = jest.fn();
+const mockGroupReset = jest.fn();
+jest.mock("../../../store/groupSessionStore", () => ({
+  useGroupSessionStore: {
+    getState: () => ({
+      subscribeToInvites: (...args: unknown[]) =>
+        mockSubscribeToInvites(...args),
+      subscribeToActiveSessions: (...args: unknown[]) =>
+        mockSubscribeToActiveSessions(...args),
+      unsubscribeAll: (...args: unknown[]) => mockUnsubscribeAll(...args),
+      reset: (...args: unknown[]) => mockGroupReset(...args),
+    }),
+  },
+}));
+
 import {
   signInWithGoogle,
   signInWithApple,
@@ -36,6 +63,7 @@ import {
   isEmailSignInLink,
   fetchUserProfile,
   saveUserProfile,
+  updateUserDoc,
   sendMagicLink,
   signOut as firebaseSignOut,
   onAuthStateChanged,
@@ -92,6 +120,16 @@ describe("authStore", () => {
       profileComplete: false,
       isNewUser: false,
     });
+
+    // Reset controllable mock fns for notifications and group sessions
+    mockInitializeNotifications
+      .mockReset()
+      .mockReturnValue(Promise.resolve(() => {}));
+    mockRemoveFCMToken.mockReset().mockReturnValue(Promise.resolve());
+    mockSubscribeToInvites.mockReset();
+    mockSubscribeToActiveSessions.mockReset();
+    mockUnsubscribeAll.mockReset();
+    mockGroupReset.mockReset();
   });
 
   describe("initial state", () => {
@@ -887,6 +925,481 @@ describe("authStore", () => {
       expect(updateUserDoc).toHaveBeenCalledWith("test-uid", {
         zelleHandle: "z@bank.com",
       });
+    });
+
+    it("updateReputation handles Firestore error silently — local state still updated", async () => {
+      simulateAuthenticated();
+      updateUserDoc.mockRejectedValueOnce(new Error("Firestore offline"));
+
+      act(() => {
+        useAuthStore
+          .getState()
+          .updateReputation({ paymentsCompleted: 3, paymentsMissed: 1 });
+      });
+      // Flush fire-and-forget promise so the .catch handler executes (line 578)
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Local state should still reflect the update
+      const rep = useAuthStore.getState().user?.reputation;
+      expect(rep?.paymentsCompleted).toBe(3);
+      expect(rep?.paymentsMissed).toBe(1);
+    });
+
+    it("setVenmoHandle handles Firestore error silently — local state still updated", async () => {
+      simulateAuthenticated();
+      updateUserDoc.mockRejectedValueOnce(new Error("Firestore offline"));
+
+      act(() => {
+        useAuthStore.getState().setVenmoHandle("@broken");
+      });
+      // Flush fire-and-forget promise so the .catch handler executes (line 590)
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(useAuthStore.getState().user?.venmoHandle).toBe("@broken");
+    });
+
+    it("setZelleHandle handles Firestore error silently — local state still updated", async () => {
+      simulateAuthenticated();
+      updateUserDoc.mockRejectedValueOnce(new Error("Firestore offline"));
+
+      act(() => {
+        useAuthStore.getState().setZelleHandle("z@broken.com");
+      });
+      // Flush fire-and-forget promise so the .catch handler executes (line 602)
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(useAuthStore.getState().user?.zelleHandle).toBe("z@broken.com");
+    });
+  });
+
+  // ─── acceptLegal ─────────────────────────────────────────────────────────────
+
+  describe("acceptLegal", () => {
+    it("updates user with legalAcceptanceVersion and sets hasAcceptedCurrentLegal=true", async () => {
+      simulateAuthenticated();
+
+      await act(async () => {
+        await useAuthStore.getState().acceptLegal();
+      });
+
+      const state = useAuthStore.getState();
+      expect(state.hasAcceptedCurrentLegal).toBe(true);
+      expect(state.user?.legalAcceptanceVersion).toBeDefined();
+      expect(state.user?.legalAcceptedAt).toBeInstanceOf(Date);
+    });
+
+    it("throws if not authenticated", async () => {
+      await expect(
+        act(async () => {
+          await useAuthStore.getState().acceptLegal();
+        }),
+      ).rejects.toThrow("Not authenticated");
+    });
+  });
+
+  // ─── completeProfile — additional coverage ────────────────────────────────────
+
+  describe("completeProfile — additional coverage", () => {
+    it("detects Apple provider and passes authProvider='apple' to saveUserProfile (line 450)", async () => {
+      useAuthStore.setState({
+        firebaseUser: {
+          uid: "apple-uid",
+          email: "user@icloud.com",
+          displayName: "Apple User",
+          photoURL: null,
+          phoneNumber: null,
+          providerId: "apple.com",
+          isNewUser: false,
+        },
+        isAuthenticated: true,
+        profileComplete: false,
+      });
+
+      jest.mocked(saveUserProfile).mockResolvedValueOnce(undefined);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce({
+        __id: "apple-uid",
+        firstName: "Apple",
+        lastName: "User",
+        email: "user@icloud.com",
+        name: "Apple User",
+        profileComplete: true,
+        authProvider: "apple",
+        reputation: { score: 50, level: "sapling" },
+        stats: {},
+      });
+
+      await act(async () => {
+        await useAuthStore.getState().completeProfile({
+          firstName: "Apple",
+          lastName: "User",
+        });
+      });
+
+      expect(saveUserProfile).toHaveBeenCalledWith(
+        "apple-uid",
+        expect.objectContaining({
+          authProvider: "apple",
+        }),
+      );
+      expect(useAuthStore.getState().profileComplete).toBe(true);
+    });
+
+    it("resets isLoading and throws when saveUserProfile rejects (lines 471-472)", async () => {
+      useAuthStore.setState({
+        firebaseUser: {
+          uid: "fail-uid",
+          email: "fail@example.com",
+          displayName: "Fail User",
+          photoURL: null,
+          phoneNumber: null,
+          providerId: "google.com",
+          isNewUser: false,
+        },
+        isAuthenticated: true,
+        profileComplete: false,
+      });
+
+      jest
+        .mocked(saveUserProfile)
+        .mockRejectedValueOnce(new Error("Firestore write failed"));
+
+      await expect(
+        act(async () => {
+          await useAuthStore.getState().completeProfile({
+            firstName: "Fail",
+            lastName: "User",
+          });
+        }),
+      ).rejects.toThrow("Firestore write failed");
+
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+  });
+
+  // ─── loginWithApple — signIn rejection (lines 372-373) ───────────────────────
+
+  describe("loginWithApple — signIn rejection", () => {
+    it("propagates signInWithApple error and resets isLoading (lines 372-373)", async () => {
+      jest
+        .mocked(signInWithApple)
+        .mockRejectedValueOnce(new Error("Apple Sign-In was cancelled"));
+
+      await expect(
+        act(async () => {
+          await useAuthStore
+            .getState()
+            .loginWithApple("mock-token", "mock-nonce");
+        }),
+      ).rejects.toThrow("Apple Sign-In was cancelled");
+
+      const state = useAuthStore.getState();
+      expect(state.isLoading).toBe(false);
+      expect(state.isAuthenticated).toBe(false);
+    });
+  });
+
+  // ─── logout — error paths ────────────────────────────────────────────────────
+
+  describe("logout — error paths", () => {
+    it("completes logout even when signOut rejects (line 496)", async () => {
+      simulateAuthenticated();
+      jest
+        .mocked(firebaseSignOut)
+        .mockRejectedValueOnce(new Error("Network error"));
+
+      await act(async () => {
+        await useAuthStore.getState().logout();
+      });
+
+      const state = useAuthStore.getState();
+      expect(state.user).toBeNull();
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.isSigningOut).toBe(false);
+    });
+
+    it("handles FCM cleanup failure silently (line 483)", async () => {
+      simulateAuthenticated();
+
+      // Make removeFCMToken reject for this test
+      mockRemoveFCMToken.mockRejectedValueOnce(new Error("FCM cleanup failed"));
+
+      await act(async () => {
+        await useAuthStore.getState().logout();
+      });
+
+      // Logout should still complete — FCM failure is non-fatal
+      const state = useAuthStore.getState();
+      expect(state.user).toBeNull();
+      expect(state.isAuthenticated).toBe(false);
+    });
+  });
+
+  // ─── initialize — notification error paths ────────────────────────────────────
+
+  describe("initialize — notification and group session recovery", () => {
+    it("handles initNotifications rejection in success path (line 248)", async () => {
+      // Make initializeNotifications reject for this test
+      mockInitializeNotifications.mockRejectedValueOnce(
+        new Error("FCM init failed"),
+      );
+
+      const mockFirebaseUser = {
+        uid: "notif-fail-uid",
+        email: "notif@example.com",
+        displayName: "Notif User",
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "google.com",
+        isNewUser: false,
+      };
+
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce({
+        __id: "notif-fail-uid",
+        name: "Notif User",
+        email: "notif@example.com",
+        profileComplete: true,
+        authProvider: "google",
+        reputation: { score: 50, level: "sapling" },
+        stats: {},
+      });
+
+      let capturedCallback: (user: unknown) => Promise<void> = async () => {};
+      jest.mocked(onAuthStateChanged).mockImplementationOnce((cb) => {
+        capturedCallback = cb as (user: unknown) => Promise<void>;
+        return jest.fn();
+      });
+
+      useAuthStore.getState().initialize();
+
+      await act(async () => {
+        await capturedCallback(mockFirebaseUser);
+      });
+      // Flush fire-and-forget catch handlers
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Auth state should still be set despite notification failure
+      const state = useAuthStore.getState();
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.isInitialized).toBe(true);
+    });
+
+    it("handles initNotifications rejection in Firestore error path (line 271)", async () => {
+      mockInitializeNotifications.mockRejectedValueOnce(
+        new Error("FCM init failed"),
+      );
+
+      const mockFirebaseUser = {
+        uid: "notif-fail-uid-2",
+        email: "notif2@example.com",
+        displayName: null,
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "email",
+        isNewUser: false,
+      };
+
+      // Firestore fetch fails, triggering the catch block
+      jest
+        .mocked(fetchUserProfile)
+        .mockRejectedValueOnce(new Error("Firestore offline"));
+
+      let capturedCallback: (user: unknown) => Promise<void> = async () => {};
+      jest.mocked(onAuthStateChanged).mockImplementationOnce((cb) => {
+        capturedCallback = cb as (user: unknown) => Promise<void>;
+        return jest.fn();
+      });
+
+      useAuthStore.getState().initialize();
+
+      await act(async () => {
+        await capturedCallback(mockFirebaseUser);
+      });
+      // Flush fire-and-forget catch handlers
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Auth state should still be set despite both failures
+      const state = useAuthStore.getState();
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.isInitialized).toBe(true);
+      expect(state.profileComplete).toBe(false);
+    });
+
+    it("calls subscribeToActiveSessions during group session recovery (line 71)", async () => {
+      const mockFirebaseUser = {
+        uid: "group-uid",
+        email: "group@example.com",
+        displayName: "Group User",
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "google.com",
+        isNewUser: false,
+      };
+
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce({
+        __id: "group-uid",
+        name: "Group User",
+        email: "group@example.com",
+        profileComplete: true,
+        authProvider: "google",
+        reputation: { score: 50, level: "sapling" },
+        stats: {},
+      });
+
+      let capturedCallback: (user: unknown) => Promise<void> = async () => {};
+      jest.mocked(onAuthStateChanged).mockImplementationOnce((cb) => {
+        capturedCallback = cb as (user: unknown) => Promise<void>;
+        return jest.fn();
+      });
+
+      useAuthStore.getState().initialize();
+
+      await act(async () => {
+        await capturedCallback(mockFirebaseUser);
+      });
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(mockSubscribeToActiveSessions).toHaveBeenCalledWith("group-uid");
+      expect(mockSubscribeToInvites).toHaveBeenCalledWith("group-uid");
+    });
+  });
+
+  // ─── loginWithGoogle — notification error (line 323) ──────────────────────────
+
+  describe("loginWithGoogle — notification error", () => {
+    it("handles initNotifications rejection silently (line 323)", async () => {
+      mockInitializeNotifications.mockRejectedValueOnce(
+        new Error("FCM init failed"),
+      );
+
+      const mockFirebaseUser = {
+        uid: "google-notif-uid",
+        email: "google-notif@gmail.com",
+        displayName: "Google Notif User",
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "google.com",
+        isNewUser: false,
+      };
+
+      jest.mocked(signInWithGoogle).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
+
+      await act(async () => {
+        await useAuthStore.getState().loginWithGoogle();
+      });
+      // Flush fire-and-forget catch handler
+      await new Promise((r) => setTimeout(r, 0));
+
+      const state = useAuthStore.getState();
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.firebaseUser).toEqual(mockFirebaseUser);
+    });
+  });
+
+  // ─── loginWithApple — notification error (line 368) ───────────────────────────
+
+  describe("loginWithApple — notification error", () => {
+    it("handles initNotifications rejection silently (line 368)", async () => {
+      mockInitializeNotifications.mockRejectedValueOnce(
+        new Error("FCM init failed"),
+      );
+
+      const mockFirebaseUser = {
+        uid: "apple-notif-uid",
+        email: "apple-notif@icloud.com",
+        displayName: "Apple Notif User",
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "apple.com",
+        isNewUser: false,
+      };
+
+      jest.mocked(signInWithApple).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
+
+      await act(async () => {
+        await useAuthStore
+          .getState()
+          .loginWithApple("mock-token", "mock-nonce");
+      });
+      // Flush fire-and-forget catch handler
+      await new Promise((r) => setTimeout(r, 0));
+
+      const state = useAuthStore.getState();
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.firebaseUser).toEqual(mockFirebaseUser);
+    });
+  });
+
+  // ─── completeEmailLink — additional coverage ──────────────────────────────────
+
+  describe("completeEmailLink — additional coverage", () => {
+    it("handles initNotifications rejection silently (line 431)", async () => {
+      mockInitializeNotifications.mockRejectedValueOnce(
+        new Error("FCM init failed"),
+      );
+
+      const mockFirebaseUser = {
+        uid: "email-notif-uid",
+        email: "email-notif@test.com",
+        displayName: null,
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "password",
+        isNewUser: true,
+      };
+
+      jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
+      jest
+        .mocked(AsyncStorage.getItem)
+        .mockResolvedValueOnce("email-notif@test.com");
+      jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
+      jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
+
+      await act(async () => {
+        await useAuthStore
+          .getState()
+          .completeEmailLink("https://example.com/signin?link=abc");
+      });
+      // Flush fire-and-forget catch handler
+      await new Promise((r) => setTimeout(r, 0));
+
+      const state = useAuthStore.getState();
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.firebaseUser).toEqual(mockFirebaseUser);
+    });
+
+    it("handles fetchUserProfile rejection via .catch(() => null) (line 409)", async () => {
+      const mockFirebaseUser = {
+        uid: "email-fetch-fail-uid",
+        email: "email-fetch-fail@test.com",
+        displayName: null,
+        photoURL: null,
+        phoneNumber: null,
+        providerId: "password",
+        isNewUser: true,
+      };
+
+      jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
+      jest
+        .mocked(AsyncStorage.getItem)
+        .mockResolvedValueOnce("email-fetch-fail@test.com");
+      jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
+      // fetchUserProfile rejects — should be caught by .catch(() => null)
+      jest
+        .mocked(fetchUserProfile)
+        .mockRejectedValueOnce(new Error("Firestore offline"));
+
+      await act(async () => {
+        await useAuthStore
+          .getState()
+          .completeEmailLink("https://example.com/signin?link=abc");
+      });
+
+      const state = useAuthStore.getState();
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.profileComplete).toBe(false);
+      expect(state.isNewUser).toBe(true);
     });
   });
 });

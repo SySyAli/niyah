@@ -2,25 +2,26 @@
 
 ## Architecture Decisions (Confirmed)
 
-| Decision | Choice |
-|----------|--------|
-| Session start model | "Start Now" only for v1 (scheduling deferred to v2) |
-| Real-time sync | Firestore `onSnapshot` listeners |
-| Stake timing | Deducted on invite accept (refunded if cancelled) |
-| Session config | Cadence durations + custom stake override |
-| Notifications | FCM push + in-app banners + share link for invites |
-| Trust model | Server-authoritative (Cloud Function validates completion) |
-| Payments | Full Stripe Connect (all testers do KYC) |
-| No-shows | Wait for everyone + manual cancel + auto-timeout (30 min) with full refunds |
-| Scheduling | "Start Now" only for v1 — proposer hits Start when all accepted. Scheduling deferred. |
-| Timeout | Proposer can cancel anytime; auto-cancel after 30 min if not all ready. Full refunds. |
-| FCM/APNs | Build full FCM code; user will configure APNs key separately. Manual steps listed at end. |
+| Decision            | Choice                                                                                    |
+| ------------------- | ----------------------------------------------------------------------------------------- |
+| Session start model | "Start Now" only for v1 (scheduling deferred to v2)                                       |
+| Real-time sync      | Firestore `onSnapshot` listeners                                                          |
+| Stake timing        | Deducted on invite accept (refunded if cancelled)                                         |
+| Session config      | Cadence durations + custom stake override                                                 |
+| Notifications       | FCM push + in-app banners + share link for invites                                        |
+| Trust model         | Server-authoritative (Cloud Function validates completion)                                |
+| Payments            | Full Stripe Connect (all testers do KYC)                                                  |
+| No-shows            | Wait for everyone + manual cancel + auto-timeout (30 min) with full refunds               |
+| Scheduling          | "Start Now" only for v1 — proposer hits Start when all accepted. Scheduling deferred.     |
+| Timeout             | Proposer can cancel anytime; auto-cancel after 30 min if not all ready. Full refunds.     |
+| FCM/APNs            | Build full FCM code; user will configure APNs key separately. Manual steps listed at end. |
 
 ---
 
 ## Workstreams (Can Run in Parallel)
 
 ### Workstream A: Firestore Schema + Security Rules
+
 **No dependencies. Can start immediately.**
 
 1. **Design Firestore collections:**
@@ -60,6 +61,7 @@
 ---
 
 ### Workstream B: Cloud Functions — Session Lifecycle (Server-Authoritative)
+
 **Depends on: Schema from Workstream A (design only, not deployed)**
 
 1. **`createGroupSession`** — Proposer creates session + invites
@@ -115,6 +117,7 @@
 ---
 
 ### Workstream C: Client-Side Store + Real-Time Listeners
+
 **Depends on: Schema from A, Cloud Function interfaces from B**
 
 1. **Update `groupSessionStore.ts`:**
@@ -140,6 +143,7 @@
 ---
 
 ### Workstream D: FCM Push Notifications
+
 **Can start in parallel. No dependency on other workstreams until integration.**
 
 1. **Install & configure `@react-native-firebase/messaging`:**
@@ -172,6 +176,7 @@
 ---
 
 ### Workstream E: UI Updates
+
 **Depends on: Store changes from C (interfaces), but can stub and build in parallel**
 
 1. **New screen: `app/session/invites.tsx`** — List of pending invites
@@ -222,6 +227,7 @@
 ---
 
 ### Workstream F: Stripe Connect Onboarding Flow Testing
+
 **Independent. Can start immediately.**
 
 1. **Verify `stripe-onboarding.tsx` works end-to-end in test mode**
@@ -263,14 +269,14 @@ Week 2-3: Integration + Testing
 
 ## What Can Be Done in Parallel RIGHT NOW
 
-| Task | Workstream | Blocks |
-|------|------------|--------|
-| Design Firestore schema + write rules | A | B, C |
-| Install FCM, token management, permission flow | D | Nothing (independent) |
-| Test Stripe Connect onboarding with team | F | Nothing (independent) |
-| Stub Cloud Function interfaces (TypeScript types) | B | C, E |
-| Build invites screen UI (with mock data) | E | Nothing (can stub) |
-| Build waiting room screen UI (with mock data) | E | Nothing (can stub) |
+| Task                                              | Workstream | Blocks                |
+| ------------------------------------------------- | ---------- | --------------------- |
+| Design Firestore schema + write rules             | A          | B, C                  |
+| Install FCM, token management, permission flow    | D          | Nothing (independent) |
+| Test Stripe Connect onboarding with team          | F          | Nothing (independent) |
+| Stub Cloud Function interfaces (TypeScript types) | B          | C, E                  |
+| Build invites screen UI (with mock data)          | E          | Nothing (can stub)    |
+| Build waiting room screen UI (with mock data)     | E          | Nothing (can stub)    |
 
 ## Risk Areas
 
@@ -284,6 +290,7 @@ Week 2-3: Integration + Testing
 ## Manual Steps Required (After Code Is Built)
 
 ### APNs Configuration for iOS Push Notifications
+
 1. Go to [Apple Developer Portal](https://developer.apple.com/account/resources/authkeys/list)
 2. Create a new **APNs Authentication Key** (Key type: Apple Push Notifications service)
 3. Download the `.p8` file — you only get ONE download
@@ -294,6 +301,7 @@ Week 2-3: Integration + Testing
 8. Save — FCM will now route through APNs for iOS
 
 ### Stripe Connect Live Mode (When Ready for Real Money)
+
 1. Go to [Stripe Dashboard](https://dashboard.stripe.com) → Settings → Connect
 2. Complete Stripe's platform onboarding (business verification)
 3. Switch from test to live API keys
@@ -303,10 +311,12 @@ Week 2-3: Integration + Testing
 7. Each tester re-does Stripe Connect onboarding (test accounts don't carry over)
 
 ### Firebase Cloud Scheduler (for auto-timeout)
+
 1. Go to GCP Console → APIs & Services → Enable "Cloud Scheduler API"
 2. Deploy the scheduled function — it auto-registers the cron job
 
 ### Tester Onboarding Checklist (Per Person)
+
 1. Install the dev build on their phone
 2. Sign in (Google/Apple/Email)
 3. Complete Stripe Connect KYC (stripe-onboarding screen)

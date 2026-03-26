@@ -361,6 +361,61 @@ describe("partnerStore", () => {
       expect(updated.settlementStatus).toBe("paid");
     });
 
+    it("markSettlementPaid with amountOwed > 0 updates reputation and records settlement", () => {
+      const session = {
+        id: "session-pay-1",
+        cadence: "daily" as const,
+        stakeAmount: 500,
+        startedAt: new Date(),
+        endsAt: new Date(),
+        status: "surrendered" as const,
+        partnerId: "user-1",
+        partnerName: "Alice",
+        partnerVenmo: "@alice",
+        settlementStatus: "pending" as const,
+        amountOwed: 500, // Positive = user owes partner
+      };
+
+      usePartnerStore.setState({ duoSessionHistory: [session] });
+      usePartnerStore.getState().markSettlementPaid("session-pay-1");
+
+      // Reputation should be updated
+      const user = useAuthStore.getState().user;
+      expect(user!.reputation.paymentsCompleted).toBe(1);
+      expect(user!.reputation.totalOwedPaid).toBe(500);
+
+      // Wallet should record the settlement (negative amount = payment out)
+      const transactions = useWalletStore.getState().transactions;
+      const settlementTx = transactions.find(
+        (t) => t.type === "settlement_paid",
+      );
+      expect(settlementTx).toBeDefined();
+      expect(settlementTx!.amount).toBe(-500);
+    });
+
+    it("markSettlementPaid with non-matching sessionId does not change reputation", () => {
+      const session = {
+        id: "session-nomatch",
+        cadence: "daily" as const,
+        stakeAmount: 500,
+        startedAt: new Date(),
+        endsAt: new Date(),
+        status: "surrendered" as const,
+        partnerId: "user-1",
+        partnerName: "Alice",
+        settlementStatus: "pending" as const,
+        amountOwed: 500,
+      };
+
+      usePartnerStore.setState({ duoSessionHistory: [session] });
+      usePartnerStore.getState().markSettlementPaid("nonexistent-id");
+
+      // Reputation should not change
+      expect(useAuthStore.getState().user!.reputation.paymentsCompleted).toBe(
+        0,
+      );
+    });
+
     it("markSettlementReceived updates session", () => {
       const session = {
         id: "session-2",
@@ -380,6 +435,58 @@ describe("partnerStore", () => {
 
       const updated = usePartnerStore.getState().duoSessionHistory[0];
       expect(updated.settlementStatus).toBe("received");
+    });
+
+    it("markSettlementReceived with amountOwed < 0 credits wallet", () => {
+      const session = {
+        id: "session-recv-1",
+        cadence: "daily" as const,
+        stakeAmount: 500,
+        startedAt: new Date(),
+        endsAt: new Date(),
+        status: "completed" as const,
+        partnerId: "user-1",
+        partnerName: "Alice",
+        partnerVenmo: "@alice",
+        settlementStatus: "pending" as const,
+        amountOwed: -500, // Negative = partner owes user
+      };
+
+      const balanceBefore = useWalletStore.getState().balance;
+      usePartnerStore.setState({ duoSessionHistory: [session] });
+      usePartnerStore.getState().markSettlementReceived("session-recv-1");
+
+      // Wallet should be credited with absolute value of amountOwed
+      expect(useWalletStore.getState().balance).toBe(balanceBefore + 500);
+
+      const transactions = useWalletStore.getState().transactions;
+      const settlementTx = transactions.find(
+        (t) => t.type === "settlement_received",
+      );
+      expect(settlementTx).toBeDefined();
+      expect(settlementTx!.amount).toBe(500);
+    });
+
+    it("markSettlementReceived with non-matching sessionId does not credit wallet", () => {
+      const session = {
+        id: "session-nomatch-2",
+        cadence: "daily" as const,
+        stakeAmount: 500,
+        startedAt: new Date(),
+        endsAt: new Date(),
+        status: "completed" as const,
+        partnerId: "user-1",
+        partnerName: "Alice",
+        settlementStatus: "pending" as const,
+        amountOwed: -500,
+      };
+
+      const balanceBefore = useWalletStore.getState().balance;
+      usePartnerStore.setState({ duoSessionHistory: [session] });
+      usePartnerStore.getState().markSettlementReceived("nonexistent-id");
+
+      // Balance should not change
+      expect(useWalletStore.getState().balance).toBe(balanceBefore);
     });
   });
 

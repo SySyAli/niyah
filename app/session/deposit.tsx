@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo } from "react";
+import { getAuth } from "@react-native-firebase/auth";
 import {
   View,
   Text,
@@ -34,20 +35,54 @@ import {
 } from "../../src/config/functions";
 import { DEMO_MODE } from "../../src/constants/config";
 import { logger } from "../../src/utils/logger";
+import {
+  getErrorMessage,
+  getFunctionErrorMessage,
+  isUserCancellationError,
+} from "../../src/utils/errors";
 
 // Lazily require Stripe — crashes on dev builds without the native StripeSdk module.
 // In DEMO_MODE the Stripe path is never reached so a no-op stub is fine.
 type UseStripe = typeof import("@stripe/stripe-react-native").useStripe;
-const _demoStripeHook: ReturnType<UseStripe> = {
+type StripeHook = ReturnType<UseStripe>;
+
+const STRIPE_PK = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+const STRIPE_UNAVAILABLE_MESSAGE =
+  "Payments are unavailable in this build right now. Please reinstall the latest app build and try again.";
+
+const _demoStripeHook: StripeHook = {
   initPaymentSheet: async () => ({ error: undefined }),
   presentPaymentSheet: async () => ({ error: undefined }),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any;
-const useStripe: UseStripe = DEMO_MODE
-  ? () => _demoStripeHook
-  : (
+
+const _unavailableStripeHook: StripeHook = {
+  initPaymentSheet: async () => ({
+    error: { code: "Failed", message: STRIPE_UNAVAILABLE_MESSAGE },
+  }),
+  presentPaymentSheet: async () => ({
+    error: { code: "Failed", message: STRIPE_UNAVAILABLE_MESSAGE },
+  }),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+} as any;
+
+let stripeHook: UseStripe | null = null;
+
+if (!DEMO_MODE && STRIPE_PK) {
+  try {
+    stripeHook = (
       require("@stripe/stripe-react-native") as typeof import("@stripe/stripe-react-native")
     ).useStripe;
+  } catch (error) {
+    logger.warn("Stripe SDK unavailable in deposit screen:", error);
+  }
+}
+
+const useStripe: UseStripe = DEMO_MODE
+  ? () => _demoStripeHook
+  : (stripeHook ?? (() => _unavailableStripeHook));
+
+const isStripePaymentsAvailable = DEMO_MODE || (!!STRIPE_PK && !!stripeHook);
 
 const QUICK_AMOUNTS = [500, 1000, 2500, 5000, 10000]; // in cents
 
@@ -56,6 +91,39 @@ interface QuickAmountButtonProps {
   onPress: (amount: number) => void;
   isSelected: boolean;
 }
+
+const getDepositErrorMessage = (error: unknown): string => {
+  const message = getFunctionErrorMessage(
+    error,
+    "Something went wrong. Please try again.",
+  );
+
+  if (/unauthorized/i.test(message)) {
+    return "Your session expired. Please sign in again before adding funds.";
+  }
+
+  if (/too many requests/i.test(message)) {
+    return "You're trying a little too quickly. Please wait a moment and try again.";
+  }
+
+  if (/function endpoint is not publicly accessible/i.test(message)) {
+    return "Payments aren't enabled on this backend yet. Redeploy the Cloud Functions with public HTTP access, then try again.";
+  }
+
+  if (/network request failed/i.test(message)) {
+    return "We couldn't reach the payment service. Check your connection and try again.";
+  }
+
+  if (
+    /failed to create payment intent|failed to verify deposit|payment setup is incomplete/i.test(
+      message,
+    )
+  ) {
+    return "We couldn't start your deposit right now. Please try again.";
+  }
+
+  return message;
+};
 
 const QuickAmountButton: React.FC<QuickAmountButtonProps> = ({
   amount,
@@ -121,6 +189,8 @@ export default function DepositScreen() {
   );
   const [isLoading, setIsLoading] = useState(false);
 
+  const paymentsUnavailable = !DEMO_MODE && !isStripePaymentsAvailable;
+
   const amountInCents = inputValue
     ? Math.round(parseFloat(inputValue) * 100)
     : 0;
@@ -183,20 +253,38 @@ export default function DepositScreen() {
 
   const handleStripeDeposit = async () => {
     const finalAmount = selectedQuickAmount ?? amountInCents;
-    if (finalAmount < 100) return;
+    if (finalAmount < 100 || isLoading) return;
+
+    if (!isStripePaymentsAvailable) {
+      Alert.alert("Payments Unavailable", STRIPE_UNAVAILABLE_MESSAGE);
+      return;
+    }
+
+    if (!getAuth().currentUser) {
+      Alert.alert(
+        "Please Sign In Again",
+        "Your session expired. Sign in again before adding funds.",
+      );
+      return;
+    }
 
     setIsLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      const { clientSecret, paymentIntentId, customerId } =
+      const { clientSecret, paymentIntentId } =
         await createPaymentIntent(finalAmount);
+
+      if (!clientSecret || !paymentIntentId) {
+        throw new Error("Payment setup is incomplete. Please try again.");
+      }
 
       const { error: initError } = await initPaymentSheet({
         merchantDisplayName: "NIYAH",
         paymentIntentClientSecret: clientSecret,
-        customerId,
         defaultBillingDetails: {},
+        returnURL: "niyah://stripe-redirect",
+        applePay: { merchantCountryCode: "US" },
         // true = show ACH/bank debit in PaymentSheet (delayed, but much lower fee)
         allowsDelayedPaymentMethods: true,
         appearance: {
@@ -220,15 +308,24 @@ export default function DepositScreen() {
       });
 
       if (initError) {
-        Alert.alert("Payment Error", initError.message);
+        Alert.alert(
+          "Payment Error",
+          getErrorMessage(initError, "We couldn't open payments right now."),
+        );
         return;
       }
 
       const { error: presentError } = await presentPaymentSheet();
 
       if (presentError) {
-        if (presentError.code !== "Canceled") {
-          Alert.alert("Payment Failed", presentError.message);
+        if (!isUserCancellationError(presentError)) {
+          Alert.alert(
+            "Payment Failed",
+            getErrorMessage(
+              presentError,
+              "We couldn't complete your payment. Please try again.",
+            ),
+          );
         }
         return;
       }
@@ -254,7 +351,7 @@ export default function DepositScreen() {
       }
     } catch (err) {
       logger.error("Deposit error:", err);
-      Alert.alert("Deposit Failed", "Something went wrong. Please try again.");
+      Alert.alert("Deposit Failed", getDepositErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -318,17 +415,23 @@ export default function DepositScreen() {
         ) : (
           <Button
             title={
-              isValidAmount
-                ? `Add ${formatMoney(selectedQuickAmount ?? amountInCents)}`
-                : "Enter an amount"
+              paymentsUnavailable
+                ? "Payments unavailable"
+                : isValidAmount
+                  ? `Add ${formatMoney(selectedQuickAmount ?? amountInCents)}`
+                  : "Enter an amount"
             }
             onPress={handleDeposit}
-            disabled={!isValidAmount || isLoading}
+            disabled={!isValidAmount || isLoading || paymentsUnavailable}
             size="large"
           />
         )}
-        {DEMO_MODE && (
-          <Text style={styles.disclaimer}>Demo mode — no real money</Text>
+        {(DEMO_MODE || paymentsUnavailable) && (
+          <Text style={styles.disclaimer}>
+            {DEMO_MODE
+              ? "Demo mode - no real money"
+              : "Payments unavailable in this build"}
+          </Text>
         )}
       </View>
     </SessionScreenScaffold>

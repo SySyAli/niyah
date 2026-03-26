@@ -37,10 +37,12 @@ import type { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
 import {
   GoogleSignin,
   isSuccessResponse,
+  statusCodes,
 } from "@react-native-google-signin/google-signin";
 import * as Linking from "expo-linking";
 import * as Crypto from "expo-crypto";
 import { logger } from "../utils/logger";
+import { createErrorWithCode, getErrorCode } from "../utils/errors";
 
 // ---------------------------------------------------------------------------
 // Firestore collection name constants
@@ -107,19 +109,33 @@ GoogleSignin.configure({
 export const signInWithGoogle = async (): Promise<FirebaseUser> => {
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-  const response = await GoogleSignin.signIn();
-  if (!isSuccessResponse(response)) {
-    throw new Error("Google Sign-In was cancelled");
-  }
+  try {
+    const response = await GoogleSignin.signIn();
+    if (!isSuccessResponse(response)) {
+      throw createErrorWithCode(
+        "Google Sign-In was cancelled",
+        statusCodes.SIGN_IN_CANCELLED,
+      );
+    }
 
-  const idToken = response.data?.idToken;
-  if (!idToken) {
-    throw new Error("Failed to get ID token from Google");
-  }
+    const idToken = response.data?.idToken;
+    if (!idToken) {
+      throw new Error("Failed to get ID token from Google");
+    }
 
-  const credential = GoogleAuthProvider.credential(idToken);
-  const result = await signInWithCredential(authInstance, credential);
-  return mapUser(result.user, result.additionalUserInfo?.isNewUser ?? false);
+    const credential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(authInstance, credential);
+    return mapUser(result.user, result.additionalUserInfo?.isNewUser ?? false);
+  } catch (error) {
+    if (getErrorCode(error) === statusCodes.SIGN_IN_CANCELLED) {
+      throw createErrorWithCode(
+        "Google Sign-In was cancelled",
+        statusCodes.SIGN_IN_CANCELLED,
+      );
+    }
+
+    throw error;
+  }
 };
 
 export const signOutGoogle = async () => {
@@ -222,6 +238,11 @@ export const saveUserProfile = async (
     email: string;
     phone?: string;
     profileImage?: string;
+    blobAvatar?: {
+      colorPreset: "sunset" | "ocean" | "forest" | "berry";
+      shapePreset: "peach" | "wave" | "petal";
+      eyesPreset: "classic" | "happy" | "wink";
+    };
     authProvider: "google" | "apple" | "email";
   },
 ): Promise<void> => {
@@ -445,7 +466,6 @@ export const updateSession = async (
   data: {
     status: string;
     completedAt?: Date;
-    actualPayout?: number;
   },
 ): Promise<void> => {
   const updateData: Record<string, unknown> = {
@@ -455,9 +475,8 @@ export const updateSession = async (
   if (data.completedAt) {
     updateData.completedAt = Timestamp.fromDate(data.completedAt);
   }
-  if (data.actualPayout !== undefined) {
-    updateData.actualPayout = data.actualPayout;
-  }
+  // actualPayout is written exclusively by Cloud Functions (admin SDK).
+  // Client writes to this field are blocked by Firestore security rules.
   await firestoreUpdateDoc(
     doc(db, COLLECTIONS.SESSIONS, sessionId),
     updateData,
@@ -535,6 +554,7 @@ export const subscribeToGroupInvites = (
     where("status", "==", "pending"),
   );
   return onSnapshot(q, (snap) => {
+    if (!snap) return callback([]);
     const invites = snap.docs.map(
       (d: FirebaseFirestoreTypes.QueryDocumentSnapshot) => ({
         __id: d.id,
@@ -559,6 +579,7 @@ export const subscribeToActiveGroupSessions = (
     where("status", "in", ["pending", "ready", "active"]),
   );
   return onSnapshot(q, (snap) => {
+    if (!snap) return callback([]);
     const sessions = snap.docs.map(
       (d: FirebaseFirestoreTypes.QueryDocumentSnapshot) => ({
         __id: d.id,

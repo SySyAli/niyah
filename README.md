@@ -77,6 +77,8 @@ pnpm start
 # Press 'i' for iOS Simulator, 'a' for Android emulator
 ```
 
+**Rebuild only when:** native dependencies change (new Swift code, new native packages). All JS/TS changes are live via hot-reload.
+
 ### Testing & Code Quality
 
 ```bash
@@ -88,25 +90,90 @@ pnpm ci          # Full CI: lint + typecheck + test
 
 ---
 
-### iOS Device (team distribution, no Mac required)
+## Teammate Setup (Windows + iPhone, no Mac needed)
 
-1. Register device:
+The Mac owner builds the app once and shares an install link. Teammates install it on their iPhones and code with live hot-reload from their Windows laptops.
+
+### 1. Install the app on your iPhone
+
+- Open the install link you received in **Safari** on your iPhone
+- Tap **Install** when prompted
+- Go to **Settings > General > VPN & Device Management** > tap the developer certificate > **Trust**
+
+### 2. Set up your dev environment (one-time)
+
+Install WSL2: `wsl --install` from PowerShell, then restart. Inside WSL:
 
 ```bash
-eas device:create
+# Install Node.js 18+ and pnpm, then:
+git clone <repo-url>
+cd niyah
+pnpm install
 ```
 
-2. Build for device:
+Set up config files (never commit these):
+
+- `.env` — copy `.env.example`, fill in values from [Firebase Console](https://console.firebase.google.com/) and [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+- `firebase/GoogleService-Info.plist` — Firebase Console > Project Settings > Your Apps > iOS > download
+- `firebase/google-services.json` — Firebase Console > Project Settings > Your Apps > Android > download
+
+You need to be added to the Firebase project first — ask the team lead.
+
+### 3. Network setup (every Windows restart)
+
+Open **PowerShell as Administrator** on the Windows side:
+
+```powershell
+.\scripts\wsl_dev_setup.ps1
+```
+
+Note the Wi-Fi IP it prints at the end.
+
+### 4. Start coding
 
 ```bash
-eas build --profile development-device --platform ios --local
+pnpm start   # inside WSL
 ```
 
-3. Upload the `.ipa` to [diawi.com](https://diawi.com) and share link to team.
+Open the NIYAH app on your iPhone. Enter the Metro URL: `http://<your-wifi-ip>:8081`
 
-4. Run `pnpm start`, enter the Manual URL in the app.
+All JS/TS code changes hot-reload instantly on your phone.
 
-5. `.ts` changes update instantly. Native changes (Swift, push notifications, Screen Time) require a new build (step 2).
+---
+
+## Building for Team Distribution (Mac owner only)
+
+### Option A: EAS Cloud (easiest)
+
+```bash
+set -a && source .env && set +a
+eas build --profile development-device --platform ios
+```
+
+EAS gives you an install link at the end. Share it with teammates.
+
+### Option B: Local via Xcode (no queue)
+
+```bash
+npx expo prebuild --platform ios
+cd ios && pod install && cd ..
+open ios/NIYAH.xcworkspace
+```
+
+In Xcode:
+
+1. Set destination to **Any iOS Device (arm64)**
+2. **Product > Archive**
+3. **Distribute App > Release Testing > Export**
+4. Upload the `.ipa` to [diawi.com](https://diawi.com) and share the link
+
+### Registering new devices
+
+```bash
+eas device:create   # generates URL — send to teammate to open on their iPhone
+```
+
+After registering, rebuild and redistribute.
 
 ---
 
@@ -150,6 +217,12 @@ npx expo prebuild --clean
 npx expo run:ios
 ```
 
+**Metro won't connect on Windows:**
+
+- Make sure `wsl_dev_setup.ps1` ran after last restart
+- Check that phone and laptop are on the same WiFi
+- Try entering the URL manually: `http://<wifi-ip>:8081`
+
 ### Android Environment Setup
 
 Add to `~/.zshrc` or `~/.bashrc`:
@@ -166,22 +239,6 @@ If the dev client doesn't auto-connect:
 ```bash
 adb reverse tcp:8081 tcp:8081
 ```
-
-### Windows (WSL) Setup
-
-Run on every restart in PowerShell as Administrator:
-
-```powershell
-.\wsl_dev_setup.ps1
-```
-
-Then from WSL:
-
-```bash
-npx expo start --dev-client --host lan
-```
-
-Connect phone to `http://<YOUR_WIFI_IP>:8081`.
 
 ---
 

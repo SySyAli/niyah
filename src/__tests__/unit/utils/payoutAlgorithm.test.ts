@@ -79,6 +79,12 @@ describe("calculatePayouts", () => {
     expect(payouts.map((p) => p.userId)).toContain("user-xyz");
   });
 
+  it("solo surrender returns 0 payout", () => {
+    const payouts = calculatePayouts(1000, [{ userId: "a", completed: false }]);
+    expect(payouts).toHaveLength(1);
+    expect(payouts[0].payout).toBe(0);
+  });
+
   it("returns empty array for empty results", () => {
     expect(calculatePayouts(500, [])).toEqual([]);
   });
@@ -239,5 +245,62 @@ describe("calculateTransfers", () => {
     // Should not throw and should return an array
     const transfers = calculateTransfers(participants, payouts);
     expect(Array.isArray(transfers)).toBe(true);
+  });
+
+  it("skips exhausted creditor when multiple debtors drain it (creditor.remaining <= 0 branch)", () => {
+    // Set up: 2 debtors and 1 creditor whose amount is less than the total debt
+    // The first debtor exhausts the creditor, second debtor finds creditor.remaining <= 0
+    const participants = [
+      makeParticipant("a", "Alice", 1000), // creditor: net +500
+      makeParticipant("b", "Bob", 1000), // debtor: net -300
+      makeParticipant("c", "Charlie", 1000), // debtor: net -200
+    ];
+    const payouts: ParticipantPayout[] = [
+      { userId: "a", payout: 1500 }, // net +500
+      { userId: "b", payout: 700 }, // net -300
+      { userId: "c", payout: 800 }, // net -200
+    ];
+    const transfers = calculateTransfers(participants, payouts);
+
+    // Both debtors should pay Alice
+    const totalPaid = transfers.reduce((sum, t) => sum + t.amount, 0);
+    expect(totalPaid).toBe(500);
+    expect(transfers.every((t) => t.toUserId === "a")).toBe(true);
+  });
+
+  it("creditor exhausted by first debtor is skipped by second debtor", () => {
+    // Creditors sorted largest-first: Bob (+200), Alice (+100)
+    // First debtor Charlie (-200) pays Bob 200 (exhausts Bob), then Alice 0 remaining.
+    // Second debtor Dave (-100) encounters Bob (remaining=0 -> continue), then pays Alice 100.
+    // This triggers the `creditor.remaining <= 0` continue branch at line 108.
+    const participants = [
+      makeParticipant("a", "Alice", 1000), // net +100
+      makeParticipant("b", "Bob", 1000), // net +200
+      makeParticipant("c", "Charlie", 1000), // net -200
+      makeParticipant("d", "Dave", 1000), // net -100
+    ];
+    const payouts: ParticipantPayout[] = [
+      { userId: "a", payout: 1100 }, // net +100
+      { userId: "b", payout: 1200 }, // net +200
+      { userId: "c", payout: 800 }, // net -200
+      { userId: "d", payout: 900 }, // net -100
+    ];
+    const transfers = calculateTransfers(participants, payouts);
+
+    // Total transfers should balance: 200 + 100 = 300
+    const totalPaid = transfers.reduce((sum, t) => sum + t.amount, 0);
+    expect(totalPaid).toBe(300);
+
+    // Bob (largest creditor, sorted first) gets exhausted by Charlie
+    const bobReceived = transfers
+      .filter((t) => t.toUserId === "b")
+      .reduce((sum, t) => sum + t.amount, 0);
+    expect(bobReceived).toBe(200);
+
+    // Alice gets paid by Dave (after Dave skips exhausted Bob)
+    const aliceReceived = transfers
+      .filter((t) => t.toUserId === "a")
+      .reduce((sum, t) => sum + t.amount, 0);
+    expect(aliceReceived).toBe(100);
   });
 });

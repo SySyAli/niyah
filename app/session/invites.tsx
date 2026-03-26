@@ -6,9 +6,10 @@ import {
   Pressable,
   ScrollView,
   Image,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, type RelativePathString } from "expo-router";
 import {
   Typography,
   Spacing,
@@ -18,7 +19,9 @@ import {
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
 import { Card, Button } from "../../src/components";
+import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
 import type { GroupInvite } from "../../src/types";
 
@@ -47,22 +50,33 @@ export default function GroupInvitesScreen() {
 
   const { pendingInvites, acceptInvite, declineInvite } =
     useGroupSessionStore();
+  const hydrateWallet = useWalletStore((state) => state.hydrate);
+  const userId = useAuthStore((state) => state.user?.id);
 
   const [loadingAccept, setLoadingAccept] = useState<string | null>(null);
   const [loadingDecline, setLoadingDecline] = useState<string | null>(null);
 
   const handleAccept = useCallback(
     async (inviteId: string) => {
+      const invite = pendingInvites.find((i) => i.id === inviteId);
+      if (!invite) return;
       setLoadingAccept(inviteId);
       try {
         await acceptInvite(inviteId);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        router.push("/session/waiting" as any);
+        // CF deducted stake from Firestore wallet — sync local balance.
+        if (userId) hydrateWallet(userId);
+        router.replace(
+          `/session/waiting-room?sessionId=${invite.sessionId}` as RelativePathString,
+        );
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to accept invite.";
+        Alert.alert("Could Not Accept", message);
       } finally {
         setLoadingAccept(null);
       }
     },
-    [acceptInvite, router],
+    [acceptInvite, hydrateWallet, pendingInvites, router, userId],
   );
 
   const handleDecline = useCallback(
@@ -70,6 +84,8 @@ export default function GroupInvitesScreen() {
       setLoadingDecline(inviteId);
       try {
         await declineInvite(inviteId);
+      } catch {
+        Alert.alert("Error", "Failed to decline invite. Please try again.");
       } finally {
         setLoadingDecline(null);
       }

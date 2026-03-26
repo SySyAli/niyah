@@ -19,6 +19,7 @@ export default tseslint.config(
       "landing-pg/out/",
       "landing-pg/node_modules/",
       "landing-pg/.next/",
+      "landing-pg/*.config.*",
       "*.config.js",
       "*.config.mjs",
       "*.config.ts",

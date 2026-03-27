@@ -33,6 +33,7 @@ jest.mock("../../../config/screentime", () => ({
   startBlocking: jest.fn(() => Promise.resolve()),
   stopBlocking: jest.fn(() => Promise.resolve()),
   onSurrenderRequested: jest.fn(() => jest.fn()),
+  onShieldViolation: jest.fn(() => jest.fn()),
 }));
 
 jest.mock("../../../config/functions", () => ({

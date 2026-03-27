@@ -375,7 +375,10 @@ export default function DepositScreen() {
       // Resync wallet from Firestore in case server credited but client missed it
       const uid = getAuth().currentUser?.uid;
       if (uid) {
-        useWalletStore.getState().hydrate(uid).catch(() => {});
+        useWalletStore
+          .getState()
+          .hydrate(uid)
+          .catch(() => {});
       }
     } finally {
       setIsLoading(false);
@@ -413,7 +416,10 @@ export default function DepositScreen() {
       );
       const uid = getAuth().currentUser?.uid;
       if (uid) {
-        useWalletStore.getState().hydrate(uid).catch(() => {});
+        useWalletStore
+          .getState()
+          .hydrate(uid)
+          .catch(() => {});
       }
     } finally {
       setIsLoading(false);

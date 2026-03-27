@@ -22,10 +22,7 @@ import { useColors } from "../../src/hooks/useColors";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
-import {
-  findContactsOnNiyah,
-  type ContactMatch,
-} from "../../src/config/functions";
+import { findContactsOnNiyah } from "../../src/config/functions";
 import { PublicProfile, Partner } from "../../src/types";
 import { logger } from "../../src/utils/logger";
 
@@ -442,15 +439,19 @@ export default function FriendsScreen() {
     unfollowUser,
     loadProfile,
     isFollowing,
+    contactMatches,
+    lastContactSyncAt,
+    setContactMatches,
+    clearContactMatches,
+    isContactSyncStale,
   } = useSocialStore();
 
   const [tab, setTab] = useState<"following" | "partners">(
     requestedTab === "partners" ? "partners" : "following",
   );
   const [loadingUids, setLoadingUids] = useState<Record<string, boolean>>({});
-  const [contactMatches, setContactMatches] = useState<ContactMatch[]>([]);
   const [isImporting, setIsImporting] = useState(false);
-  const [hasImported, setHasImported] = useState(false);
+  const hasImported = lastContactSyncAt !== null;
 
   const myUid = user?.id ?? "";
 
@@ -520,6 +521,11 @@ export default function FriendsScreen() {
   // ── Import contacts ───────────────────────────────────────────────────────
 
   const handleImportContacts = useCallback(async () => {
+    // Skip re-fetch if cache is fresh (< 5 min old) and we have results
+    if (!isContactSyncStale() && contactMatches.length > 0) {
+      return;
+    }
+
     setIsImporting(true);
     try {
       const { status } = await Contacts.requestPermissionsAsync();
@@ -564,7 +570,10 @@ export default function FriendsScreen() {
       }
 
       if (phones.length === 0 && emails.length === 0) {
-        Alert.alert("No Contacts", "No phone numbers or emails found in your contacts.");
+        Alert.alert(
+          "No Contacts",
+          "No phone numbers or emails found in your contacts.",
+        );
         setIsImporting(false);
         return;
       }
@@ -577,7 +586,6 @@ export default function FriendsScreen() {
       );
 
       setContactMatches(newMatches);
-      setHasImported(true);
 
       if (newMatches.length === 0) {
         Alert.alert(
@@ -595,7 +603,14 @@ export default function FriendsScreen() {
     } finally {
       setIsImporting(false);
     }
-  }, [isFollowing, myUid, router]);
+  }, [
+    isFollowing,
+    isContactSyncStale,
+    contactMatches.length,
+    myUid,
+    router,
+    setContactMatches,
+  ]);
 
   // ── Build list data based on active tab ──────────────────────────────────
 
@@ -660,13 +675,13 @@ export default function FriendsScreen() {
       try {
         await followUser(myUid, targetUid);
         // Remove from matches since they're now followed
-        setContactMatches((prev) => prev.filter((m) => m.uid !== targetUid));
+        setContactMatches(contactMatches.filter((m) => m.uid !== targetUid));
         loadProfile(targetUid).catch(() => {});
       } finally {
         setLoadingUids((prev) => ({ ...prev, [targetUid]: false }));
       }
     },
-    [myUid, followUser, loadProfile],
+    [myUid, followUser, loadProfile, contactMatches, setContactMatches],
   );
 
   const listHeader = useMemo(
@@ -705,12 +720,15 @@ export default function FriendsScreen() {
               <Text style={styles.contactMatchTitle}>
                 Friends on NIYAH ({contactMatches.length})
               </Text>
-              <Pressable onPress={() => setContactMatches([])}>
+              <Pressable onPress={clearContactMatches}>
                 <Text style={styles.contactMatchDismiss}>Dismiss</Text>
               </Pressable>
             </View>
             {contactMatches.map((match) => (
-              <View key={match.uid} style={[styles.row, { marginBottom: Spacing.sm }]}>
+              <View
+                key={match.uid}
+                style={[styles.row, { marginBottom: Spacing.sm }]}
+              >
                 <View style={styles.avatar}>
                   <Text style={styles.avatarInitial}>
                     {match.name.charAt(0).toUpperCase()}
@@ -755,7 +773,19 @@ export default function FriendsScreen() {
         <SegmentControl selected={tab} onChange={setTab} />
       </>
     ),
-    [styles, tab, router, Colors, contactMatches, isImporting, hasImported, loadingUids, handleImportContacts, handleFollowMatch],
+    [
+      styles,
+      tab,
+      router,
+      Colors,
+      contactMatches,
+      isImporting,
+      hasImported,
+      loadingUids,
+      handleImportContacts,
+      handleFollowMatch,
+      clearContactMatches,
+    ],
   );
 
   const listEmpty = useMemo(

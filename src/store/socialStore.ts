@@ -6,6 +6,7 @@ import {
   unfollowUser as firebaseUnfollowUser,
   getPublicProfile,
 } from "../config/firebase";
+import { type ContactMatch } from "../config/functions";
 import { logger } from "../utils/logger";
 
 interface SocialState {
@@ -14,19 +15,30 @@ interface SocialState {
   profiles: Record<string, PublicProfile>;
   isLoading: boolean;
 
+  // Contact discovery cache
+  contactMatches: ContactMatch[];
+  lastContactSyncAt: number | null;
+
   loadMyFollows: (uid: string) => Promise<void>;
   followUser: (myUid: string, targetUid: string) => Promise<void>;
   unfollowUser: (myUid: string, targetUid: string) => Promise<void>;
   loadProfile: (uid: string) => Promise<void>;
   isFollowing: (uid: string) => boolean;
+  setContactMatches: (matches: ContactMatch[]) => void;
+  clearContactMatches: () => void;
+  isContactSyncStale: () => boolean;
   reset: () => void;
 }
+
+const CONTACT_SYNC_STALE_MS = 5 * 60 * 1000; // 5 minutes
 
 export const useSocialStore = create<SocialState>((set, get) => ({
   following: [],
   followers: [],
   profiles: {},
   isLoading: false,
+  contactMatches: [],
+  lastContactSyncAt: null,
 
   loadMyFollows: async (uid: string) => {
     set({ isLoading: true });
@@ -86,12 +98,28 @@ export const useSocialStore = create<SocialState>((set, get) => ({
     return get().following.includes(uid);
   },
 
+  setContactMatches: (matches: ContactMatch[]) => {
+    set({ contactMatches: matches, lastContactSyncAt: Date.now() });
+  },
+
+  clearContactMatches: () => {
+    set({ contactMatches: [] });
+  },
+
+  isContactSyncStale: () => {
+    const { lastContactSyncAt } = get();
+    if (!lastContactSyncAt) return true;
+    return Date.now() - lastContactSyncAt > CONTACT_SYNC_STALE_MS;
+  },
+
   reset: () => {
     set({
       following: [],
       followers: [],
       profiles: {},
       isLoading: false,
+      contactMatches: [],
+      lastContactSyncAt: null,
     });
   },
 }));

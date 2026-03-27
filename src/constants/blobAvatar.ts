@@ -1,8 +1,19 @@
-export type BlobAvatarColorPreset = "sunset" | "ocean" | "forest" | "berry";
+export type BlobAvatarColorPreset =
+  | "sunset"
+  | "ocean"
+  | "forest"
+  | "berry"
+  | "lemon"
+  | "coral";
 
 export type BlobAvatarShapePreset = "peach" | "wave" | "petal";
 
-export type BlobAvatarEyesPreset = "classic" | "happy" | "wink";
+export type BlobAvatarEyesPreset =
+  | "classic"
+  | "happy"
+  | "wink"
+  | "sleepy"
+  | "surprised";
 
 export interface BlobAvatarConfig {
   colorPreset: BlobAvatarColorPreset;
@@ -15,6 +26,8 @@ export const BLOB_AVATAR_COLORS: BlobAvatarColorPreset[] = [
   "ocean",
   "forest",
   "berry",
+  "lemon",
+  "coral",
 ];
 
 export const BLOB_AVATAR_SHAPES: BlobAvatarShapePreset[] = [
@@ -27,7 +40,30 @@ export const BLOB_AVATAR_EYES: BlobAvatarEyesPreset[] = [
   "classic",
   "happy",
   "wink",
+  "sleepy",
+  "surprised",
 ];
+
+/** Human-readable labels for the Blob Maker UI */
+export const BLOB_DISPLAY_LABELS: Record<string, string> = {
+  // Colors
+  sunset: "Peach",
+  ocean: "Sky",
+  forest: "Mint",
+  berry: "Grape",
+  lemon: "Sunny",
+  coral: "Rose",
+  // Shapes
+  peach: "Round",
+  wave: "Wavy",
+  petal: "Teardrop",
+  // Eyes
+  classic: "Normal",
+  happy: "Happy",
+  wink: "Wink",
+  sleepy: "Chill",
+  surprised: "Shocked",
+};
 
 export const DEFAULT_BLOB_AVATAR: BlobAvatarConfig = {
   colorPreset: "sunset",

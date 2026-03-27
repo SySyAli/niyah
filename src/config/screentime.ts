@@ -69,6 +69,39 @@ export const isBlocking = (): boolean => {
 };
 
 // ---------------------------------------------------------------------------
+// Scheduled blocking
+// ---------------------------------------------------------------------------
+
+export const startScheduledBlocking = async (
+  startHour: number,
+  startMinute: number,
+  endHour: number,
+  endMinute: number,
+  activityName: string,
+): Promise<void> => {
+  if (!isScreenTimeAvailable) return;
+  return NiyahScreenTime.startScheduledBlocking(
+    startHour,
+    startMinute,
+    endHour,
+    endMinute,
+    activityName,
+  );
+};
+
+export const stopScheduledBlocking = async (
+  activityName: string,
+): Promise<void> => {
+  if (!isScreenTimeAvailable) return;
+  return NiyahScreenTime.stopScheduledBlocking(activityName);
+};
+
+export const stopAllScheduledBlocking = async (): Promise<void> => {
+  if (!isScreenTimeAvailable) return;
+  return NiyahScreenTime.stopAllScheduledBlocking();
+};
+
+// ---------------------------------------------------------------------------
 // Violation events
 // ---------------------------------------------------------------------------
 

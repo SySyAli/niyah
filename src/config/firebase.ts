@@ -239,9 +239,9 @@ export const saveUserProfile = async (
     phone?: string;
     profileImage?: string;
     blobAvatar?: {
-      colorPreset: "sunset" | "ocean" | "forest" | "berry";
+      colorPreset: "sunset" | "ocean" | "forest" | "berry" | "lemon" | "coral";
       shapePreset: "peach" | "wave" | "petal";
-      eyesPreset: "classic" | "happy" | "wink";
+      eyesPreset: "classic" | "happy" | "wink" | "sleepy" | "surprised";
     };
     authProvider: "google" | "apple" | "email";
   },
@@ -466,6 +466,7 @@ export const updateSession = async (
   data: {
     status: string;
     completedAt?: Date;
+    violationCount?: number;
   },
 ): Promise<void> => {
   const updateData: Record<string, unknown> = {
@@ -474,6 +475,9 @@ export const updateSession = async (
   };
   if (data.completedAt) {
     updateData.completedAt = Timestamp.fromDate(data.completedAt);
+  }
+  if (data.violationCount !== undefined) {
+    updateData.violationCount = data.violationCount;
   }
   // actualPayout is written exclusively by Cloud Functions (admin SDK).
   // Client writes to this field are blocked by Firestore security rules.

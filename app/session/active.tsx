@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { View, Text, StyleSheet, Alert } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
 import {
@@ -20,8 +20,12 @@ import {
   isScreenTimeAvailable,
 } from "../../src/config/screentime";
 
+type SessionMode = "solo_quick" | "solo_scheduled" | "group";
+
 export default function ActiveSessionScreen() {
   const Colors = useColors();
+  const params = useLocalSearchParams<{ mode?: SessionMode }>();
+  const mode: SessionMode = params.mode ?? "group";
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -359,15 +363,19 @@ export default function ActiveSessionScreen() {
       footer={
         <>
           <Button
-            title="Surrender"
+            title={mode === "solo_quick" ? "End Session" : "Surrender"}
             onPress={() => {
               Alert.alert(
-                "Surrender Session?",
-                `You will forfeit your ${formatMoney(stakeAmount)} stake. This cannot be undone.`,
+                mode === "solo_quick"
+                  ? "End Blocking?"
+                  : "Surrender Session?",
+                mode === "solo_quick"
+                  ? "Are you sure you want to stop blocking apps?"
+                  : `You will forfeit your ${formatMoney(stakeAmount)} stake. This cannot be undone.`,
                 [
                   { text: "Keep Going", style: "cancel" },
                   {
-                    text: "Surrender",
+                    text: mode === "solo_quick" ? "End" : "Surrender",
                     style: "destructive",
                     onPress: async () => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -395,9 +403,11 @@ export default function ActiveSessionScreen() {
             variant="outline"
             size="large"
           />
-          <Text style={styles.warningText}>
-            Warning: Surrendering forfeits your {formatMoney(stakeAmount)} stake
-          </Text>
+          {mode !== "solo_quick" && (
+            <Text style={styles.warningText}>
+              Warning: Surrendering forfeits your {formatMoney(stakeAmount)} stake
+            </Text>
+          )}
         </>
       }
     >
@@ -431,15 +441,17 @@ export default function ActiveSessionScreen() {
         <Text style={styles.progressText}>{progressPercent}% complete</Text>
       </View>
 
-      {/* Payout Card */}
-      <Card style={styles.payoutCard}>
-        <Text style={styles.payoutLabel}>Complete to earn</Text>
-        <Text style={styles.payoutAmount}>
-          {participantCount <= 1
-            ? formatMoney(stakeAmount * SOLO_COMPLETION_MULTIPLIER)
-            : `Up to ${formatMoney(poolTotal)}`}
-        </Text>
-      </Card>
+      {/* Payout Card — hidden for solo quick-block (no money involved) */}
+      {mode !== "solo_quick" && (
+        <Card style={styles.payoutCard}>
+          <Text style={styles.payoutLabel}>Complete to earn</Text>
+          <Text style={styles.payoutAmount}>
+            {participantCount <= 1
+              ? formatMoney(stakeAmount * SOLO_COMPLETION_MULTIPLIER)
+              : `Up to ${formatMoney(poolTotal)}`}
+          </Text>
+        </Card>
+      )}
 
       {/* Violation Counter */}
       {violationCount > 0 && (

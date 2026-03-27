@@ -33,9 +33,15 @@ export interface User {
   zelleHandle?: string; // Email or phone for Zelle settlements
   profileImage?: string;
   blobAvatar?: {
-    colorPreset: "sunset" | "ocean" | "forest" | "berry";
+    colorPreset:
+      | "sunset"
+      | "ocean"
+      | "forest"
+      | "berry"
+      | "lemon"
+      | "coral";
     shapePreset: "peach" | "wave" | "petal";
-    eyesPreset: "classic" | "happy" | "wink";
+    eyesPreset: "classic" | "happy" | "wink" | "sleepy" | "surprised";
   };
   phoneNumber?: string;
   authProvider?: "email" | "google" | "apple";

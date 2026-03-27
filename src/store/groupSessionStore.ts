@@ -12,7 +12,7 @@ import {
   CadenceType,
   UserReputation,
 } from "../types";
-import { CADENCES, DEMO_MODE } from "../constants/config";
+import { CADENCES, DEMO_MODE, USE_SHORT_TIMERS } from "../constants/config";
 import { useAuthStore } from "./authStore";
 import { useWalletStore } from "./walletStore";
 import {
@@ -184,6 +184,7 @@ interface GroupSessionState {
   startGroupSession: (
     cadence: CadenceType,
     participants: NewParticipant[],
+    customDurationMs?: number,
   ) => void;
   completeGroupSession: (
     results: ParticipantResult[],
@@ -319,7 +320,7 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
 
   // ─── Legacy lifecycle (backward compat) ───────────────────────────────────
 
-  startGroupSession: (cadence, participants) => {
+  startGroupSession: (cadence, participants, customDurationMs) => {
     const isSoloSession = participants.length <= 1;
 
     // In live mode, keep the local legacy path for solo sessions until the
@@ -339,18 +340,20 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
     }
 
     const config = CADENCES[cadence];
-    const duration = config.demoDuration;
+    const duration =
+      customDurationMs ?? (USE_SHORT_TIMERS ? config.demoDuration : config.duration);
+    const stake = customDurationMs !== undefined ? 0 : config.stake;
 
     const fullParticipants: SessionParticipant[] = participants.map((p) => ({
       ...p,
-      stakeAmount: config.stake,
+      stakeAmount: stake,
     }));
 
     const session: GroupSession = {
       id: generateId(),
       cadence,
-      stakePerParticipant: config.stake,
-      poolTotal: config.stake * fullParticipants.length,
+      stakePerParticipant: stake,
+      poolTotal: stake * fullParticipants.length,
       startedAt: new Date(),
       endsAt: new Date(Date.now() + duration),
       status: "active",
@@ -359,7 +362,9 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
     };
 
     // Only deduct from the current user's wallet; remote participants manage their own wallets.
-    useWalletStore.getState().deductStake(config.stake, session.id);
+    if (stake > 0) {
+      useWalletStore.getState().deductStake(stake, session.id);
+    }
 
     set({ activeGroupSession: session });
   },

@@ -54,6 +54,28 @@ declare class NiyahScreenTimeModuleClass extends NativeModule<NiyahScreenTimeMod
 
   /** Check if apps are currently being blocked. */
   isBlocking(): boolean;
+
+  // ------------------------------------------------------------------
+  // Scheduled blocking (DeviceActivitySchedule)
+  // ------------------------------------------------------------------
+
+  /**
+   * Start monitoring a DeviceActivitySchedule. The DeviceActivityMonitor
+   * extension will apply/remove shields at the scheduled times.
+   */
+  startScheduledBlocking(
+    startHour: number,
+    startMinute: number,
+    endHour: number,
+    endMinute: number,
+    activityName: string,
+  ): Promise<void>;
+
+  /** Stop monitoring a specific scheduled activity. */
+  stopScheduledBlocking(activityName: string): Promise<void>;
+
+  /** Stop all scheduled monitoring. */
+  stopAllScheduledBlocking(): Promise<void>;
 }
 
 export default requireNativeModule<NiyahScreenTimeModuleClass>(

@@ -22,14 +22,18 @@ import Foundation
 /// modules, or React Native runtime. It can only use Foundation, the Screen
 /// Time frameworks, and the shared App Group container.
 
-// ManagedSettingsStore.Name.niyahSession is declared in NiyahScreenTimeModule.swift.
-// When this extension is built as a separate target (Phase 1), this file will need
-// its own copy of that declaration since it won't share the main module's sources.
+// The extension runs in a separate process and cannot access the main app's sources,
+// so we must redeclare the named store here.
+@available(iOS 16.0, *)
+extension ManagedSettingsStore.Name {
+  static let niyahSession = Self("niyah.session")
+}
 
 @available(iOS 16.0, *)
 class NiyahDeviceActivityMonitorExtension: DeviceActivityMonitor {
 
   private static let appGroupID = "group.com.niyah.app"
+  private static let selectionKey = "niyah_app_selection"
   private static let violationsKey = "niyah_shield_violations"
   private static let blockingKey = "niyah_is_blocking"
 
@@ -42,13 +46,13 @@ class NiyahDeviceActivityMonitorExtension: DeviceActivityMonitor {
   // ------------------------------------------------------------------
 
   /// Called when a monitored activity interval begins.
-  /// We use this to re-apply shields at the start of a NIYAH session
-  /// (belt-and-suspenders with the main app's startBlocking call).
+  /// Re-applies shields from the extension side. This is critical for scheduled
+  /// blocking — the main app may not be running, so the extension must read the
+  /// saved FamilyActivitySelection from shared UserDefaults and apply it.
   override func intervalDidStart(for activity: DeviceActivityName) {
     super.intervalDidStart(for: activity)
-    // The main app already applies shields via ManagedSettingsStore.
-    // This callback is a safety net -- no action needed unless we want
-    // to re-apply shields from the extension side.
+    applyShieldsFromSavedSelection()
+    sharedDefaults.set(true, forKey: Self.blockingKey)
   }
 
   /// Called when a monitored activity interval ends.
@@ -90,6 +94,33 @@ class NiyahDeviceActivityMonitorExtension: DeviceActivityMonitor {
   override func intervalWillEndWarning(for activity: DeviceActivityName) {
     super.intervalWillEndWarning(for: activity)
     // Could show a "session ending soon" notification in the future.
+  }
+
+  // ------------------------------------------------------------------
+  // MARK: - Shield application from saved selection
+  // ------------------------------------------------------------------
+
+  /// Reads the FamilyActivitySelection that the main app persisted to shared
+  /// UserDefaults and applies shields to the named ManagedSettingsStore.
+  /// This allows the extension to block apps even when the main app isn't running.
+  private func applyShieldsFromSavedSelection() {
+    let store = ManagedSettingsStore(named: .niyahSession)
+    guard let data = sharedDefaults.data(forKey: Self.selectionKey),
+          let selection = try? PropertyListDecoder().decode(
+            FamilyActivitySelection.self, from: data
+          )
+    else { return }
+
+    if !selection.applicationTokens.isEmpty {
+      store.shield.applications = selection.applicationTokens
+    }
+    if !selection.categoryTokens.isEmpty {
+      store.shield.applicationCategories =
+        ShieldSettings.ActivityCategoryPolicy.specific(selection.categoryTokens)
+    }
+    if !selection.webDomainTokens.isEmpty {
+      store.shield.webDomains = selection.webDomainTokens
+    }
   }
 
   // ------------------------------------------------------------------

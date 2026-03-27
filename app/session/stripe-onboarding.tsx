@@ -61,7 +61,9 @@ export default function StripeOnboardingScreen() {
       if (user?.stripeAccountStatus) {
         setStatus(user.stripeAccountStatus as AccountStatus);
       } else {
-        setLoadError("Could not reach the server. Check your connection and try again.");
+        setLoadError(
+          "Could not reach the server. Check your connection and try again.",
+        );
       }
     } finally {
       setIsLoading(false);

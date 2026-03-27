@@ -16,17 +16,21 @@ import {
   startBlocking,
   stopBlocking,
   onSurrenderRequested,
+  onShieldViolation,
 } from "../config/screentime";
 import { generateId } from "../utils/id";
 import { logger } from "../utils/logger";
 
 // Module-level flag to prevent race between recoverActiveSession and startSession
 let _isRecovering = false;
+// Cleanup function for violation listener
+let _unsubViolation: (() => void) | null = null;
 
 interface SessionState {
   currentSession: Session | null;
   sessionHistory: Session[];
   isBlocking: boolean;
+  violationCount: number;
 
   startSession: (cadence: CadenceType) => void;
   surrenderSession: () => void;
@@ -41,6 +45,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   currentSession: null,
   sessionHistory: [],
   isBlocking: false,
+  violationCount: 0,
 
   startSession: (cadence: CadenceType) => {
     const { currentSession } = get();
@@ -79,6 +84,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const unsubSurrender = onSurrenderRequested(() => {
       unsubSurrender();
       get().surrenderSession();
+    });
+
+    // Track shield violations (user tried to open a blocked app)
+    _unsubViolation?.();
+    _unsubViolation = onShieldViolation(() => {
+      const { currentSession } = get();
+      if (!currentSession) return;
+      const newCount = get().violationCount + 1;
+      set({ violationCount: newCount });
+
+      // Fire-and-forget Firestore update
+      updateSession(currentSession.id, {
+        status: "active",
+        violationCount: newCount,
+      }).catch((err) => logger.warn("Failed to update violation count:", err));
     });
 
     // Persist session to Firestore (fire-and-forget)
@@ -124,9 +144,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       logger.warn("Screen Time stopBlocking (surrender) failed:", err),
     );
 
+    // Clean up violation listener
+    _unsubViolation?.();
+    _unsubViolation = null;
+
     set({
       currentSession: null,
       isBlocking: false,
+      violationCount: 0,
       sessionHistory: [completedSession, ...sessionHistory],
     });
 
@@ -180,9 +205,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       logger.warn("Screen Time stopBlocking (complete) failed:", err),
     );
 
+    // Clean up violation listener
+    _unsubViolation?.();
+    _unsubViolation = null;
+
     set({
       currentSession: null,
       isBlocking: false,
+      violationCount: 0,
       sessionHistory: [completedSession, ...sessionHistory],
     });
 
@@ -303,10 +333,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   reset: () => {
+    _unsubViolation?.();
+    _unsubViolation = null;
     set({
       currentSession: null,
       sessionHistory: [],
       isBlocking: false,
+      violationCount: 0,
     });
   },
 }));

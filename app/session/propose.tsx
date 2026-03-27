@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -293,9 +293,24 @@ export default function ProposeSessionScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { partners } = usePartnerStore();
-  const { following, profiles } = useSocialStore();
+  const { following, profiles, loadMyFollows, loadProfile } = useSocialStore();
   const { proposeSession } = useGroupSessionStore();
   const hydrateWallet = useWalletStore((state) => state.hydrate);
+
+  // Hydrate follows + profiles on mount so friend list isn't empty
+  useEffect(() => {
+    if (user?.id) {
+      loadMyFollows(user.id).catch(() => {});
+    }
+  }, [user?.id, loadMyFollows]);
+
+  useEffect(() => {
+    for (const uid of following) {
+      if (!profiles[uid]) {
+        loadProfile(uid).catch(() => {});
+      }
+    }
+  }, [following, profiles, loadProfile]);
 
   // Stake
   const [stake, setStake] = useState<number | null>(null);

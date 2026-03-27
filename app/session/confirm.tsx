@@ -16,7 +16,6 @@ import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
 import {
   CADENCES,
-  DEMO_MODE,
   USE_SHORT_TIMERS,
   REPUTATION_LEVELS,
   SOLO_COMPLETION_MULTIPLIER,

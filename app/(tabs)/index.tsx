@@ -19,13 +19,14 @@ import {
   Balance,
   Button,
   MoneyPlant,
-  PeachAvatar,
+  BlobAvatar,
 } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { formatMoney, formatRelativeTime } from "../../src/utils/format";
+import { generateBlobAvatarPreset } from "../../src/constants/blobAvatar";
 
 interface ActionButtonProps {
   label: string;
@@ -432,8 +433,9 @@ export default function DashboardScreen() {
               <Text style={styles.greeting}>Welcome back</Text>
               <Text style={styles.name}>{user?.name || "there"}</Text>
             </View>
-            <PeachAvatar
+            <BlobAvatar
               size={56}
+              config={user?.blobAvatar ?? generateBlobAvatarPreset(user?.id || "guest")}
               onPress={() => router.push("/(tabs)/profile")}
             />
           </View>
@@ -505,13 +507,21 @@ export default function DashboardScreen() {
             <Card style={styles.ctaCard}>
               <Text style={styles.ctaTitle}>Ready to focus?</Text>
               <Text style={styles.ctaSubtitle}>
-                Start a solo or group session with real financial stakes
+                Block distracting apps and stay productive
               </Text>
-              <Button
-                title="Start Session"
-                onPress={() => router.push("/session/select")}
-                size="large"
-              />
+              <View style={{ gap: Spacing.sm, width: "100%" }}>
+                <Button
+                  title="Block Apps Now"
+                  onPress={() => router.push("/session/quick-block")}
+                  size="large"
+                />
+                <Button
+                  title="Group Challenge"
+                  onPress={() => router.push("/session/propose")}
+                  size="large"
+                  variant="outline"
+                />
+              </View>
             </Card>
           )}
 

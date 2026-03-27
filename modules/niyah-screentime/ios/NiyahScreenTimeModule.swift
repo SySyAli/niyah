@@ -8,6 +8,9 @@ import FamilyControls
 #if canImport(ManagedSettings)
 import ManagedSettings
 #endif
+#if canImport(DeviceActivity)
+import DeviceActivity
+#endif
 
 // Named store extension — keeps session shields isolated and cleanup simple.
 #if canImport(ManagedSettings)
@@ -259,6 +262,37 @@ public class NiyahScreenTimeModule: Module {
 
     Function("isBlocking") { [weak self] () -> Bool in
       return self?.isCurrentlyBlocking ?? false
+    }
+
+    // ================================================================
+    // MARK: - Scheduled Blocking (DeviceActivitySchedule)
+    // ================================================================
+
+    AsyncFunction("startScheduledBlocking") { (startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, activityName: String) in
+      guard #available(iOS 16.0, *) else { return }
+      let center = DeviceActivityCenter()
+      let schedule = DeviceActivitySchedule(
+        intervalStart: DateComponents(hour: startHour, minute: startMinute),
+        intervalEnd: DateComponents(hour: endHour, minute: endMinute),
+        repeats: true
+      )
+      try center.startMonitoring(
+        DeviceActivityName(rawValue: activityName),
+        during: schedule
+      )
+      NSLog("[NiyahScreenTime] startScheduledBlocking: monitoring \(activityName) from \(startHour):\(startMinute) to \(endHour):\(endMinute)")
+    }
+
+    AsyncFunction("stopScheduledBlocking") { (activityName: String) in
+      guard #available(iOS 16.0, *) else { return }
+      DeviceActivityCenter().stopMonitoring([DeviceActivityName(rawValue: activityName)])
+      NSLog("[NiyahScreenTime] stopScheduledBlocking: stopped \(activityName)")
+    }
+
+    AsyncFunction("stopAllScheduledBlocking") { () in
+      guard #available(iOS 16.0, *) else { return }
+      DeviceActivityCenter().stopMonitoring()
+      NSLog("[NiyahScreenTime] stopAllScheduledBlocking: all monitoring stopped")
     }
   }
 

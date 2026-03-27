@@ -75,7 +75,9 @@ export default function WithdrawScreen() {
     : 0;
   const displayAmount = inputValue ? `$${inputValue}` : "";
   const isValidAmount =
-    amountInCents >= 1000 && amountInCents <= balance && amountInCents <= 1_000_000;
+    amountInCents >= 1000 &&
+    amountInCents <= balance &&
+    amountInCents <= 1_000_000;
   const instantFee = calcInstantFee(amountInCents);
 
   const handleKeyPress = useCallback(
@@ -140,7 +142,10 @@ export default function WithdrawScreen() {
       // Resync wallet from Firestore in case server processed but client errored
       const uid = user?.id;
       if (uid) {
-        useWalletStore.getState().hydrate(uid).catch(() => {});
+        useWalletStore
+          .getState()
+          .hydrate(uid)
+          .catch(() => {});
       }
     } finally {
       setIsLoading(false);
@@ -185,7 +190,7 @@ export default function WithdrawScreen() {
 
             Alert.alert(
               "Bank Connected",
-              `${result.bankName} ending in ${result.bankMask} is now linked.`,
+              `${result.bankName} ending in ${result.bankMask} is now linked. You can now withdraw to this account.`,
             );
           } catch (err) {
             logger.error("linkBankAccount error:", err);
@@ -318,8 +323,8 @@ export default function WithdrawScreen() {
                   </View>
                 </View>
                 <Text style={styles.methodDescription}>
-                  Instant bank deposit. 1.5% fee (min $0.50) — covered by NIYAH.
-                  You receive the full {formatMoney(amountInCents)}.
+                  Instant bank transfer. 1.5% fee (min $0.50) — covered by
+                  NIYAH. You receive the full {formatMoney(amountInCents)}.
                 </Text>
               </View>
             </Pressable>

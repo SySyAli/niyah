@@ -378,7 +378,7 @@ const RATE_LIMITS = {
   cancelGroupSession: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
   createPlaidLinkToken: { maxCalls: 10, windowMs: 600_000 }, // 10/10min
   linkBankAccount: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
-  findContactsOnNiyah: { maxCalls: 5, windowMs: 600_000 }, // 5/10min
+  findContactsOnNiyah: { maxCalls: 10, windowMs: 3_600_000 }, // 10/hr
 } as const;
 
 // ─── createPaymentIntent ────────────────────────────────────────────────────
@@ -923,70 +923,151 @@ export const linkBankAccount = onRequest(
       const userDoc = await userRef.get();
       const userData = userDoc.data() ?? {};
 
+      // Idempotency: if user already has a linked bank, return existing data
+      if (userData.linkedBank && userData.stripeAccountId) {
+        const lb = userData.linkedBank as {
+          institutionName?: string;
+          bankName?: string;
+          mask?: string;
+        };
+        res.json({
+          success: true,
+          bankName: lb.institutionName ?? lb.bankName ?? "Bank",
+          bankMask: lb.mask ?? "****",
+        });
+        return;
+      }
+
       // 1. Exchange public_token → access_token (server-side only)
-      const exchangeResponse = await plaid.itemPublicTokenExchange({
-        public_token: publicToken,
-      });
-      const accessToken = exchangeResponse.data.access_token;
-      const itemId = exchangeResponse.data.item_id;
+      let accessToken: string;
+      let itemId: string;
+      try {
+        const exchangeResponse = await plaid.itemPublicTokenExchange({
+          public_token: publicToken,
+        });
+        accessToken = exchangeResponse.data.access_token;
+        itemId = exchangeResponse.data.item_id;
+      } catch (err) {
+        console.error("linkBankAccount step 1 (token exchange) failed:", err);
+        sendError(res, 500, "Failed to exchange Plaid token");
+        return;
+      }
 
       // 2. Get account details for display (mask, institution name)
-      const accountsResponse = await plaid.accountsGet({
-        access_token: accessToken,
-      });
-      const linkedAccount = accountsResponse.data.accounts.find(
-        (a) => a.account_id === accountId,
-      );
-      const bankMask = linkedAccount?.mask ?? "****";
-      const bankName = linkedAccount?.name ?? "Bank Account";
-
-      // Get institution name
-      const itemResponse = await plaid.itemGet({ access_token: accessToken });
-      const institutionId = itemResponse.data.item.institution_id;
+      let bankMask = "****";
+      let bankName = "Bank Account";
       let institutionName = "Bank";
-      if (institutionId) {
-        try {
-          const instResponse = await plaid.institutionsGetById({
-            institution_id: institutionId,
-            country_codes: [CountryCode.Us],
-          });
-          institutionName = instResponse.data.institution.name;
-        } catch {
-          // Non-critical — use default
+      try {
+        const accountsResponse = await plaid.accountsGet({
+          access_token: accessToken,
+        });
+        const linkedAccount = accountsResponse.data.accounts.find(
+          (a) => a.account_id === accountId,
+        );
+        bankMask = linkedAccount?.mask ?? "****";
+        bankName = linkedAccount?.name ?? "Bank Account";
+
+        const itemResponse = await plaid.itemGet({
+          access_token: accessToken,
+        });
+        const institutionId = itemResponse.data.item.institution_id;
+        if (institutionId) {
+          try {
+            const instResponse = await plaid.institutionsGetById({
+              institution_id: institutionId,
+              country_codes: [CountryCode.Us],
+            });
+            institutionName = instResponse.data.institution.name;
+          } catch {
+            // Non-critical — use default
+          }
         }
+      } catch (err) {
+        console.error("linkBankAccount step 2 (account details) failed:", err);
+        // Non-fatal — proceed with defaults
       }
 
       // 3. Create Stripe processor token from Plaid
-      const processorResponse = await plaid.processorStripeBankAccountTokenCreate({
-        access_token: accessToken,
-        account_id: accountId,
-      });
-      const stripeBankToken = processorResponse.data.stripe_bank_account_token;
+      let stripeBankToken: string;
+      try {
+        const processorResponse =
+          await plaid.processorStripeBankAccountTokenCreate({
+            access_token: accessToken,
+            account_id: accountId,
+          });
+        stripeBankToken =
+          processorResponse.data.stripe_bank_account_token;
+      } catch (err) {
+        console.error(
+          "linkBankAccount step 3 (processor token) failed:",
+          err,
+        );
+        sendError(
+          res,
+          500,
+          "Failed to create processor token. Ensure Plaid-Stripe integration is enabled in your Plaid dashboard.",
+        );
+        return;
+      }
 
       // 4. Create or get Stripe Custom connected account
       let stripeAccountId: string = userData.stripeAccountId ?? "";
-      if (!stripeAccountId) {
-        const account = await stripe.accounts.create({
-          type: "custom",
-          country: "US",
-          email: userData.email ?? undefined,
-          capabilities: {
-            transfers: { requested: true },
-          },
-          business_type: "individual",
-          tos_acceptance: {
-            service_agreement: "recipient",
-          },
-          metadata: { firebaseUid: uid },
-        });
-        stripeAccountId = account.id;
+      try {
+        if (!stripeAccountId) {
+          const account = await stripe.accounts.create({
+            type: "custom",
+            country: "US",
+            email: userData.email ?? undefined,
+            capabilities: {
+              transfers: { requested: true },
+            },
+            business_type: "individual",
+            tos_acceptance: {
+              service_agreement: "recipient",
+              date: Math.floor(Date.now() / 1000),
+              ip:
+                (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+                req.ip ||
+                "0.0.0.0",
+            },
+            metadata: { firebaseUid: uid },
+          });
+          stripeAccountId = account.id;
+        }
+      } catch (err) {
+        console.error(
+          "linkBankAccount step 4 (Stripe account) failed:",
+          err,
+        );
+        sendError(res, 500, "Failed to create Stripe connected account");
+        return;
       }
 
       // 5. Attach bank account to Stripe connected account via processor token
-      await stripe.accounts.createExternalAccount(stripeAccountId, {
-        external_account: stripeBankToken,
-        default_for_currency: true,
-      });
+      try {
+        await stripe.accounts.createExternalAccount(stripeAccountId, {
+          external_account: stripeBankToken,
+          default_for_currency: true,
+        });
+      } catch (err: unknown) {
+        // If bank already exists on this account, treat as success
+        const stripeErr = err as { code?: string; message?: string };
+        if (
+          stripeErr.code === "bank_account_exists" ||
+          stripeErr.message?.includes("already exists")
+        ) {
+          console.warn(
+            "linkBankAccount step 5: bank already attached, continuing",
+          );
+        } else {
+          console.error(
+            "linkBankAccount step 5 (attach bank) failed:",
+            err,
+          );
+          sendError(res, 500, "Failed to attach bank account to Stripe");
+          return;
+        }
+      }
 
       // 6. Store everything in Firestore (access_token server-side only)
       await userRef.update({
@@ -1010,7 +1091,7 @@ export const linkBankAccount = onRequest(
         bankMask,
       });
     } catch (err) {
-      console.error("linkBankAccount error:", err);
+      console.error("linkBankAccount unexpected error:", err);
       const message =
         err instanceof Error ? err.message : "Failed to link bank account";
       sendError(res, 500, message);

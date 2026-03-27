@@ -37,7 +37,6 @@ import {
   ProfileHeader,
   ReputationCard,
   ScreenTimeCard,
-  PaymentHandlesCard,
   TransactionHistory,
 } from "../../src/components/profile";
 import { logger } from "../../src/utils/logger";
@@ -47,8 +46,7 @@ export default function ProfileScreen() {
   const Colors = useColors();
   const { theme, toggleTheme } = useThemeStore();
   const router = useRouter();
-  const { user, logout, setVenmoHandle, setZelleHandle, setBlobAvatar } =
-    useAuthStore();
+  const { user, logout, setBlobAvatar } = useAuthStore();
   const { balance, transactions, pendingWithdrawal } = useWalletStore();
   const { partners } = usePartnerStore();
   const { following, loadMyFollows } = useSocialStore();
@@ -112,12 +110,20 @@ export default function ProfileScreen() {
 
         <ScreenTimeCard />
 
-        <PaymentHandlesCard
-          venmoHandle={user?.venmoHandle}
-          zelleHandle={user?.zelleHandle}
-          onSaveVenmo={setVenmoHandle}
-          onSaveZelle={setZelleHandle}
-        />
+        {/* Linked Bank */}
+        {user?.linkedBank && (
+          <Card style={styles.balanceCard}>
+            <Text style={styles.balanceLabel}>Linked Bank</Text>
+            <Text style={styles.bankName}>
+              {(user.linkedBank as { institutionName?: string })
+                .institutionName ?? "Bank"}
+            </Text>
+            <Text style={styles.bankMask}>
+              Account ending in{" "}
+              {(user.linkedBank as { mask?: string }).mask ?? "****"}
+            </Text>
+          </Card>
+        )}
 
         {/* Balance Card */}
         <Card style={styles.balanceCard}>
@@ -264,6 +270,16 @@ const makeStyles = (Colors: ThemeColors) =>
       fontSize: Typography.labelSmall,
       color: Colors.textSecondary,
       marginBottom: Spacing.xs,
+    },
+    bankName: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    bankMask: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      marginTop: 2,
     },
     withdrawButton: {
       backgroundColor: Colors.backgroundTertiary,

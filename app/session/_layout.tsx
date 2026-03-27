@@ -12,9 +12,12 @@ export default function SessionLayout() {
         animation: "slide_from_bottom",
       }}
     >
+      <Stack.Screen name="quick-block" />
       <Stack.Screen name="select" />
       <Stack.Screen name="propose" />
       <Stack.Screen name="confirm" />
+      <Stack.Screen name="waiting-room" />
+      <Stack.Screen name="schedule-builder" />
       <Stack.Screen name="active" options={{ gestureEnabled: false }} />
       <Stack.Screen name="surrender" options={{ presentation: "modal" }} />
       <Stack.Screen name="complete" options={{ gestureEnabled: false }} />

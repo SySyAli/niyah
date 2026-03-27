@@ -6,6 +6,7 @@ export { NumPad, AmountDisplay } from "./NumPad";
 export { Confetti } from "./Confetti";
 export { MoneyPlant } from "./MoneyPlant";
 export { PeachAvatar } from "./PeachAvatar";
+export { BlobAvatar } from "./BlobAvatar";
 export { AuthScreenScaffold } from "./AuthScreenScaffold";
 export { SessionScreenScaffold } from "./SessionScreenScaffold";
 export { LegalContentView } from "./LegalContentView";

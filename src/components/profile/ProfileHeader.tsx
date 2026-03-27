@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import Svg, { Circle, Path, LinearGradient, Stop, Defs } from "react-native-svg";
 import { BlobAvatar } from "../BlobAvatar";
 import {
   Typography,
@@ -17,12 +18,26 @@ import {
   BLOB_AVATAR_COLORS,
   BLOB_AVATAR_EYES,
   BLOB_AVATAR_SHAPES,
+  BLOB_DISPLAY_LABELS,
   generateBlobAvatarPreset,
   type BlobAvatarColorPreset,
   type BlobAvatarConfig,
   type BlobAvatarEyesPreset,
   type BlobAvatarShapePreset,
 } from "../../constants/blobAvatar";
+
+/** Gradient circle swatch used for color selection */
+const COLOR_SWATCH_DATA: Record<
+  BlobAvatarColorPreset,
+  { start: string; end: string }
+> = {
+  sunset: { start: "#F0A090", end: "#E07A5F" },
+  ocean: { start: "#64BFEE", end: "#329DD8" },
+  forest: { start: "#5CB88A", end: "#40916C" },
+  berry: { start: "#D38ECF", end: "#A65EA1" },
+  lemon: { start: "#F5D76E", end: "#E8B830" },
+  coral: { start: "#FF8A80", end: "#E05555" },
+};
 
 interface ProfileHeaderProps {
   user: User | null;
@@ -55,12 +70,6 @@ export function ProfileHeader({
     if (score >= 60) return Colors.primary;
     if (score >= 40) return Colors.warning;
     return Colors.loss;
-  };
-
-  const getPresetLabel = (
-    value: BlobAvatarColorPreset | BlobAvatarShapePreset | BlobAvatarEyesPreset,
-  ) => {
-    return value.charAt(0).toUpperCase() + value.slice(1);
   };
 
   const updateBlobAvatar = (
@@ -130,33 +139,62 @@ export function ProfileHeader({
         <View style={styles.blobMakerCard}>
           <Text style={styles.blobMakerTitle}>Blob Maker</Text>
 
+          {/* ── Color selector: gradient circle swatches ── */}
           <Text style={styles.blobMakerLabel}>Color</Text>
           <View style={styles.optionsRow}>
             {BLOB_AVATAR_COLORS.map((option) => {
               const selected = avatarConfig.colorPreset === option;
+              const swatch = COLOR_SWATCH_DATA[option];
               return (
                 <Pressable
                   key={option}
-                  style={[
-                    styles.optionPill,
-                    selected && styles.optionPillSelected,
-                    selected && { borderColor: Colors.primary },
-                  ]}
+                  style={styles.swatchWrapper}
                   onPress={() => updateBlobAvatar("colorPreset", option)}
                 >
-                  <Text
+                  <View
                     style={[
-                      styles.optionPillText,
-                      selected && styles.optionPillTextSelected,
+                      styles.swatchRing,
+                      selected && {
+                        borderColor: Colors.primary,
+                        borderWidth: 2.5,
+                      },
                     ]}
                   >
-                    {getPresetLabel(option)}
+                    <Svg width={36} height={36} viewBox="0 0 36 36">
+                      <Defs>
+                        <LinearGradient
+                          id={`swatch-${option}`}
+                          x1="0"
+                          y1="0"
+                          x2="1"
+                          y2="1"
+                        >
+                          <Stop offset="0" stopColor={swatch.start} />
+                          <Stop offset="1" stopColor={swatch.end} />
+                        </LinearGradient>
+                      </Defs>
+                      <Circle
+                        cx={18}
+                        cy={18}
+                        r={16}
+                        fill={`url(#swatch-${option})`}
+                      />
+                    </Svg>
+                  </View>
+                  <Text
+                    style={[
+                      styles.swatchLabel,
+                      selected && styles.swatchLabelSelected,
+                    ]}
+                  >
+                    {BLOB_DISPLAY_LABELS[option]}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
+          {/* ── Shape selector: mini blob previews ── */}
           <Text style={styles.blobMakerLabel}>Shape</Text>
           <View style={styles.optionsRow}>
             {BLOB_AVATAR_SHAPES.map((option) => {
@@ -164,47 +202,74 @@ export function ProfileHeader({
               return (
                 <Pressable
                   key={option}
-                  style={[
-                    styles.optionPill,
-                    selected && styles.optionPillSelected,
-                    selected && { borderColor: Colors.primary },
-                  ]}
+                  style={styles.previewWrapper}
                   onPress={() => updateBlobAvatar("shapePreset", option)}
                 >
-                  <Text
+                  <View
                     style={[
-                      styles.optionPillText,
-                      selected && styles.optionPillTextSelected,
+                      styles.previewBorder,
+                      selected && {
+                        borderColor: Colors.primary,
+                        borderWidth: 2.5,
+                      },
                     ]}
                   >
-                    {getPresetLabel(option)}
+                    <BlobAvatar
+                      size={48}
+                      config={{
+                        ...avatarConfig,
+                        shapePreset: option,
+                      }}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.swatchLabel,
+                      selected && styles.swatchLabelSelected,
+                    ]}
+                  >
+                    {BLOB_DISPLAY_LABELS[option]}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <Text style={styles.blobMakerLabel}>Eyes</Text>
+          {/* ── Eyes selector: mini blob previews ── */}
+          <Text style={styles.blobMakerLabel}>Expression</Text>
           <View style={styles.optionsRow}>
             {BLOB_AVATAR_EYES.map((option) => {
               const selected = avatarConfig.eyesPreset === option;
               return (
                 <Pressable
                   key={option}
-                  style={[
-                    styles.optionPill,
-                    selected && styles.optionPillSelected,
-                    selected && { borderColor: Colors.primary },
-                  ]}
+                  style={styles.previewWrapper}
                   onPress={() => updateBlobAvatar("eyesPreset", option)}
                 >
-                  <Text
+                  <View
                     style={[
-                      styles.optionPillText,
-                      selected && styles.optionPillTextSelected,
+                      styles.previewBorder,
+                      selected && {
+                        borderColor: Colors.primary,
+                        borderWidth: 2.5,
+                      },
                     ]}
                   >
-                    {getPresetLabel(option)}
+                    <BlobAvatar
+                      size={48}
+                      config={{
+                        ...avatarConfig,
+                        eyesPreset: option,
+                      }}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.swatchLabel,
+                      selected && styles.swatchLabelSelected,
+                    ]}
+                  >
+                    {BLOB_DISPLAY_LABELS[option]}
                   </Text>
                 </Pressable>
               );
@@ -326,5 +391,40 @@ const makeStyles = (Colors: ThemeColors) =>
     optionPillTextSelected: {
       color: Colors.text,
       ...Font.semibold,
+    },
+    swatchWrapper: {
+      alignItems: "center",
+      gap: 4,
+    },
+    swatchRing: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "transparent",
+    },
+    swatchLabel: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textSecondary,
+      ...Font.medium,
+    },
+    swatchLabelSelected: {
+      color: Colors.primary,
+      ...Font.semibold,
+    },
+    previewWrapper: {
+      alignItems: "center",
+      gap: 4,
+    },
+    previewBorder: {
+      width: 56,
+      height: 56,
+      borderRadius: Radius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "transparent",
     },
   });

@@ -7,7 +7,12 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { View, Text, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
-import { create, open, type LinkSuccess, type LinkExit } from "react-native-plaid-link-sdk";
+import {
+  create,
+  open,
+  type LinkSuccess,
+  type LinkExit,
+} from "react-native-plaid-link-sdk";
 import {
   Typography,
   Spacing,
@@ -177,9 +182,7 @@ export default function BankSetupScreen() {
         {isLinking ? (
           <>
             <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.linkingText}>
-              Linking your bank account...
-            </Text>
+            <Text style={styles.linkingText}>Linking your bank account...</Text>
             <Text style={styles.linkingSubtext}>
               This may take a few seconds
             </Text>
@@ -225,8 +228,8 @@ export default function BankSetupScreen() {
             />
 
             <Text style={styles.disclaimer}>
-              Powered by Plaid. Your credentials are never shared with NIYAH.
-              We only receive your account and routing numbers for transfers.
+              Powered by Plaid. Your credentials are never shared with NIYAH. We
+              only receive your account and routing numbers for transfers.
             </Text>
           </>
         )}

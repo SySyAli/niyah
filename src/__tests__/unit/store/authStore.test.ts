@@ -68,7 +68,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from "../../../config/firebase";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 
 // Helper: simulate an authenticated user by directly setting state
 // (since actual Firebase auth is mocked)
@@ -500,7 +500,7 @@ describe("authStore", () => {
 
     it("should set full auth state before returning", async () => {
       jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
-      jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce("user@email.com");
+      jest.mocked(SecureStore.getItemAsync).mockResolvedValueOnce("user@email.com");
       jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
       jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
 
@@ -521,7 +521,7 @@ describe("authStore", () => {
 
     it("should clean up stored email after successful sign-in", async () => {
       jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
-      jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce("user@email.com");
+      jest.mocked(SecureStore.getItemAsync).mockResolvedValueOnce("user@email.com");
       jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
       jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
 
@@ -531,7 +531,7 @@ describe("authStore", () => {
           .completeEmailLink("https://example.com/signin?link=abc");
       });
 
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(
         "@niyah/magic_link_email",
       );
     });
@@ -550,7 +550,7 @@ describe("authStore", () => {
 
     it("should throw if stored email is missing", async () => {
       jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
-      jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce(null);
+      jest.mocked(SecureStore.getItemAsync).mockResolvedValueOnce(null);
 
       await expect(
         act(async () => {
@@ -747,7 +747,7 @@ describe("authStore", () => {
   // ─── sendEmailLink ────────────────────────────────────────────────────────────
 
   describe("sendEmailLink", () => {
-    it("calls sendMagicLink and stores email in AsyncStorage", async () => {
+    it("calls sendMagicLink and stores email in SecureStore", async () => {
       jest.mocked(sendMagicLink).mockResolvedValueOnce(undefined);
 
       await act(async () => {
@@ -755,7 +755,7 @@ describe("authStore", () => {
       });
 
       expect(sendMagicLink).toHaveBeenCalledWith("user@test.com");
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
         "@niyah/magic_link_email",
         "user@test.com",
       );
@@ -776,7 +776,7 @@ describe("authStore", () => {
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
-    it("does not store email in AsyncStorage when Firebase fails", async () => {
+    it("does not store email in SecureStore when Firebase fails", async () => {
       jest
         .mocked(sendMagicLink)
         .mockRejectedValueOnce(new Error("Network error"));
@@ -788,7 +788,7 @@ describe("authStore", () => {
       ).rejects.toThrow();
 
       // Email must NOT be stored if the magic link was never sent
-      expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(
+      expect(SecureStore.setItemAsync).not.toHaveBeenCalledWith(
         "@niyah/magic_link_email",
         "fail@test.com",
       );
@@ -1351,7 +1351,7 @@ describe("authStore", () => {
 
       jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
       jest
-        .mocked(AsyncStorage.getItem)
+        .mocked(SecureStore.getItemAsync)
         .mockResolvedValueOnce("email-notif@test.com");
       jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
       jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
@@ -1382,7 +1382,7 @@ describe("authStore", () => {
 
       jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
       jest
-        .mocked(AsyncStorage.getItem)
+        .mocked(SecureStore.getItemAsync)
         .mockResolvedValueOnce("email-fetch-fail@test.com");
       jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
       // fetchUserProfile rejects — should be caught by .catch(() => null)

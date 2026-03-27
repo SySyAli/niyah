@@ -13,10 +13,6 @@
 
 import React from "react";
 import { View, StyleSheet, Text, Platform } from "react-native";
-import { DebugLayoutProvider, DraggableGroup } from "./DebugLayoutEditor";
-
-// ── Set to true to enable drag-to-position debug mode ──
-const DEBUG_LAYOUT = false;
 import Animated, {
   SharedValue,
   useAnimatedStyle,
@@ -543,12 +539,11 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
   }));
 
   return (
-    <DebugLayoutProvider enabled={DEBUG_LAYOUT} sf={sf} figmaYOff={FIGMA_Y_OFF}>
+    <>
       <Animated.View
         style={[styles.scene, { width: sceneW, height: sceneH }, sceneStyle]}
       >
         {/* Phone shadow — exact Figma ellipse */}
-        <DraggableGroup id="phoneShadow" label="Phone Shadow">
           <Animated.View
             style={[
               styles.abs,
@@ -564,10 +559,8 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
           >
             <SvgXml xml={PHONE_SHADOW_SVG} width={fd(380)} height={fd(108)} />
           </Animated.View>
-        </DraggableGroup>
 
         {/* Dead phone — rotated 61.73deg, exact Figma SVG */}
-        <DraggableGroup id="deadPhone" label="Dead Phone">
           <Animated.View
             style={[
               styles.abs,
@@ -587,10 +580,8 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
               <SvgXml xml={DEAD_PHONE_SVG} width={fd(138)} height={fd(184)} />
             </View>
           </Animated.View>
-        </DraggableGroup>
 
         {/* Sparkle stars around dead phone — exact Figma positions */}
-        <DraggableGroup id="stars" label="Stars">
           <Animated.View
             style={[
               styles.abs,
@@ -631,10 +622,8 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
               </View>
             ))}
           </Animated.View>
-        </DraggableGroup>
 
         {/* Star lines / orbit rings around dead phone — exact Figma positions */}
-        <DraggableGroup id="starlines" label="Starlines">
           <Animated.View
             style={[
               styles.abs,
@@ -673,11 +662,9 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
               </View>
             ))}
           </Animated.View>
-        </DraggableGroup>
 
         {/* Glow ellipses (halo-like effects) — Figma starlines-06/07/09 (filters stripped).
           Positioned near blob/pot area per Figma metadata (y~449-452). */}
-        <DraggableGroup id="glows" label="Glows">
           <Animated.View
             style={[
               styles.abs,
@@ -748,10 +735,8 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
               />
             </View>
           </Animated.View>
-        </DraggableGroup>
 
         {/* Gold coins BEHIND pot — layer='back' */}
-        <DraggableGroup id="coinsBack" label="Coins (Back)">
           <Animated.View
             style={[
               styles.abs,
@@ -788,11 +773,9 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
               </View>
             ))}
           </Animated.View>
-        </DraggableGroup>
 
         {/* Peach blob in pot — full combined Figma SVG. */}
 
-        <DraggableGroup id="pot" label="Pot + Blob">
           <Animated.View
             style={[
               styles.abs,
@@ -819,10 +802,8 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
               />
             </View>
           </Animated.View>
-        </DraggableGroup>
 
         {/* Bitcoin coins — behind gold coins */}
-        <DraggableGroup id="btcCoins" label="BTC Coins">
           <Animated.View
             style={[
               styles.abs,
@@ -858,10 +839,8 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
               <SvgXml xml={BITCOIN_SVG} width={fd(60)} height={fd(58)} />
             </View>
           </Animated.View>
-        </DraggableGroup>
 
         {/* Gold coins IN FRONT of pot — layer='front' (default) */}
-        <DraggableGroup id="coinsFront" label="Coins (Front)">
           <Animated.View
             style={[
               styles.abs,
@@ -898,10 +877,8 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
               </View>
             ))}
           </Animated.View>
-        </DraggableGroup>
 
         {/* Dollar signs */}
-        <DraggableGroup id="dollars" label="Dollar Signs">
           <Animated.View
             style={[
               styles.abs,
@@ -946,9 +923,8 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
               <Text style={[styles.dollarSign, { fontSize: fd(30) }]}>$</Text>
             </View>
           </Animated.View>
-        </DraggableGroup>
       </Animated.View>
-    </DebugLayoutProvider>
+    </>
   );
 };
 

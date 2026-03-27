@@ -13,7 +13,7 @@ import {
   updateUserDoc,
   type FirebaseUser,
 } from "../config/firebase";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import {
   REFERRAL_REPUTATION_BOOST,
   CURRENT_LEGAL_VERSION,
@@ -390,7 +390,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       await sendMagicLink(email);
-      await AsyncStorage.setItem(MAGIC_LINK_EMAIL_KEY, email);
+      await SecureStore.setItemAsync(MAGIC_LINK_EMAIL_KEY, email);
       set({ isLoading: false });
     } catch (error) {
       set({ isLoading: false });
@@ -406,13 +406,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const email = await AsyncStorage.getItem(MAGIC_LINK_EMAIL_KEY);
+      const email = await SecureStore.getItemAsync(MAGIC_LINK_EMAIL_KEY);
       if (!email) {
         throw new Error("Email not found. Please try signing in again.");
       }
 
       const firebaseUser = await signInWithEmailLink(email, url);
-      await AsyncStorage.removeItem(MAGIC_LINK_EMAIL_KEY);
+      await SecureStore.deleteItemAsync(MAGIC_LINK_EMAIL_KEY);
 
       // Fetch Firestore profile and build user state immediately,
       // rather than waiting for onAuthStateChanged (which races).

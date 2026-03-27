@@ -759,7 +759,7 @@ export const handleSessionComplete = onRequest(
       const txnRef = db.collection("transactions").doc();
       const sessionRef = db.collection("sessions").doc(sessionId);
 
-      const newBalance = await db.runTransaction(async (txn) => {
+      const { newBalance, payout } = await db.runTransaction(async (txn) => {
         // Read session doc — authoritative source of truth
         const sessionSnap = await txn.get(sessionRef);
         if (!sessionSnap.exists) {
@@ -828,10 +828,10 @@ export const handleSessionComplete = onRequest(
           actualPayout: payout,
         });
 
-        return updatedBalance;
+        return { newBalance: updatedBalance, payout };
       });
 
-      res.json({ newBalance, payout: newBalance });
+      res.json({ newBalance, payout });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       // Return 4xx for validation errors, 5xx for unexpected failures
@@ -1542,7 +1542,7 @@ export const stripeWebhook = onRequest(
           const pi = event.data.object as Stripe.PaymentIntent;
           if (pi.metadata.type === "deposit") {
             const uid = pi.metadata.firebaseUid;
-            if (uid) {
+            if (isValidFirebaseUid(uid)) {
               const existingTxn = await db
                 .collection("transactions")
                 .where("paymentIntentId", "==", pi.id)
@@ -1575,7 +1575,7 @@ export const stripeWebhook = onRequest(
           // Sync Stripe Connect account status
           const account = event.data.object as Stripe.Account;
           const uid = account.metadata?.firebaseUid;
-          if (uid) {
+          if (isValidFirebaseUid(uid)) {
             const status = account.details_submitted
               ? account.payouts_enabled
                 ? "active"

@@ -544,385 +544,381 @@ export const Onboarding3Scene: React.FC<Onboarding3SceneProps> = ({
         style={[styles.scene, { width: sceneW, height: sceneH }, sceneStyle]}
       >
         {/* Phone shadow — exact Figma ellipse */}
-          <Animated.View
-            style={[
-              styles.abs,
-              {
-                left: fx(7.7),
-                top: fy(208.4),
-                width: fd(380),
-                height: fd(108),
-                zIndex: 3,
-              },
-              phoneAnim,
-            ]}
-          >
-            <SvgXml xml={PHONE_SHADOW_SVG} width={fd(380)} height={fd(108)} />
-          </Animated.View>
+        <Animated.View
+          style={[
+            styles.abs,
+            {
+              left: fx(7.7),
+              top: fy(208.4),
+              width: fd(380),
+              height: fd(108),
+              zIndex: 3,
+            },
+            phoneAnim,
+          ]}
+        >
+          <SvgXml xml={PHONE_SHADOW_SVG} width={fd(380)} height={fd(108)} />
+        </Animated.View>
 
         {/* Dead phone — rotated 61.73deg, exact Figma SVG */}
-          <Animated.View
-            style={[
-              styles.abs,
-              {
-                left: fx(80.4),
-                top: fy(167.6),
-                width: fd(227),
-                height: fd(208),
-                justifyContent: "center",
-                alignItems: "center",
-                zIndex: 11,
-              },
-              phoneAnim,
-            ]}
-          >
-            <View style={{ transform: [{ rotate: "61.73deg" }] }}>
-              <SvgXml xml={DEAD_PHONE_SVG} width={fd(138)} height={fd(184)} />
-            </View>
-          </Animated.View>
+        <Animated.View
+          style={[
+            styles.abs,
+            {
+              left: fx(80.4),
+              top: fy(167.6),
+              width: fd(227),
+              height: fd(208),
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 11,
+            },
+            phoneAnim,
+          ]}
+        >
+          <View style={{ transform: [{ rotate: "61.73deg" }] }}>
+            <SvgXml xml={DEAD_PHONE_SVG} width={fd(138)} height={fd(184)} />
+          </View>
+        </Animated.View>
 
         {/* Sparkle stars around dead phone — exact Figma positions */}
-          <Animated.View
-            style={[
-              styles.abs,
-              {
-                left: fx(-11.9),
-                top: fy(200 - 54.4),
-                zIndex: 19,
-                transform: [{ scale: 0.85 }],
-              },
-              sparkleAnim,
-            ]}
-          >
-            {[
-              { x: 237.82, y: 224.98, w: 13, h: 14, v: 2 },
-              { x: 247.73, y: 243.12, w: 18, h: 18, v: 1 },
-              { x: 267.72, y: 238.23, w: 18, h: 18, v: 1 },
-              { x: 282.35, y: 273.35, w: 18, h: 18, v: 1 },
-              { x: 305.76, y: 298.22, w: 18, h: 18, v: 1 },
-              { x: 301.37, y: 274.81, w: 18, h: 18, v: 1 },
-              { x: 324.77, y: 271.88, w: 18, h: 18, v: 1 },
-              { x: 296.98, y: 251.4, w: 18, h: 18, v: 0 },
-            ].map((sp, i) => (
-              <View
-                key={`sp-${i}`}
-                style={[
-                  styles.abs,
-                  {
-                    left: fx(sp.x),
-                    top: fy(sp.y),
-                  },
-                ]}
-              >
-                <SvgXml
-                  xml={STAR_SVGS[sp.v]}
-                  width={fd(sp.w)}
-                  height={fd(sp.h)}
-                />
-              </View>
-            ))}
-          </Animated.View>
+        <Animated.View
+          style={[
+            styles.abs,
+            {
+              left: fx(-11.9),
+              top: fy(200 - 54.4),
+              zIndex: 19,
+              transform: [{ scale: 0.85 }],
+            },
+            sparkleAnim,
+          ]}
+        >
+          {[
+            { x: 237.82, y: 224.98, w: 13, h: 14, v: 2 },
+            { x: 247.73, y: 243.12, w: 18, h: 18, v: 1 },
+            { x: 267.72, y: 238.23, w: 18, h: 18, v: 1 },
+            { x: 282.35, y: 273.35, w: 18, h: 18, v: 1 },
+            { x: 305.76, y: 298.22, w: 18, h: 18, v: 1 },
+            { x: 301.37, y: 274.81, w: 18, h: 18, v: 1 },
+            { x: 324.77, y: 271.88, w: 18, h: 18, v: 1 },
+            { x: 296.98, y: 251.4, w: 18, h: 18, v: 0 },
+          ].map((sp, i) => (
+            <View
+              key={`sp-${i}`}
+              style={[
+                styles.abs,
+                {
+                  left: fx(sp.x),
+                  top: fy(sp.y),
+                },
+              ]}
+            >
+              <SvgXml
+                xml={STAR_SVGS[sp.v]}
+                width={fd(sp.w)}
+                height={fd(sp.h)}
+              />
+            </View>
+          ))}
+        </Animated.View>
 
         {/* Star lines / orbit rings around dead phone — exact Figma positions */}
-          <Animated.View
-            style={[
-              styles.abs,
-              {
-                left: fx(21.2),
-                top: fy(200 - 107.1),
-                zIndex: 6,
-                transform: [{ rotate: "30deg" }],
-              },
-              sparkleAnim,
-            ]}
-          >
-            {[
-              { x: 245.5, y: 252.86, w: 74.58, h: 25.79, v: 0 },
-              { x: 258.11, y: 272.68, w: 77.07, h: 43.59, v: 1 },
-              { x: 252.84, y: 234.45, w: 87.12, h: 68.78, v: 2 },
-              { x: 241.02, y: 220.68, w: 95.71, h: 93.99, v: 3 },
-            ].map((sl, i) => (
-              <View
-                key={`sl-${i}`}
-                style={[
-                  styles.abs,
-                  {
-                    left: fx(sl.x),
-                    top: fy(sl.y),
-                    width: fd(sl.w),
-                    height: fd(sl.h),
-                  },
-                ]}
-              >
-                <SvgXml
-                  xml={STARLINE_SVGS[sl.v]}
-                  width={fd(sl.w)}
-                  height={fd(sl.h)}
-                />
-              </View>
-            ))}
-          </Animated.View>
+        <Animated.View
+          style={[
+            styles.abs,
+            {
+              left: fx(21.2),
+              top: fy(200 - 107.1),
+              zIndex: 6,
+              transform: [{ rotate: "30deg" }],
+            },
+            sparkleAnim,
+          ]}
+        >
+          {[
+            { x: 245.5, y: 252.86, w: 74.58, h: 25.79, v: 0 },
+            { x: 258.11, y: 272.68, w: 77.07, h: 43.59, v: 1 },
+            { x: 252.84, y: 234.45, w: 87.12, h: 68.78, v: 2 },
+            { x: 241.02, y: 220.68, w: 95.71, h: 93.99, v: 3 },
+          ].map((sl, i) => (
+            <View
+              key={`sl-${i}`}
+              style={[
+                styles.abs,
+                {
+                  left: fx(sl.x),
+                  top: fy(sl.y),
+                  width: fd(sl.w),
+                  height: fd(sl.h),
+                },
+              ]}
+            >
+              <SvgXml
+                xml={STARLINE_SVGS[sl.v]}
+                width={fd(sl.w)}
+                height={fd(sl.h)}
+              />
+            </View>
+          ))}
+        </Animated.View>
 
         {/* Glow ellipses (halo-like effects) — Figma starlines-06/07/09 (filters stripped).
           Positioned near blob/pot area per Figma metadata (y~449-452). */}
-          <Animated.View
+        <Animated.View
+          style={[
+            styles.abs,
+            {
+              left: fx(-110.1),
+              top: fy(200 - 88.6),
+              zIndex: 9,
+              transform: [{ scale: 0.8 }, { rotate: "-20deg" }],
+            },
+            haloAnim,
+          ]}
+        >
+          {/* Bright yellow glow (starlines-09) */}
+          <View
             style={[
               styles.abs,
               {
-                left: fx(-110.1),
-                top: fy(200 - 88.6),
-                zIndex: 9,
-                transform: [{ scale: 0.8 }, { rotate: "-20deg" }],
+                left: fx(96),
+                top: fy(451.57),
+                width: fd(115.37),
+                height: fd(62.72),
+                opacity: 0.35,
               },
-              haloAnim,
             ]}
           >
-            {/* Bright yellow glow (starlines-09) */}
-            <View
-              style={[
-                styles.abs,
-                {
-                  left: fx(96),
-                  top: fy(451.57),
-                  width: fd(115.37),
-                  height: fd(62.72),
-                  opacity: 0.35,
-                },
-              ]}
-            >
-              <SvgXml
-                xml={BRIGHT_GLOW_SVG}
-                width={fd(115.37)}
-                height={fd(62.72)}
-              />
-            </View>
-            {/* Gold glow (starlines-07) */}
-            <View
-              style={[
-                styles.abs,
-                {
-                  left: fx(104.93),
-                  top: fy(452.91),
-                  width: fd(98.79),
-                  height: fd(50.46),
-                  opacity: 0.5,
-                },
-              ]}
-            >
-              <SvgXml
-                xml={GOLD_GLOW_SVG}
-                width={fd(98.79)}
-                height={fd(50.46)}
-              />
-            </View>
-            {/* White ring glow (starlines-06) */}
-            <View
-              style={[
-                styles.abs,
-                {
-                  left: fx(97),
-                  top: fy(449.42),
-                  width: fd(111.12),
-                  height: fd(59.37),
-                  opacity: 0.3,
-                },
-              ]}
-            >
-              <SvgXml
-                xml={WHITE_RING_SVG}
-                width={fd(111.12)}
-                height={fd(59.37)}
-              />
-            </View>
-          </Animated.View>
+            <SvgXml
+              xml={BRIGHT_GLOW_SVG}
+              width={fd(115.37)}
+              height={fd(62.72)}
+            />
+          </View>
+          {/* Gold glow (starlines-07) */}
+          <View
+            style={[
+              styles.abs,
+              {
+                left: fx(104.93),
+                top: fy(452.91),
+                width: fd(98.79),
+                height: fd(50.46),
+                opacity: 0.5,
+              },
+            ]}
+          >
+            <SvgXml xml={GOLD_GLOW_SVG} width={fd(98.79)} height={fd(50.46)} />
+          </View>
+          {/* White ring glow (starlines-06) */}
+          <View
+            style={[
+              styles.abs,
+              {
+                left: fx(97),
+                top: fy(449.42),
+                width: fd(111.12),
+                height: fd(59.37),
+                opacity: 0.3,
+              },
+            ]}
+          >
+            <SvgXml
+              xml={WHITE_RING_SVG}
+              width={fd(111.12)}
+              height={fd(59.37)}
+            />
+          </View>
+        </Animated.View>
 
         {/* Gold coins BEHIND pot — layer='back' */}
-          <Animated.View
-            style={[
-              styles.abs,
-              {
-                left: fx(COINS_OFFSET_X),
-                top: fy(FIGMA_Y_OFF + COINS_OFFSET_Y),
-                width: sceneW,
-                height: sceneH,
-              },
-              potAnim,
-            ]}
-          >
-            {GOLD_COINS.filter((c) => c.layer === "back").map((coin, i) => (
-              <View
-                key={`gc-b-${i}`}
-                style={[
-                  styles.abs,
-                  {
-                    left: fx(coin.x),
-                    top: fy(coin.y),
-                    width: fd(coin.w),
-                    height: fd(coin.h),
-                    transform: coin.rot
-                      ? [{ rotate: `${coin.rot}deg` }]
-                      : undefined,
-                  },
-                ]}
-              >
-                <SvgXml
-                  xml={COIN_SVG_MAP[coin.v ?? 0]}
-                  width={fd(coin.w)}
-                  height={fd(coin.h)}
-                />
-              </View>
-            ))}
-          </Animated.View>
+        <Animated.View
+          style={[
+            styles.abs,
+            {
+              left: fx(COINS_OFFSET_X),
+              top: fy(FIGMA_Y_OFF + COINS_OFFSET_Y),
+              width: sceneW,
+              height: sceneH,
+            },
+            potAnim,
+          ]}
+        >
+          {GOLD_COINS.filter((c) => c.layer === "back").map((coin, i) => (
+            <View
+              key={`gc-b-${i}`}
+              style={[
+                styles.abs,
+                {
+                  left: fx(coin.x),
+                  top: fy(coin.y),
+                  width: fd(coin.w),
+                  height: fd(coin.h),
+                  transform: coin.rot
+                    ? [{ rotate: `${coin.rot}deg` }]
+                    : undefined,
+                },
+              ]}
+            >
+              <SvgXml
+                xml={COIN_SVG_MAP[coin.v ?? 0]}
+                width={fd(coin.w)}
+                height={fd(coin.h)}
+              />
+            </View>
+          ))}
+        </Animated.View>
 
         {/* Peach blob in pot — full combined Figma SVG. */}
 
-          <Animated.View
-            style={[
-              styles.abs,
-              {
-                left: fx(-87),
-                top: fy(212.9),
-                width: fd(583.561),
-                height: fd(608.935),
-              },
-              potAnim,
-            ]}
+        <Animated.View
+          style={[
+            styles.abs,
+            {
+              left: fx(-87),
+              top: fy(212.9),
+              width: fd(583.561),
+              height: fd(608.935),
+            },
+            potAnim,
+          ]}
+        >
+          <View
+            style={{
+              width: fd(583.561),
+              height: fd(608.935),
+              transform: [{ rotate: "30deg" }],
+            }}
           >
-            <View
-              style={{
-                width: fd(583.561),
-                height: fd(608.935),
-                transform: [{ rotate: "30deg" }],
-              }}
-            >
-              <SvgXml
-                xml={BLOB_IN_POT_SVG}
-                width={fd(583.561)}
-                height={fd(608.935)}
-              />
-            </View>
-          </Animated.View>
+            <SvgXml
+              xml={BLOB_IN_POT_SVG}
+              width={fd(583.561)}
+              height={fd(608.935)}
+            />
+          </View>
+        </Animated.View>
 
         {/* Bitcoin coins — behind gold coins */}
-          <Animated.View
-            style={[
-              styles.abs,
-              { left: fx(BTC_OFFSET_X), top: fy(FIGMA_Y_OFF + BTC_OFFSET_Y) },
-              potAnim,
-            ]}
-          >
-            <View style={[styles.abs, { left: fx(43), top: fy(593) }]}>
-              <SvgXml xml={BITCOIN_SVG} width={fd(59)} height={fd(57)} />
-            </View>
-            <View
-              style={[
-                styles.abs,
-                {
-                  left: fx(157),
-                  top: fy(597),
-                  transform: [{ rotate: "45deg" }],
-                },
-              ]}
-            >
-              <SvgXml xml={BITCOIN_SVG} width={fd(60)} height={fd(58)} />
-            </View>
-            <View
-              style={[
-                styles.abs,
-                {
-                  left: fx(263),
-                  top: fy(595),
-                  transform: [{ rotate: "19.75deg" }],
-                },
-              ]}
-            >
-              <SvgXml xml={BITCOIN_SVG} width={fd(60)} height={fd(58)} />
-            </View>
-          </Animated.View>
-
-        {/* Gold coins IN FRONT of pot — layer='front' (default) */}
-          <Animated.View
+        <Animated.View
+          style={[
+            styles.abs,
+            { left: fx(BTC_OFFSET_X), top: fy(FIGMA_Y_OFF + BTC_OFFSET_Y) },
+            potAnim,
+          ]}
+        >
+          <View style={[styles.abs, { left: fx(43), top: fy(593) }]}>
+            <SvgXml xml={BITCOIN_SVG} width={fd(59)} height={fd(57)} />
+          </View>
+          <View
             style={[
               styles.abs,
               {
-                left: fx(COINS_OFFSET_X),
-                top: fy(FIGMA_Y_OFF + COINS_OFFSET_Y),
-                width: sceneW,
-                height: sceneH,
+                left: fx(157),
+                top: fy(597),
+                transform: [{ rotate: "45deg" }],
               },
-              potAnim,
             ]}
           >
-            {GOLD_COINS.filter((c) => c.layer !== "back").map((coin, i) => (
-              <View
-                key={`gc-f-${i}`}
-                style={[
-                  styles.abs,
-                  {
-                    left: fx(coin.x),
-                    top: fy(coin.y),
-                    width: fd(coin.w),
-                    height: fd(coin.h),
-                    transform: coin.rot
-                      ? [{ rotate: `${coin.rot}deg` }]
-                      : undefined,
-                  },
-                ]}
-              >
-                <SvgXml
-                  xml={COIN_SVG_MAP[coin.v ?? 0]}
-                  width={fd(coin.w)}
-                  height={fd(coin.h)}
-                />
-              </View>
-            ))}
-          </Animated.View>
-
-        {/* Dollar signs */}
-          <Animated.View
+            <SvgXml xml={BITCOIN_SVG} width={fd(60)} height={fd(58)} />
+          </View>
+          <View
             style={[
               styles.abs,
-              { left: fx(31.5), top: fy(200 - 111.8) },
-              dollarAnim,
+              {
+                left: fx(263),
+                top: fy(595),
+                transform: [{ rotate: "19.75deg" }],
+              },
             ]}
           >
+            <SvgXml xml={BITCOIN_SVG} width={fd(60)} height={fd(58)} />
+          </View>
+        </Animated.View>
+
+        {/* Gold coins IN FRONT of pot — layer='front' (default) */}
+        <Animated.View
+          style={[
+            styles.abs,
+            {
+              left: fx(COINS_OFFSET_X),
+              top: fy(FIGMA_Y_OFF + COINS_OFFSET_Y),
+              width: sceneW,
+              height: sceneH,
+            },
+            potAnim,
+          ]}
+        >
+          {GOLD_COINS.filter((c) => c.layer !== "back").map((coin, i) => (
             <View
+              key={`gc-f-${i}`}
               style={[
                 styles.abs,
                 {
-                  left: fx(291),
-                  top: fy(453),
-                  transform: [{ rotate: "15deg" }],
+                  left: fx(coin.x),
+                  top: fy(coin.y),
+                  width: fd(coin.w),
+                  height: fd(coin.h),
+                  transform: coin.rot
+                    ? [{ rotate: `${coin.rot}deg` }]
+                    : undefined,
                 },
               ]}
             >
-              <Text style={[styles.dollarSign, { fontSize: fd(60) }]}>$</Text>
+              <SvgXml
+                xml={COIN_SVG_MAP[coin.v ?? 0]}
+                width={fd(coin.w)}
+                height={fd(coin.h)}
+              />
             </View>
-            <View
-              style={[
-                styles.abs,
-                {
-                  left: fx(259),
-                  top: fy(466),
-                  transform: [{ rotate: "15deg" }],
-                },
-              ]}
-            >
-              <Text style={[styles.dollarSign, { fontSize: fd(42) }]}>$</Text>
-            </View>
-            <View
-              style={[
-                styles.abs,
-                {
-                  left: fx(272),
-                  top: fy(513),
-                  transform: [{ rotate: "15deg" }],
-                },
-              ]}
-            >
-              <Text style={[styles.dollarSign, { fontSize: fd(30) }]}>$</Text>
-            </View>
-          </Animated.View>
+          ))}
+        </Animated.View>
+
+        {/* Dollar signs */}
+        <Animated.View
+          style={[
+            styles.abs,
+            { left: fx(31.5), top: fy(200 - 111.8) },
+            dollarAnim,
+          ]}
+        >
+          <View
+            style={[
+              styles.abs,
+              {
+                left: fx(291),
+                top: fy(453),
+                transform: [{ rotate: "15deg" }],
+              },
+            ]}
+          >
+            <Text style={[styles.dollarSign, { fontSize: fd(60) }]}>$</Text>
+          </View>
+          <View
+            style={[
+              styles.abs,
+              {
+                left: fx(259),
+                top: fy(466),
+                transform: [{ rotate: "15deg" }],
+              },
+            ]}
+          >
+            <Text style={[styles.dollarSign, { fontSize: fd(42) }]}>$</Text>
+          </View>
+          <View
+            style={[
+              styles.abs,
+              {
+                left: fx(272),
+                top: fy(513),
+                transform: [{ rotate: "15deg" }],
+              },
+            ]}
+          >
+            <Text style={[styles.dollarSign, { fontSize: fd(30) }]}>$</Text>
+          </View>
+        </Animated.View>
       </Animated.View>
     </>
   );

@@ -500,7 +500,9 @@ describe("authStore", () => {
 
     it("should set full auth state before returning", async () => {
       jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
-      jest.mocked(SecureStore.getItemAsync).mockResolvedValueOnce("user@email.com");
+      jest
+        .mocked(SecureStore.getItemAsync)
+        .mockResolvedValueOnce("user@email.com");
       jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
       jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
 
@@ -521,7 +523,9 @@ describe("authStore", () => {
 
     it("should clean up stored email after successful sign-in", async () => {
       jest.mocked(isEmailSignInLink).mockResolvedValueOnce(true);
-      jest.mocked(SecureStore.getItemAsync).mockResolvedValueOnce("user@email.com");
+      jest
+        .mocked(SecureStore.getItemAsync)
+        .mockResolvedValueOnce("user@email.com");
       jest.mocked(signInWithEmailLink).mockResolvedValueOnce(mockFirebaseUser);
       jest.mocked(fetchUserProfile).mockResolvedValueOnce(null);
 

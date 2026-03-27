@@ -6,9 +6,11 @@ import {
   FlatList,
   Pressable,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Contacts from "expo-contacts";
 import {
   Spacing,
   Typography,
@@ -20,7 +22,12 @@ import { useColors } from "../../src/hooks/useColors";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
+import {
+  findContactsOnNiyah,
+  type ContactMatch,
+} from "../../src/config/functions";
 import { PublicProfile, Partner } from "../../src/types";
+import { logger } from "../../src/utils/logger";
 
 // ─── Styles (makeStyles) ──────────────────────────────────────────────────────
 
@@ -196,6 +203,43 @@ const makeStyles = (Colors: ThemeColors) =>
     },
     followingBtnText: {
       color: Colors.primaryLight,
+    },
+    findFriendsBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing.sm,
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+      paddingVertical: Spacing.md,
+      backgroundColor: Colors.primaryMuted,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: Colors.primary,
+    },
+    findFriendsBtnText: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.primary,
+    },
+    contactMatchSection: {
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+    },
+    contactMatchHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: Spacing.sm,
+    },
+    contactMatchTitle: {
+      fontSize: Typography.labelLarge,
+      ...Font.semibold,
+      color: Colors.textSecondary,
+    },
+    contactMatchDismiss: {
+      fontSize: Typography.labelMedium,
+      color: Colors.textMuted,
     },
   });
 
@@ -404,6 +448,9 @@ export default function FriendsScreen() {
     requestedTab === "partners" ? "partners" : "following",
   );
   const [loadingUids, setLoadingUids] = useState<Record<string, boolean>>({});
+  const [contactMatches, setContactMatches] = useState<ContactMatch[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [hasImported, setHasImported] = useState(false);
 
   const myUid = user?.id ?? "";
 
@@ -470,6 +517,86 @@ export default function FriendsScreen() {
     }
   };
 
+  // ── Import contacts ───────────────────────────────────────────────────────
+
+  const handleImportContacts = useCallback(async () => {
+    setIsImporting(true);
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Contacts Access Needed",
+          "Allow NIYAH to access contacts so you can find friends already on the app.",
+          [{ text: "OK" }],
+        );
+        setIsImporting(false);
+        return;
+      }
+
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers, Contacts.Fields.Emails],
+      });
+
+      // Extract phone numbers and emails
+      const phones: string[] = [];
+      const emails: string[] = [];
+      for (const contact of data) {
+        if (contact.phoneNumbers) {
+          for (const pn of contact.phoneNumbers) {
+            if (pn.number) {
+              // Normalize: strip non-digits, add +1 if US number without country code
+              const digits = pn.number.replace(/[^\d+]/g, "");
+              if (digits.startsWith("+")) {
+                phones.push(digits);
+              } else if (digits.length === 10) {
+                phones.push(`+1${digits}`);
+              } else if (digits.length === 11 && digits.startsWith("1")) {
+                phones.push(`+${digits}`);
+              }
+            }
+          }
+        }
+        if (contact.emails) {
+          for (const em of contact.emails) {
+            if (em.email) emails.push(em.email.toLowerCase());
+          }
+        }
+      }
+
+      if (phones.length === 0 && emails.length === 0) {
+        Alert.alert("No Contacts", "No phone numbers or emails found in your contacts.");
+        setIsImporting(false);
+        return;
+      }
+
+      const result = await findContactsOnNiyah(phones, emails);
+
+      // Filter out users we already follow
+      const newMatches = result.matches.filter(
+        (m) => !isFollowing(m.uid) && m.uid !== myUid,
+      );
+
+      setContactMatches(newMatches);
+      setHasImported(true);
+
+      if (newMatches.length === 0) {
+        Alert.alert(
+          "No New Friends Found",
+          "None of your contacts are on NIYAH yet. Invite them!",
+          [
+            { text: "Invite", onPress: () => router.push("/invite") },
+            { text: "OK" },
+          ],
+        );
+      }
+    } catch (err) {
+      logger.error("Import contacts error:", err);
+      Alert.alert("Error", "Could not import contacts. Please try again.");
+    } finally {
+      setIsImporting(false);
+    }
+  }, [isFollowing, myUid, router]);
+
   // ── Build list data based on active tab ──────────────────────────────────
 
   const listData: ListItem[] = useMemo(() => {
@@ -527,6 +654,21 @@ export default function FriendsScreen() {
     [loadingUids, isFollowing, router],
   );
 
+  const handleFollowMatch = useCallback(
+    async (targetUid: string) => {
+      setLoadingUids((prev) => ({ ...prev, [targetUid]: true }));
+      try {
+        await followUser(myUid, targetUid);
+        // Remove from matches since they're now followed
+        setContactMatches((prev) => prev.filter((m) => m.uid !== targetUid));
+        loadProfile(targetUid).catch(() => {});
+      } finally {
+        setLoadingUids((prev) => ({ ...prev, [targetUid]: false }));
+      }
+    },
+    [myUid, followUser, loadProfile],
+  );
+
   const listHeader = useMemo(
     () => (
       <>
@@ -538,11 +680,82 @@ export default function FriendsScreen() {
           </Pressable>
         </View>
 
+        {/* ── Find Friends button ──────────────────────────────────────────── */}
+        <Pressable
+          style={styles.findFriendsBtn}
+          onPress={handleImportContacts}
+          disabled={isImporting}
+        >
+          {isImporting ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : null}
+          <Text style={styles.findFriendsBtnText}>
+            {isImporting
+              ? "Searching contacts..."
+              : hasImported
+                ? "Refresh Contacts"
+                : "Find Friends from Contacts"}
+          </Text>
+        </Pressable>
+
+        {/* ── Contact matches ───────────────────────────────────────────────── */}
+        {contactMatches.length > 0 && (
+          <View style={styles.contactMatchSection}>
+            <View style={styles.contactMatchHeader}>
+              <Text style={styles.contactMatchTitle}>
+                Friends on NIYAH ({contactMatches.length})
+              </Text>
+              <Pressable onPress={() => setContactMatches([])}>
+                <Text style={styles.contactMatchDismiss}>Dismiss</Text>
+              </Pressable>
+            </View>
+            {contactMatches.map((match) => (
+              <View key={match.uid} style={[styles.row, { marginBottom: Spacing.sm }]}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarInitial}>
+                    {match.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.rowInfo}>
+                  <Text style={styles.rowName}>{match.name}</Text>
+                  <View style={styles.repRow}>
+                    <View
+                      style={[
+                        styles.repDot,
+                        {
+                          backgroundColor: repColor(
+                            match.reputation.level,
+                            Colors,
+                          ),
+                        },
+                      ]}
+                    />
+                    <Text style={styles.repScore}>
+                      {match.reputation.score}
+                    </Text>
+                  </View>
+                </View>
+                <Pressable
+                  style={styles.followBtn}
+                  onPress={() => handleFollowMatch(match.uid)}
+                  disabled={!!loadingUids[match.uid]}
+                >
+                  {loadingUids[match.uid] ? (
+                    <ActivityIndicator size="small" color={Colors.white} />
+                  ) : (
+                    <Text style={styles.followBtnText}>Follow</Text>
+                  )}
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* ── Segment control ─────────────────────────────────────────────── */}
         <SegmentControl selected={tab} onChange={setTab} />
       </>
     ),
-    [styles, tab, router],
+    [styles, tab, router, Colors, contactMatches, isImporting, hasImported, loadingUids, handleImportContacts, handleFollowMatch],
   );
 
   const listEmpty = useMemo(

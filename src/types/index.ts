@@ -45,6 +45,12 @@ export interface User {
   stripeAccountId?: string;
   stripeCustomerId?: string;
   stripeAccountStatus?: "pending" | "active" | "restricted";
+  // Plaid bank connection
+  linkedBank?: {
+    institutionName: string;
+    bankName: string;
+    mask: string;
+  };
   // Legal acceptance
   legalAcceptanceVersion?: string;
   legalAcceptedAt?: Date;

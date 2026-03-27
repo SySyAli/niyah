@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { Session, CadenceType } from "../types";
-import { CADENCES, DEMO_MODE } from "../constants/config";
+import { CADENCES, DEMO_MODE, USE_SHORT_TIMERS } from "../constants/config";
 import { useAuthStore } from "./authStore";
 import { useWalletStore } from "./walletStore";
 import {
@@ -19,6 +19,9 @@ import {
 } from "../config/screentime";
 import { generateId } from "../utils/id";
 import { logger } from "../utils/logger";
+
+// Module-level flag to prevent race between recoverActiveSession and startSession
+let _isRecovering = false;
 
 interface SessionState {
   currentSession: Session | null;
@@ -41,14 +44,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   startSession: (cadence: CadenceType) => {
     const { currentSession } = get();
-    if (currentSession) {
+    if (currentSession || _isRecovering) {
       throw new Error(
         "A session is already active. Complete or surrender it first.",
       );
     }
 
     const config = CADENCES[cadence];
-    const duration = DEMO_MODE ? config.demoDuration : config.duration;
+    const duration = USE_SHORT_TIMERS ? config.demoDuration : config.duration;
 
     const session: Session = {
       id: generateId(),
@@ -211,8 +214,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   recoverActiveSession: async (userId: string) => {
     const { currentSession } = get();
     // Don't recover if we already have an active session in memory
-    if (currentSession) return;
+    if (currentSession || _isRecovering) return;
 
+    _isRecovering = true;
     try {
       const activeSession = await getActiveSession(userId);
       if (!activeSession) return;
@@ -293,6 +297,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       set({ currentSession: restoredSession, isBlocking: true });
     } catch (error) {
       logger.error("Failed to recover active session:", error);
+    } finally {
+      _isRecovering = false;
     }
   },
 

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { Partner, DuoSession, CadenceType } from "../types";
-import { CADENCES, DEMO_MODE } from "../constants/config";
+import { CADENCES, DEMO_MODE, USE_SHORT_TIMERS } from "../constants/config";
 import { useAuthStore } from "./authStore";
 import { useWalletStore } from "./walletStore";
 import { fetchUserProfile, awardReferralToUser } from "../config/firebase";
@@ -113,7 +113,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     if (!currentPartner) return;
 
     const config = CADENCES[cadence];
-    const duration = DEMO_MODE ? config.demoDuration : config.duration;
+    const duration = USE_SHORT_TIMERS ? config.demoDuration : config.duration;
 
     const duoSession: DuoSession = {
       id: generateId(),

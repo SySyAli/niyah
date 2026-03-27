@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   Alert,
-  Linking,
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -29,7 +28,18 @@ import {
 import { useWalletStore } from "../../src/store/walletStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { formatMoney } from "../../src/utils/format";
-import { requestWithdrawal } from "../../src/config/functions";
+import {
+  requestWithdrawal,
+  createPlaidLinkToken,
+  linkBankAccount,
+} from "../../src/config/functions";
+import {
+  create as plaidCreate,
+  open as plaidOpen,
+  type LinkSuccess,
+  type LinkExit,
+} from "react-native-plaid-link-sdk";
+import { logger } from "../../src/utils/logger";
 
 type WithdrawMethod = "standard" | "instant";
 
@@ -50,15 +60,22 @@ export default function WithdrawScreen() {
   const [selectedMethod, setSelectedMethod] =
     useState<WithdrawMethod>("standard");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLinkingBank, setIsLinkingBank] = useState(false);
+  const { updateUser } = useAuthStore();
 
   const stripeStatus = user?.stripeAccountStatus ?? "none";
   const hasActiveStripe = stripeStatus === "active";
+  const linkedBank = user?.linkedBank as
+    | { institutionName: string; mask: string }
+    | undefined;
+  const hasBankLinked = hasActiveStripe && !!linkedBank;
 
   const amountInCents = inputValue
     ? Math.round(parseFloat(inputValue) * 100)
     : 0;
   const displayAmount = inputValue ? `$${inputValue}` : "";
-  const isValidAmount = amountInCents >= 1000 && amountInCents <= balance;
+  const isValidAmount =
+    amountInCents >= 1000 && amountInCents <= balance && amountInCents <= 1_000_000;
   const instantFee = calcInstantFee(amountInCents);
 
   const handleKeyPress = useCallback(
@@ -120,45 +137,92 @@ export default function WithdrawScreen() {
           ? err.message
           : "Something went wrong. Please try again.";
       Alert.alert("Withdrawal Failed", message);
+      // Resync wallet from Firestore in case server processed but client errored
+      const uid = user?.id;
+      if (uid) {
+        useWalletStore.getState().hydrate(uid).catch(() => {});
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Opens a Venmo REQUEST to @niyah-focus AFTER server-side validation.
-  // Balance is deducted server-side via requestWithdrawal to prevent unlimited
-  // withdrawal requests without balance impact.
-  const handleVenmoWithdraw = async () => {
-    setIsLoading(true);
+  // Opens Plaid Link as a native overlay — no navigation needed.
+  const handleConnectBank = useCallback(async () => {
+    setIsLinkingBank(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     try {
-      // Validate and deduct balance server-side first
-      await requestWithdrawal(amountInCents, "standard");
-      withdraw(amountInCents);
+      // 1. Get link token from server
+      const { linkToken } = await createPlaidLinkToken();
 
-      // Only open Venmo after server confirms balance deduction
-      const venmoUrl = `venmo://paycharge?txn=request&recipients=niyah-focus&amount=${encodeURIComponent((amountInCents / 100).toFixed(2))}&note=${encodeURIComponent("NIYAH withdrawal")}`;
-      Linking.openURL(venmoUrl).catch(() =>
-        Linking.openURL("https://venmo.com/niyah-focus"),
-      );
+      // 2. Create Plaid session + open native UI
+      plaidCreate({ token: linkToken });
+      plaidOpen({
+        onSuccess: async (success: LinkSuccess) => {
+          try {
+            const publicToken = success.publicToken;
+            const plaidAccountId = success.metadata.accounts[0]?.id;
+            if (!publicToken || !plaidAccountId) {
+              Alert.alert("Error", "No bank account was selected.");
+              setIsLinkingBank(false);
+              return;
+            }
+
+            // 3. Exchange token + link bank server-side
+            const result = await linkBankAccount(publicToken, plaidAccountId);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            // 4. Update local state — screen re-renders with bank connected
+            updateUser({
+              stripeAccountStatus: "active",
+              linkedBank: {
+                institutionName: result.bankName,
+                mask: result.bankMask,
+                bankName: result.bankName,
+              },
+            });
+
+            Alert.alert(
+              "Bank Connected",
+              `${result.bankName} ending in ${result.bankMask} is now linked.`,
+            );
+          } catch (err) {
+            logger.error("linkBankAccount error:", err);
+            const msg =
+              err instanceof Error
+                ? err.message
+                : "Failed to link bank account.";
+            Alert.alert("Link Failed", msg);
+          } finally {
+            setIsLinkingBank(false);
+          }
+        },
+        onExit: (exit: LinkExit) => {
+          setIsLinkingBank(false);
+          if (exit.error) {
+            logger.error("Plaid Link exit error:", exit.error);
+            Alert.alert(
+              "Connection Error",
+              "Could not connect to your bank. Please try again.",
+            );
+          }
+        },
+      });
+    } catch (err) {
+      logger.error("createPlaidLinkToken error:", err);
       Alert.alert(
-        "Withdrawal Requested",
-        `We'll send you ${formatMoney(amountInCents)} via Venmo within 24 hours.`,
-        [{ text: "OK", onPress: () => router.back() }],
+        "Setup Error",
+        "Could not start bank connection. Check your internet and try again.",
       );
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.";
-      Alert.alert("Withdrawal Failed", message);
-    } finally {
-      setIsLoading(false);
+      setIsLinkingBank(false);
     }
-  };
+  }, [updateUser]);
 
   const getAmountError = () => {
     if (!inputValue) return null;
     if (amountInCents < 1000) return "Minimum withdrawal is $10.00";
+    if (amountInCents > 1_000_000) return "Maximum withdrawal is $10,000.00";
     if (amountInCents > balance) return "Exceeds available balance";
     return null;
   };
@@ -179,8 +243,18 @@ export default function WithdrawScreen() {
           <Text style={styles.summaryAmount}>{formatMoney(amountInCents)}</Text>
         </View>
 
-        {hasActiveStripe ? (
+        {hasBankLinked ? (
           <>
+            {/* Connected bank info */}
+            <Card style={styles.setupCard} variant="outlined">
+              <Text style={styles.setupTitle}>
+                {linkedBank!.institutionName}
+              </Text>
+              <Text style={styles.setupDescription}>
+                Account ending in {linkedBank!.mask}
+              </Text>
+            </Card>
+
             <Text style={styles.sectionLabel}>
               How would you like to receive it?
             </Text>
@@ -244,9 +318,8 @@ export default function WithdrawScreen() {
                   </View>
                 </View>
                 <Text style={styles.methodDescription}>
-                  Instant bank deposit. Stripe charges 1.5% (min $0.50) —
-                  covered by NIYAH. You receive the full{" "}
-                  {formatMoney(amountInCents)}.
+                  Instant bank deposit. 1.5% fee (min $0.50) — covered by NIYAH.
+                  You receive the full {formatMoney(amountInCents)}.
                 </Text>
               </View>
             </Pressable>
@@ -266,55 +339,33 @@ export default function WithdrawScreen() {
                   size="large"
                 />
               )}
-
-              <Pressable onPress={handleVenmoWithdraw} style={styles.venmoLink}>
-                <Text style={styles.venmoLinkText}>Send via Venmo instead</Text>
-              </Pressable>
             </View>
           </>
         ) : (
-          /* No active Stripe Connect account */
+          /* No bank connected — connect inline via Plaid */
           <>
-            <Card style={styles.setupCard} variant="outlined">
-              <Text style={styles.setupTitle}>
-                {stripeStatus === "pending"
-                  ? "Verification In Progress"
-                  : "Bank Payouts Not Set Up"}
-              </Text>
-              <Text style={styles.setupDescription}>
-                {stripeStatus === "pending"
-                  ? "Your Stripe account is being verified. This usually takes a few minutes."
-                  : "Connect your bank account to withdraw directly. Secure, free, and instant setup."}
-              </Text>
-              <Button
-                title={
-                  stripeStatus === "pending"
-                    ? "Check Status"
-                    : "Set Up Bank Payouts"
-                }
-                onPress={() => router.push("/session/stripe-onboarding")}
-                size="large"
-                style={styles.setupButton}
-              />
-            </Card>
-
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <Text style={styles.venmoSectionLabel}>Request via Venmo</Text>
-            <Text style={styles.venmoSectionDescription}>
-              Opens Venmo to request {formatMoney(amountInCents)} from
-              @niyah-focus. We'll approve and send it within 24 hours.
-            </Text>
-            <Button
-              title="Open Venmo"
-              onPress={handleVenmoWithdraw}
-              size="large"
-              variant="secondary"
-            />
+            {isLinkingBank ? (
+              <View style={styles.linkingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={styles.linkingText}>
+                  Linking your bank account...
+                </Text>
+              </View>
+            ) : (
+              <Card style={styles.setupCard} variant="outlined">
+                <Text style={styles.setupTitle}>Connect Your Bank</Text>
+                <Text style={styles.setupDescription}>
+                  Link your bank account to withdraw directly. Secure connection
+                  via Plaid — your credentials are never shared with NIYAH.
+                </Text>
+                <Button
+                  title="Connect Bank Account"
+                  onPress={handleConnectBank}
+                  size="large"
+                  style={styles.setupButton}
+                />
+              </Card>
+            )}
           </>
         )}
       </SessionScreenScaffold>
@@ -484,12 +535,6 @@ const makeStyles = (Colors: ThemeColors) =>
       fontSize: Typography.bodyMedium,
       ...Font.medium,
     },
-    venmoLink: { alignItems: "center", paddingVertical: Spacing.sm },
-    venmoLinkText: {
-      color: Colors.textSecondary,
-      fontSize: Typography.bodyMedium,
-      ...Font.medium,
-    },
     setupCard: { gap: Spacing.md },
     setupTitle: {
       fontSize: Typography.titleSmall,
@@ -502,24 +547,15 @@ const makeStyles = (Colors: ThemeColors) =>
       lineHeight: Typography.bodyMedium * 1.5,
     },
     setupButton: { marginTop: Spacing.sm },
-    dividerRow: {
-      flexDirection: "row",
+    linkingContainer: {
       alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: Spacing.xl * 2,
       gap: Spacing.md,
-      marginBottom: Spacing.lg,
     },
-    dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
-    dividerText: { color: Colors.textMuted, fontSize: Typography.labelMedium },
-    venmoSectionLabel: {
-      fontSize: Typography.bodyLarge,
-      ...Font.semibold,
-      color: Colors.text,
-      marginBottom: Spacing.lg,
-    },
-    venmoSectionDescription: {
+    linkingText: {
       fontSize: Typography.bodyMedium,
       color: Colors.textSecondary,
-      lineHeight: Typography.bodyMedium * 1.5,
-      marginBottom: Spacing.lg,
+      ...Font.medium,
     },
   });

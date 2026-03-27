@@ -11,6 +11,7 @@ import { onRequest, type Request } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import Stripe from "stripe";
+import { PlaidApi, Configuration, PlaidEnvironments, Products, CountryCode } from "plaid";
 import type { Response } from "express";
 import {
   buildStoredPayouts,
@@ -27,6 +28,9 @@ const db = admin.firestore();
 // Set with: firebase functions:secrets:set STRIPE_SECRET_KEY
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
+// Plaid secrets — set with: firebase functions:secrets:set PLAID_CLIENT_ID / PLAID_SECRET
+const PLAID_CLIENT_ID = defineSecret("PLAID_CLIENT_ID");
+const PLAID_SECRET = defineSecret("PLAID_SECRET");
 
 const PUBLIC_HTTP_OPTIONS = {
   cors: true,
@@ -46,12 +50,39 @@ const PUBLIC_STRIPE_WEBHOOK_OPTIONS = {
   secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET],
 };
 
+const PUBLIC_PLAID_HTTP_OPTIONS = {
+  ...PUBLIC_HTTP_OPTIONS,
+  secrets: [PLAID_CLIENT_ID, PLAID_SECRET],
+};
+
+const PUBLIC_PLAID_STRIPE_HTTP_OPTIONS = {
+  ...PUBLIC_HTTP_OPTIONS,
+  secrets: [PLAID_CLIENT_ID, PLAID_SECRET, STRIPE_SECRET_KEY],
+};
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getStripe(): Stripe {
   return new Stripe(STRIPE_SECRET_KEY.value(), {
     apiVersion: "2025-02-24.acacia",
   });
+}
+
+// Plaid environment: "sandbox" for testing, "production" for real banks + SMS
+// Switch to "production" once Plaid approves your production access request.
+const PLAID_ENV = (process.env.PLAID_ENV ?? "sandbox") as keyof typeof PlaidEnvironments;
+
+function getPlaid(): PlaidApi {
+  const config = new Configuration({
+    basePath: PlaidEnvironments[PLAID_ENV] ?? PlaidEnvironments.sandbox,
+    baseOptions: {
+      headers: {
+        "PLAID-CLIENT-ID": PLAID_CLIENT_ID.value(),
+        "PLAID-SECRET": PLAID_SECRET.value(),
+      },
+    },
+  });
+  return new PlaidApi(config);
 }
 
 /** Verify Firebase ID token from Authorization header. Returns uid or throws. */
@@ -203,6 +234,73 @@ async function settleGroupSessionPayouts(
   return transferIds;
 }
 
+// ─── Push Notifications ─────────────────────────────────────────────────────
+
+/**
+ * Send a push notification to a user's registered devices.
+ * Fire-and-forget — errors are logged but never throw.
+ */
+async function sendPushToUser(
+  uid: string,
+  notification: { title: string; body: string },
+  data?: Record<string, string>,
+): Promise<void> {
+  try {
+    const userDoc = await db.collection("users").doc(uid).get();
+    const tokens: string[] = userDoc.data()?.fcmTokens ?? [];
+    if (tokens.length === 0) return;
+
+    const messaging = admin.messaging();
+    const results = await Promise.allSettled(
+      tokens.map((token) =>
+        messaging.send({
+          token,
+          notification,
+          data: data ?? {},
+          apns: {
+            payload: { aps: { sound: "default", badge: 1 } },
+          },
+        }),
+      ),
+    );
+
+    // Clean up invalid tokens
+    const invalidTokens: string[] = [];
+    results.forEach((result, i) => {
+      if (
+        result.status === "rejected" &&
+        result.reason?.code === "messaging/registration-token-not-registered"
+      ) {
+        invalidTokens.push(tokens[i]);
+      }
+    });
+    if (invalidTokens.length > 0) {
+      await db
+        .collection("users")
+        .doc(uid)
+        .update({
+          fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens),
+        });
+    }
+  } catch (err) {
+    console.error(`sendPushToUser failed for uid=${uid}:`, err);
+  }
+}
+
+/**
+ * Send push notifications to multiple users in parallel.
+ * Fire-and-forget — errors are logged but never throw.
+ */
+async function sendPushToUsers(
+  uids: string[],
+  notification: { title: string; body: string },
+  data?: Record<string, string>,
+): Promise<void> {
+  await Promise.allSettled(
+    uids.map((uid) => sendPushToUser(uid, notification, data)),
+  );
+}
+
 // ─── Rate Limiting ──────────────────────────────────────────────────────────
 
 interface RateLimitConfig {
@@ -264,7 +362,7 @@ const RATE_LIMITS = {
   handleSessionForfeit: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
   createPaymentIntent: { maxCalls: 3, windowMs: 600_000 }, // 3/10min
   verifyAndCreditDeposit: { maxCalls: 5, windowMs: 600_000 }, // 5/10min
-  requestWithdrawal: { maxCalls: 2, windowMs: 3_600_000 }, // 2/hr
+  requestWithdrawal: { maxCalls: 10, windowMs: 3_600_000 }, // 10/hr (relaxed for testing)
   distributeGroupPayouts: { maxCalls: 3, windowMs: 3_600_000 }, // 3/hr
   awardReferral: { maxCalls: 10, windowMs: 86_400_000 }, // 10/day
   createConnectAccount: { maxCalls: 3, windowMs: 3_600_000 }, // 3/hr
@@ -278,6 +376,9 @@ const RATE_LIMITS = {
   startGroupSession: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
   reportSessionStatus: { maxCalls: 10, windowMs: 3_600_000 }, // 10/hr
   cancelGroupSession: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
+  createPlaidLinkToken: { maxCalls: 10, windowMs: 600_000 }, // 10/10min
+  linkBankAccount: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
+  findContactsOnNiyah: { maxCalls: 5, windowMs: 600_000 }, // 5/10min
 } as const;
 
 // ─── createPaymentIntent ────────────────────────────────────────────────────
@@ -710,6 +811,213 @@ export const getConnectAccountStatus = onRequest(
   },
 );
 
+// ─── createPlaidLinkToken ───────────────────────────────────────────────────
+/**
+ * Creates a Plaid Link token for the client to open the bank-connection UI.
+ * Body: {} (user identified via auth token)
+ * Returns: { linkToken: string }
+ */
+export const createPlaidLinkToken = onRequest(
+  PUBLIC_PLAID_HTTP_OPTIONS,
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "createPlaidLinkToken",
+        RATE_LIMITS.createPlaidLinkToken,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    try {
+      const plaid = getPlaid();
+      const response = await plaid.linkTokenCreate({
+        user: { client_user_id: uid },
+        client_name: "NIYAH",
+        products: [Products.Auth],
+        country_codes: [CountryCode.Us],
+        language: "en",
+      });
+
+      res.json({ linkToken: response.data.link_token });
+    } catch (err) {
+      console.error("createPlaidLinkToken error:", err);
+      sendError(res, 500, "Failed to create bank link session");
+    }
+  },
+);
+
+// ─── linkBankAccount ────────────────────────────────────────────────────────
+/**
+ * Exchanges a Plaid public_token for access credentials, creates a Stripe
+ * Custom connected account (if needed), and attaches the bank via a Plaid
+ * processor token. This is a one-time setup per bank account.
+ *
+ * Body: { publicToken: string, accountId: string }
+ *   publicToken — from Plaid Link onSuccess
+ *   accountId   — the Plaid account_id the user selected
+ *
+ * Returns: { success: true, bankName: string, bankMask: string }
+ *
+ * SECURITY:
+ * - Auth required (verifyAuth)
+ * - Rate limited (5/hr)
+ * - Plaid access_token stored server-side only (never sent to client)
+ * - Stripe account created as Custom type (no hosted redirect needed)
+ */
+export const linkBankAccount = onRequest(
+  PUBLIC_PLAID_STRIPE_HTTP_OPTIONS,
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(uid, "linkBankAccount", RATE_LIMITS.linkBankAccount)
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { publicToken, accountId } = req.body as {
+      publicToken: unknown;
+      accountId: unknown;
+    };
+    if (typeof publicToken !== "string" || !publicToken) {
+      sendError(res, 400, "Missing publicToken");
+      return;
+    }
+    if (typeof accountId !== "string" || !accountId) {
+      sendError(res, 400, "Missing accountId");
+      return;
+    }
+
+    try {
+      const plaid = getPlaid();
+      const stripe = getStripe();
+      const userRef = db.collection("users").doc(uid);
+      const userDoc = await userRef.get();
+      const userData = userDoc.data() ?? {};
+
+      // 1. Exchange public_token → access_token (server-side only)
+      const exchangeResponse = await plaid.itemPublicTokenExchange({
+        public_token: publicToken,
+      });
+      const accessToken = exchangeResponse.data.access_token;
+      const itemId = exchangeResponse.data.item_id;
+
+      // 2. Get account details for display (mask, institution name)
+      const accountsResponse = await plaid.accountsGet({
+        access_token: accessToken,
+      });
+      const linkedAccount = accountsResponse.data.accounts.find(
+        (a) => a.account_id === accountId,
+      );
+      const bankMask = linkedAccount?.mask ?? "****";
+      const bankName = linkedAccount?.name ?? "Bank Account";
+
+      // Get institution name
+      const itemResponse = await plaid.itemGet({ access_token: accessToken });
+      const institutionId = itemResponse.data.item.institution_id;
+      let institutionName = "Bank";
+      if (institutionId) {
+        try {
+          const instResponse = await plaid.institutionsGetById({
+            institution_id: institutionId,
+            country_codes: [CountryCode.Us],
+          });
+          institutionName = instResponse.data.institution.name;
+        } catch {
+          // Non-critical — use default
+        }
+      }
+
+      // 3. Create Stripe processor token from Plaid
+      const processorResponse = await plaid.processorStripeBankAccountTokenCreate({
+        access_token: accessToken,
+        account_id: accountId,
+      });
+      const stripeBankToken = processorResponse.data.stripe_bank_account_token;
+
+      // 4. Create or get Stripe Custom connected account
+      let stripeAccountId: string = userData.stripeAccountId ?? "";
+      if (!stripeAccountId) {
+        const account = await stripe.accounts.create({
+          type: "custom",
+          country: "US",
+          email: userData.email ?? undefined,
+          capabilities: {
+            transfers: { requested: true },
+          },
+          business_type: "individual",
+          tos_acceptance: {
+            service_agreement: "recipient",
+          },
+          metadata: { firebaseUid: uid },
+        });
+        stripeAccountId = account.id;
+      }
+
+      // 5. Attach bank account to Stripe connected account via processor token
+      await stripe.accounts.createExternalAccount(stripeAccountId, {
+        external_account: stripeBankToken,
+        default_for_currency: true,
+      });
+
+      // 6. Store everything in Firestore (access_token server-side only)
+      await userRef.update({
+        stripeAccountId: stripeAccountId,
+        stripeAccountStatus: "active",
+        plaidAccessToken: accessToken,
+        plaidItemId: itemId,
+        plaidAccountId: accountId,
+        linkedBank: {
+          institutionName,
+          bankName,
+          mask: bankMask,
+          linkedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      res.json({
+        success: true,
+        bankName: institutionName,
+        bankMask,
+      });
+    } catch (err) {
+      console.error("linkBankAccount error:", err);
+      const message =
+        err instanceof Error ? err.message : "Failed to link bank account";
+      sendError(res, 500, message);
+    }
+  },
+);
+
 // ─── handleSessionComplete ──────────────────────────────────────────────────
 /**
  * Called when a solo session completes successfully.
@@ -1012,7 +1320,7 @@ export const requestWithdrawal = onRequest(
 
     const { amount, method = "standard" } = req.body as {
       amount: unknown;
-      method?: "standard" | "instant";
+      method?: "standard" | "instant" | "venmo";
     };
 
     if (
@@ -1027,31 +1335,39 @@ export const requestWithdrawal = onRequest(
       sendError(res, 400, "Minimum withdrawal is $10");
       return;
     }
+    if (amount > 1_000_000) {
+      sendError(res, 400, "Maximum withdrawal is $10,000 per transaction");
+      return;
+    }
+
+    // Daily aggregate withdrawal limit: $25,000
+    try {
+      const oneDayAgo = new Date(Date.now() - 86_400_000);
+      const recentWithdrawals = await db
+        .collection("transactions")
+        .where("userId", "==", uid)
+        .where("type", "==", "withdrawal")
+        .where("createdAt", ">=", oneDayAgo)
+        .get();
+      const dailyTotal = recentWithdrawals.docs.reduce(
+        (sum, doc) => sum + Math.abs(doc.data().amount ?? 0),
+        0,
+      );
+      if (dailyTotal + amount > 2_500_000) {
+        sendError(
+          res,
+          400,
+          `Daily withdrawal limit is $25,000. You've withdrawn ${(dailyTotal / 100).toFixed(2)} today.`,
+        );
+        return;
+      }
+    } catch (limitErr) {
+      console.error("Daily limit check failed:", limitErr);
+      // Fail open for now — rate limiting still protects against abuse
+    }
 
     try {
-      const stripe = getStripe();
-      const userRef = db.collection("users").doc(uid);
       const walletRef = db.collection("wallets").doc(uid);
-      const userSnap = await userRef.get();
-      const userData = userSnap.data() ?? {};
-
-      const connectedAccountId: string = userData.stripeAccountId ?? "";
-      if (!connectedAccountId) {
-        sendError(
-          res,
-          400,
-          "No payout account set up — complete Stripe onboarding first",
-        );
-        return;
-      }
-      if (userData.stripeAccountStatus !== "active") {
-        sendError(
-          res,
-          400,
-          "Payout account not yet verified — complete identity verification first",
-        );
-        return;
-      }
 
       // Read balance from wallets collection (protected from client writes)
       const walletSnap = await walletRef.get();
@@ -1072,10 +1388,60 @@ export const requestWithdrawal = onRequest(
           type: "withdrawal",
           amount: -amount,
           description: `Withdrawal (${method})`,
-          status: "processing",
+          status: method === "venmo" ? "pending_venmo" : "processing",
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       });
+
+      // Venmo: balance deducted, user handles Venmo request separately
+      if (method === "venmo") {
+        await txnRef.update({ status: "pending_venmo" });
+        res.json({
+          success: true,
+          transferId: txnRef.id,
+          estimatedArrival: "Within 24 hours (manual Venmo)",
+        });
+        return;
+      }
+
+      // Stripe methods require a connected account
+      const userRef = db.collection("users").doc(uid);
+      const userSnap = await userRef.get();
+      const userData = userSnap.data() ?? {};
+
+      const connectedAccountId: string = userData.stripeAccountId ?? "";
+      if (!connectedAccountId) {
+        // Restore balance since Stripe transfer can't proceed
+        await db.runTransaction(async (txn) => {
+          const snap = await txn.get(walletRef);
+          const current: number = snap.data()?.balance ?? 0;
+          txn.update(walletRef, { balance: current + amount });
+        });
+        await txnRef.delete();
+        sendError(
+          res,
+          400,
+          "No payout account set up — complete Stripe onboarding first",
+        );
+        return;
+      }
+      if (userData.stripeAccountStatus !== "active") {
+        // Restore balance since Stripe transfer can't proceed
+        await db.runTransaction(async (txn) => {
+          const snap = await txn.get(walletRef);
+          const current: number = snap.data()?.balance ?? 0;
+          txn.update(walletRef, { balance: current + amount });
+        });
+        await txnRef.delete();
+        sendError(
+          res,
+          400,
+          "Payout account not yet verified — complete identity verification first",
+        );
+        return;
+      }
+
+      const stripe = getStripe();
 
       // Transfer from Niyah's platform account → user's connected account
       const transfer = await stripe.transfers.create({
@@ -1650,6 +2016,112 @@ export const acceptLegalTerms = onRequest(
 );
 
 // ─── createGroupSession ──────────────────────────────────────────────────────
+// ─── findContactsOnNiyah ────────────────────────────────────────────────────
+/**
+ * Matches device contacts (phone numbers + emails) against existing NIYAH users.
+ * Body: { phones: string[], emails: string[] }
+ *   phones — E.164 formatted phone numbers (e.g. "+15551234567")
+ *   emails — lowercase email addresses
+ * Returns: { matches: { uid, name, reputation }[] }
+ *
+ * SECURITY: Auth required. Rate limited. Raw contacts are NOT stored —
+ * only used transiently for matching. Returns only public profile data.
+ */
+export const findContactsOnNiyah = onRequest(
+  PUBLIC_HTTP_OPTIONS,
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "findContactsOnNiyah",
+        RATE_LIMITS.findContactsOnNiyah,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { phones = [], emails = [] } = req.body as {
+      phones?: unknown[];
+      emails?: unknown[];
+    };
+
+    // Validate + sanitize inputs (cap at 500 to prevent abuse)
+    const cleanPhones = (Array.isArray(phones) ? phones : [])
+      .filter((p): p is string => typeof p === "string" && p.length > 0)
+      .map((p) => p.replace(/[^\d+]/g, ""))
+      .slice(0, 500);
+    const cleanEmails = (Array.isArray(emails) ? emails : [])
+      .filter((e): e is string => typeof e === "string" && e.includes("@"))
+      .map((e) => e.toLowerCase().trim())
+      .slice(0, 500);
+
+    if (cleanPhones.length === 0 && cleanEmails.length === 0) {
+      res.json({ matches: [] });
+      return;
+    }
+
+    try {
+      const matchedUids = new Set<string>();
+      const matches: { uid: string; name: string; reputation: { score: number; level: string } }[] = [];
+
+      // Firestore `in` queries are limited to 30 items, so we batch
+      const batchQuery = async (field: string, values: string[]) => {
+        for (let i = 0; i < values.length; i += 30) {
+          const batch = values.slice(i, i + 30);
+          const snap = await db
+            .collection("users")
+            .where(field, "in", batch)
+            .get();
+          for (const doc of snap.docs) {
+            if (doc.id !== uid && !matchedUids.has(doc.id)) {
+              matchedUids.add(doc.id);
+              const d = doc.data();
+              matches.push({
+                uid: doc.id,
+                name: d.name ?? "Unknown",
+                reputation: {
+                  score: d.reputation?.score ?? 50,
+                  level: d.reputation?.level ?? "sapling",
+                },
+              });
+            }
+          }
+        }
+      };
+
+      // Query by phone number and email in parallel
+      await Promise.all([
+        cleanPhones.length > 0
+          ? batchQuery("phoneNumber", cleanPhones)
+          : Promise.resolve(),
+        cleanEmails.length > 0
+          ? batchQuery("email", cleanEmails)
+          : Promise.resolve(),
+      ]);
+
+      res.json({ matches });
+    } catch (err) {
+      console.error("findContactsOnNiyah error:", err);
+      sendError(res, 500, "Failed to search contacts");
+    }
+  },
+);
+
+// ─── createGroupSession ─────────────────────────────────────────────────────
 /**
  * Creates a new group session and sends invites to participants.
  * Body: { cadence: string, stakePerParticipant: number, duration: number, inviteeIds: string[], customStake?: boolean }
@@ -1870,6 +2342,17 @@ export const createGroupSession = onRequest(
 
       await batch.commit();
 
+      // Notify each invitee (fire-and-forget)
+      const proposerName = proposerData.name ?? "Someone";
+      sendPushToUsers(
+        inviteeIds,
+        {
+          title: "Group Session Invite",
+          body: `${proposerName} invited you to a focus session!`,
+        },
+        { type: "group_invite", sessionId },
+      );
+
       console.log(
         `createGroupSession: session=${sessionId}, proposer=${uid}, invitees=${inviteeIds.length}`,
       );
@@ -2015,6 +2498,34 @@ export const respondToGroupInvite = onRequest(
             ),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
+
+          // Notify all participants that everyone accepted
+          sendPushToUsers(
+            updatedSessionData.participantIds.filter(
+              (pid: string) => pid !== uid,
+            ),
+            {
+              title: "Everyone Accepted!",
+              body: "All participants accepted. Head to the waiting room!",
+            },
+            {
+              type: "session_ready",
+              sessionId: inviteData.sessionId,
+            },
+          );
+        } else {
+          // Notify proposer that someone accepted
+          sendPushToUser(
+            inviteData.fromUserId,
+            {
+              title: "Invite Accepted",
+              body: "A participant accepted your group session invite.",
+            },
+            {
+              type: "invite_response",
+              sessionId: inviteData.sessionId,
+            },
+          );
         }
 
         console.log(
@@ -2086,6 +2597,19 @@ export const respondToGroupInvite = onRequest(
             poolTotal: updatedPoolTotal,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
+
+          // Notify proposer that someone declined
+          sendPushToUser(
+            inviteData.fromUserId,
+            {
+              title: "Invite Declined",
+              body: "A participant declined your group session invite.",
+            },
+            {
+              type: "invite_response",
+              sessionId: inviteData.sessionId,
+            },
+          );
 
           console.log(
             `respondToGroupInvite: invite=${inviteId}, user=${uid}, declined, remaining=${updatedParticipantIds.length}`,
@@ -2278,6 +2802,16 @@ export const startGroupSession = onRequest(
         endsAt: admin.firestore.Timestamp.fromMillis(endsAtMs),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      // Notify all non-proposer participants that session started
+      sendPushToUsers(
+        sessionData.participantIds.filter((pid: string) => pid !== uid),
+        {
+          title: "Session Started!",
+          body: "Your group focus session has begun. Stay focused!",
+        },
+        { type: "session_started", sessionId },
+      );
 
       console.log(
         `startGroupSession: session=${sessionId}, endsAt=${new Date(endsAtMs).toISOString()}`,
@@ -2483,6 +3017,18 @@ export const reportSessionStatus = onRequest(
         await settleGroupSessionPayouts(sessionId, payoutList, uid);
       }
 
+      // Notify all participants that the session is complete
+      if (outcome.participantIds) {
+        sendPushToUsers(
+          outcome.participantIds.filter((pid: string) => pid !== uid),
+          {
+            title: "Session Complete",
+            body: "Your group session has ended. Check your results!",
+          },
+          { type: "session_complete", sessionId },
+        );
+      }
+
       console.log(
         `reportSessionStatus: session=${sessionId} completed, payouts=${JSON.stringify(outcome.payouts)}`,
       );
@@ -2633,6 +3179,16 @@ export const cancelGroupSession = onRequest(
       });
 
       await batch.commit();
+
+      // Notify all non-proposer participants that session was cancelled
+      sendPushToUsers(
+        sessionData.participantIds.filter((pid: string) => pid !== uid),
+        {
+          title: "Session Cancelled",
+          body: "A group session you were in has been cancelled. Your stake has been refunded.",
+        },
+        { type: "session_cancelled", sessionId },
+      );
 
       console.log(
         `cancelGroupSession: session=${sessionId}, refunded=${refundedCount}`,

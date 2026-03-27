@@ -148,6 +148,27 @@ export async function getConnectAccountStatus(): Promise<{
   }>("getConnectAccountStatus", {});
 }
 
+// ─── Plaid bank connection functions ────────────────────────────────────────
+
+/** Creates a Plaid Link token for the client to open the bank-connection UI. */
+export async function createPlaidLinkToken(): Promise<{ linkToken: string }> {
+  return callFunction<{ linkToken: string }>("createPlaidLinkToken", {});
+}
+
+/**
+ * Exchanges a Plaid public_token, creates a Stripe Custom connected account,
+ * and attaches the bank — all server-side. One-time setup per bank.
+ */
+export async function linkBankAccount(
+  publicToken: string,
+  accountId: string,
+): Promise<{ success: boolean; bankName: string; bankMask: string }> {
+  return callFunction<{ success: boolean; bankName: string; bankMask: string }>(
+    "linkBankAccount",
+    { publicToken, accountId },
+  );
+}
+
 export interface WithdrawalResult {
   success: boolean;
   transferId: string;
@@ -155,14 +176,36 @@ export interface WithdrawalResult {
   estimatedArrival: string;
 }
 
-// method: 'standard' (free, 1-2 days) | 'instant' (1.5% fee, ~30 min, Niyah absorbs fee)
+// method: 'standard' (free, 1-2 days) | 'instant' (1.5% fee, ~30 min) | 'venmo' (manual, ~24h)
 export async function requestWithdrawal(
   amount: number,
-  method: "standard" | "instant",
+  method: "standard" | "instant" | "venmo",
 ): Promise<WithdrawalResult> {
   return callFunction<WithdrawalResult>("requestWithdrawal", {
     amount,
     method,
+  });
+}
+
+// ─── Contact discovery functions ────────────────────────────────────────────
+
+export interface ContactMatch {
+  uid: string;
+  name: string;
+  reputation: { score: number; level: string };
+}
+
+/**
+ * Matches device contacts against NIYAH users by phone number and email.
+ * Raw contacts are NOT stored server-side — only used for transient matching.
+ */
+export async function findContactsOnNiyah(
+  phones: string[],
+  emails: string[],
+): Promise<{ matches: ContactMatch[] }> {
+  return callFunction<{ matches: ContactMatch[] }>("findContactsOnNiyah", {
+    phones,
+    emails,
   });
 }
 

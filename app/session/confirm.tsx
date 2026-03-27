@@ -17,6 +17,7 @@ import { useAuthStore } from "../../src/store/authStore";
 import {
   CADENCES,
   DEMO_MODE,
+  USE_SHORT_TIMERS,
   REPUTATION_LEVELS,
   SOLO_COMPLETION_MULTIPLIER,
 } from "../../src/constants/config";
@@ -294,7 +295,7 @@ export default function ConfirmSessionScreen() {
   };
 
   const getDurationText = () => {
-    if (DEMO_MODE) return `${config.demoDuration / 1000} seconds (demo)`;
+    if (USE_SHORT_TIMERS) return `${config.demoDuration / 1000} seconds (demo)`;
     switch (cadence) {
       case "daily":
         return "24 hours";

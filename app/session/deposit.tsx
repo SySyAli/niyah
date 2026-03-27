@@ -188,6 +188,9 @@ export default function DepositScreen() {
     null,
   );
   const [isLoading, setIsLoading] = useState(false);
+  // Store paymentIntentId for retry if verify fails after payment succeeds
+  const [pendingVerifyId, setPendingVerifyId] = useState<string | null>(null);
+  const [pendingVerifyAmount, setPendingVerifyAmount] = useState<number>(0);
 
   const paymentsUnavailable = !DEMO_MODE && !isStripePaymentsAvailable;
 
@@ -279,6 +282,10 @@ export default function DepositScreen() {
         throw new Error("Payment setup is incomplete. Please try again.");
       }
 
+      // Save for potential retry if verify fails after payment succeeds
+      setPendingVerifyId(paymentIntentId);
+      setPendingVerifyAmount(finalAmount);
+
       const { error: initError } = await initPaymentSheet({
         merchantDisplayName: "NIYAH",
         paymentIntentClientSecret: clientSecret,
@@ -331,6 +338,7 @@ export default function DepositScreen() {
       }
 
       const result = await verifyAndCreditDeposit(paymentIntentId);
+      setPendingVerifyId(null);
 
       if ("processing" in result) {
         // ACH bank debit — webhook will credit balance when cleared
@@ -351,7 +359,62 @@ export default function DepositScreen() {
       }
     } catch (err) {
       logger.error("Deposit error:", err);
-      Alert.alert("Deposit Failed", getDepositErrorMessage(err));
+      // If payment sheet succeeded but verify failed, save for retry
+      if (pendingVerifyId) {
+        Alert.alert(
+          "Verification Failed",
+          "Your payment went through but we couldn't verify it. Tap Retry to try again — you won't be charged twice.",
+          [
+            { text: "Retry", onPress: () => handleRetryVerify() },
+            { text: "Cancel", style: "cancel" },
+          ],
+        );
+      } else {
+        Alert.alert("Deposit Failed", getDepositErrorMessage(err));
+      }
+      // Resync wallet from Firestore in case server credited but client missed it
+      const uid = getAuth().currentUser?.uid;
+      if (uid) {
+        useWalletStore.getState().hydrate(uid).catch(() => {});
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetryVerify = async () => {
+    if (!pendingVerifyId) return;
+    setIsLoading(true);
+    try {
+      const result = await verifyAndCreditDeposit(pendingVerifyId);
+      setPendingVerifyId(null);
+
+      if ("processing" in result) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+          "Bank Transfer Initiated",
+          `Your bank transfer is being processed. Funds will appear soon.`,
+          [{ text: "Got it", onPress: () => router.back() }],
+        );
+      } else {
+        deposit(pendingVerifyAmount, result.newBalance);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          "Funds Added",
+          `${formatMoney(pendingVerifyAmount)} added to your NIYAH balance.`,
+          [{ text: "Done", onPress: () => router.back() }],
+        );
+      }
+    } catch (err) {
+      logger.error("Retry verify error:", err);
+      Alert.alert(
+        "Still Failed",
+        "We couldn't verify your payment. Your balance will update automatically once the payment clears. Contact support if it doesn't appear within a few minutes.",
+      );
+      const uid = getAuth().currentUser?.uid;
+      if (uid) {
+        useWalletStore.getState().hydrate(uid).catch(() => {});
+      }
     } finally {
       setIsLoading(false);
     }

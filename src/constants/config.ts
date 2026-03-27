@@ -38,6 +38,10 @@ export const CADENCES = {
 // Demo mode: driven by env var so production builds can't accidentally ship demo.
 // Set EXPO_PUBLIC_DEMO_MODE=true in .env for development; omit or set false for production.
 export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === "true";
+// Short timers: use demo durations (10s/60s/90s) with real backend + payments.
+// Set EXPO_PUBLIC_SHORT_TIMERS=true in .env for quick testing without demo mode.
+export const USE_SHORT_TIMERS =
+  DEMO_MODE || process.env.EXPO_PUBLIC_SHORT_TIMERS === "true";
 export const INITIAL_BALANCE = 5000; // $50.00 in cents
 
 // Reputation thresholds

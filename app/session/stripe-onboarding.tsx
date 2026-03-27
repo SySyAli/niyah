@@ -37,9 +37,11 @@ export default function StripeOnboardingScreen() {
   const [status, setStatus] = useState<AccountStatus>("none");
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const checkStatus = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       if (!user?.stripeAccountId) {
         setStatus("none");
@@ -55,6 +57,12 @@ export default function StripeOnboardingScreen() {
       }
     } catch (err) {
       logger.error("Failed to check Stripe status:", err);
+      // If we have a cached status, use it; otherwise show error
+      if (user?.stripeAccountStatus) {
+        setStatus(user.stripeAccountStatus as AccountStatus);
+      } else {
+        setLoadError("Could not reach the server. Check your connection and try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -110,6 +118,29 @@ export default function StripeOnboardingScreen() {
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Checking account status...</Text>
+        </View>
+      );
+    }
+
+    if (loadError) {
+      return (
+        <View style={styles.center}>
+          <Text style={styles.statusEmoji}>!</Text>
+          <Text style={styles.statusTitle}>Connection Error</Text>
+          <Text style={styles.statusDescription}>{loadError}</Text>
+          <Button
+            title="Retry"
+            onPress={checkStatus}
+            size="large"
+            style={styles.actionButton}
+          />
+          <Button
+            title="Go Back"
+            onPress={() => router.back()}
+            size="large"
+            variant="secondary"
+            style={styles.actionButton}
+          />
         </View>
       );
     }

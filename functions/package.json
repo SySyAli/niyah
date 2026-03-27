@@ -16,11 +16,12 @@
   "dependencies": {
     "firebase-admin": "^12.7.0",
     "firebase-functions": "^6.3.0",
+    "plaid": "^41.4.0",
     "stripe": "^17.4.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.3"
   },
   "private": true
 }

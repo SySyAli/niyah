@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
 const GOOGLE_FORM_URL = "https://forms.gle/xC4qzpmwWwDD7Z5VA";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const screenshots = [
-  { src: "/app-screen-1.svg", alt: "Welcome to Niyah" },
-  { src: "/app-screen-2.svg", alt: "How it works" },
-  { src: "/app-screen-3.svg", alt: "Active session" },
-  { src: "/app-screen-4.svg", alt: "Session complete" },
+  { src: `${BASE_PATH}/app-screen-1.svg`, alt: "Welcome to Niyah" },
+  { src: `${BASE_PATH}/app-screen-2.svg`, alt: "How it works" },
+  { src: `${BASE_PATH}/app-screen-3.svg`, alt: "Active session" },
+  { src: `${BASE_PATH}/app-screen-4.svg`, alt: "Session complete" },
 ];
 
 export function Hero() {

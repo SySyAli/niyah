@@ -264,7 +264,7 @@ export default function SurrenderScreen() {
       const venmoUrl = getVenmoPayLink(
         amountOwed,
         settledPartner.venmoHandle,
-        `NIYAH session - lost to ${settledPartner.name}`,
+        `Niyah session - lost to ${settledPartner.name}`,
       );
 
       try {

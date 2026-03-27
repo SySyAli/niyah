@@ -55,7 +55,7 @@ class NiyahShieldActionExtension: ShieldActionDelegate {
     ) {
         switch action {
         case .primaryButtonPressed:
-            // "Stay Focused" — close the shield, return to Home Screen.
+            // "Close" — dismiss the shield, return to Home Screen.
             // Blocking stays active.
             completionHandler(.close)
 

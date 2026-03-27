@@ -41,7 +41,7 @@ declare class NiyahScreenTimeModuleClass extends NativeModule<NiyahScreenTimeMod
 
   /**
    * Start blocking the selected apps.
-   * Call this when a NIYAH session begins.
+   * Call this when a Niyah session begins.
    * Applies a ManagedSettings shield to all selected apps.
    */
   startBlocking(): Promise<void>;

@@ -170,7 +170,7 @@
 
 5. **Share link for invites:**
    - Generate dynamic link: `https://{project}.firebaseapp.com/invite/{sessionId}`
-   - Share via `Share.share()` with message like "Join my focus session on NIYAH! $5 stake, 1 hour. [link]"
+   - Share via `Share.share()` with message like "Join my focus session on Niyah! $5 stake, 1 hour. [link]"
    - Handle deep link in `_layout.tsx` → navigate to invite acceptance screen
 
 ---

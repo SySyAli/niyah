@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   Pressable,
   ActivityIndicator,
   Modal,
@@ -66,16 +65,12 @@ export default function AuthEntryScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
-  const { loginWithGoogle, loginWithApple, sendEmailLink, isLoading } =
-    useAuthStore();
+  const { loginWithGoogle, loginWithApple, isLoading } = useAuthStore();
 
-  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [legalModalVisible, setLegalModalVisible] = useState(false);
-
-  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   // ── Google Sign-In ──
   const handleGoogle = async () => {
@@ -157,51 +152,35 @@ export default function AuthEntryScreen() {
   };
 
   // ── Email Magic Link ──
-  const handleEmailContinue = async () => {
-    if (!isValidEmail) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    setError("");
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await sendEmailLink(email);
-      router.push({
-        pathname: "/(auth)/check-email",
-        params: { email },
-      });
-    } catch (e: unknown) {
-      logger.error("Magic link error:", e);
-      setError(
-        getErrorMessage(e, "Failed to send sign-in link. Please try again."),
-      );
-    }
-  };
-
   const anyLoading = isLoading || googleLoading || appleLoading;
 
   return (
     <AuthScreenScaffold
-      title={"Welcome to\nNiyah"}
-      subtitle={"Sign in or create an account\nto get started"}
+      title={"Save your\nprogress"}
+      subtitle={"Let's get started on your focus journey."}
       footer={
-        <Text style={styles.footerText}>
-          By continuing, you agree to our{" "}
-          <Text
-            style={styles.footerLink}
-            onPress={() => setLegalModalVisible(true)}
-          >
-            Terms of Service
-          </Text>{" "}
-          and{" "}
-          <Text
-            style={styles.footerLink}
-            onPress={() => setLegalModalVisible(true)}
-          >
-            Privacy Policy
+        <View style={styles.footerContainer}>
+          <Text style={styles.privacyNote}>
+            Your sensitive data is protected by Apple{"\n"}and never leaves your
+            device
           </Text>
-        </Text>
+          <Text style={styles.footerText}>
+            By continuing, you agree to our{" "}
+            <Text
+              style={styles.footerLink}
+              onPress={() => setLegalModalVisible(true)}
+            >
+              Terms of Service
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={styles.footerLink}
+              onPress={() => setLegalModalVisible(true)}
+            >
+              Privacy Policy
+            </Text>
+          </Text>
+        </View>
       }
     >
       {/* Error */}
@@ -211,8 +190,61 @@ export default function AuthEntryScreen() {
         </View>
       ) : null}
 
-      {/* Social buttons */}
+      {/* Phone number — primary sign-in */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.phoneButton,
+          pressed && styles.socialButtonPressed,
+          anyLoading && styles.socialButtonDisabled,
+        ]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.push("/(auth)/phone-entry");
+        }}
+        disabled={anyLoading}
+      >
+        <Text style={styles.phoneButtonPrefix}>+1</Text>
+        <Text style={styles.phoneButtonPlaceholder}>Phone Number</Text>
+      </Pressable>
+
+      <Button
+        title="Next"
+        onPress={() => router.push("/(auth)/phone-entry")}
+        disabled={anyLoading}
+        size="large"
+      />
+
+      {/* OR divider */}
+      <View style={styles.orDivider}>
+        <View style={styles.orLine} />
+        <Text style={styles.orText}>or</Text>
+        <View style={styles.orLine} />
+      </View>
+
+      {/* Apple + Google */}
       <View style={styles.socialSection}>
+        {/* Apple — custom button to match Google style */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.socialButton,
+            pressed && styles.socialButtonPressed,
+            anyLoading && styles.socialButtonDisabled,
+          ]}
+          onPress={handleApple}
+          disabled={anyLoading}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Apple"
+        >
+          {appleLoading ? (
+            <ActivityIndicator size="small" color={Colors.text} />
+          ) : (
+            <>
+              <Text style={styles.appleIcon}>{"\uF8FF"}</Text>
+              <Text style={styles.socialButtonText}>Continue with Apple</Text>
+            </>
+          )}
+        </Pressable>
+
         {/* Google */}
         <Pressable
           style={({ pressed }) => [
@@ -234,58 +266,6 @@ export default function AuthEntryScreen() {
             </>
           )}
         </Pressable>
-
-        {/* Apple (iOS only) — wrapped so the native control respects our height */}
-        <View style={styles.appleButtonWrapper}>
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={
-              AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
-            }
-            buttonStyle={
-              AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-            }
-            cornerRadius={Radius.lg}
-            style={styles.appleButton}
-            onPress={handleApple}
-          />
-        </View>
-      </View>
-
-      {/* OR divider */}
-      <View style={styles.orDivider}>
-        <View style={styles.orLine} />
-        <Text style={styles.orText}>or</Text>
-        <View style={styles.orLine} />
-      </View>
-
-      {/* Email input */}
-      <View style={styles.emailSection}>
-        <TextInput
-          style={styles.emailInput}
-          placeholder="your@email.com"
-          placeholderTextColor={Colors.textMuted}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="email"
-          textContentType="emailAddress"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setError("");
-          }}
-          editable={!anyLoading}
-          returnKeyType="go"
-          onSubmitEditing={handleEmailContinue}
-        />
-
-        <Button
-          title="Continue"
-          onPress={handleEmailContinue}
-          disabled={!isValidEmail || anyLoading}
-          loading={isLoading && !googleLoading && !appleLoading}
-          size="large"
-        />
       </View>
 
       {/* Read-only legal modal */}
@@ -327,6 +307,27 @@ const makeStyles = (Colors: ThemeColors) =>
       fontSize: Typography.bodySmall,
       textAlign: "center",
     },
+    phoneButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      height: 56,
+      borderRadius: Radius.lg,
+      backgroundColor: Colors.backgroundCard,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      paddingHorizontal: Spacing.lg,
+      gap: Spacing.md,
+      marginBottom: Spacing.md,
+    },
+    phoneButtonPrefix: {
+      fontSize: Typography.bodyLarge,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    phoneButtonPlaceholder: {
+      fontSize: Typography.bodyLarge,
+      color: Colors.textMuted,
+    },
     socialSection: {
       gap: Spacing.md,
     },
@@ -353,18 +354,9 @@ const makeStyles = (Colors: ThemeColors) =>
       ...Font.medium,
       color: Colors.text,
     },
-    // Wrapper enforces the same height as the Google button.
-    // Without an explicit container the native Apple button expands
-    // to its own preferred intrinsic size, making the text appear
-    // much larger than our custom Google button.
-    appleButtonWrapper: {
-      height: 56,
-      borderRadius: Radius.lg,
-      overflow: "hidden" as const,
-    },
-    appleButton: {
-      height: 56,
-      width: "100%",
+    appleIcon: {
+      fontSize: 22,
+      color: Colors.text,
     },
     orDivider: {
       flexDirection: "row",
@@ -381,18 +373,14 @@ const makeStyles = (Colors: ThemeColors) =>
       color: Colors.textMuted,
       marginHorizontal: Spacing.lg,
     },
-    emailSection: {
-      gap: Spacing.md,
+    footerContainer: {
+      gap: Spacing.sm,
     },
-    emailInput: {
-      height: 56,
-      backgroundColor: Colors.backgroundCard,
-      borderRadius: Radius.lg,
-      paddingHorizontal: Spacing.lg,
-      fontSize: Typography.bodyLarge,
-      color: Colors.text,
-      borderWidth: 1,
-      borderColor: Colors.border,
+    privacyNote: {
+      fontSize: Typography.labelSmall,
+      color: Colors.textMuted,
+      textAlign: "center",
+      lineHeight: Typography.labelSmall * 1.6,
     },
     footerText: {
       fontSize: Typography.labelSmall,

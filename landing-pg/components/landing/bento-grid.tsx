@@ -6,7 +6,7 @@ export function BentoGrid() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-12 text-center">
           <h2 className="mb-4 text-3xl font-bold leading-tight tracking-tight text-[oklch(0.93_0.01_80)] md:text-4xl lg:text-5xl text-balance">
-            Why NIYAH works when other apps don&apos;t.
+            Why Niyah works when other apps don&apos;t.
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-[oklch(0.93_0.01_80)]/60">
             Every screen time app tells you how much you used your phone. That
@@ -25,7 +25,7 @@ export function BentoGrid() {
                 Financial stakes change everything
               </h3>
               <p className="max-w-lg text-white/75">
-                NIYAH is built on behavioral economics — commitment contracts
+                Niyah is built on behavioral economics — commitment contracts
                 with real financial stakes. When your actual money is on the
                 line, and your friends can see whether you followed through, the
                 incentive structure is fundamentally different.

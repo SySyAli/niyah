@@ -38,7 +38,7 @@ export interface User {
     eyesPreset: "classic" | "happy" | "wink" | "sleepy" | "surprised";
   };
   phoneNumber?: string;
-  authProvider?: "email" | "google" | "apple";
+  authProvider?: "email" | "google" | "apple" | "phone";
   // Firebase-backed profile
   profileComplete?: boolean;
   // Stripe

@@ -110,7 +110,7 @@ export async function handleSessionComplete(
   );
 }
 
-/** Stake is retained as NIYAH revenue. Server reads amount from session doc. */
+/** Stake is retained as Niyah revenue. Server reads amount from session doc. */
 export async function handleSessionForfeit(
   sessionId: string,
   _stakeAmount?: number,
@@ -196,7 +196,7 @@ export interface ContactMatch {
 }
 
 /**
- * Matches device contacts against NIYAH users by phone number and email.
+ * Matches device contacts against Niyah users by phone number and email.
  * Raw contacts are NOT stored server-side — only used for transient matching.
  */
 export async function findContactsOnNiyah(

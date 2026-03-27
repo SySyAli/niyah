@@ -15,8 +15,11 @@ export default function AuthLayout() {
     >
       <Stack.Screen name="welcome" />
       <Stack.Screen name="auth-entry" />
+      <Stack.Screen name="phone-entry" />
+      <Stack.Screen name="verify-phone" />
       <Stack.Screen name="check-email" />
       <Stack.Screen name="profile-setup" />
+      <Stack.Screen name="screentime-setup" />
     </Stack>
   );
 }

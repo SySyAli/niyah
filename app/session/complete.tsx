@@ -437,7 +437,7 @@ export default function CompleteScreen() {
     const venmoUrl = getVenmoPayLink(
       transfer.amount,
       recipient.venmoHandle,
-      `NIYAH session payment`,
+      `Niyah session payment`,
     );
     try {
       const canOpen = await Linking.canOpenURL(venmoUrl);

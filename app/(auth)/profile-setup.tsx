@@ -84,8 +84,8 @@ export default function ProfileSetupScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Navigate to main app (or Stripe connect in PR 3)
-      router.replace("/(tabs)");
+      // Route to Screen Time setup before main app
+      router.replace("/(auth)/screentime-setup");
     } catch (e: unknown) {
       const err = e as { message?: string };
       logger.error("Profile setup error:", e);
@@ -148,19 +148,21 @@ export default function ProfileSetupScreen() {
           />
         </View>
 
-        {/* Email (locked) */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <View style={styles.lockedInputContainer}>
-            <TextInput
-              style={[styles.input, styles.lockedInput]}
-              value={email}
-              editable={false}
-              selectTextOnFocus={false}
-            />
-            <Text style={styles.lockIcon}>{"\uD83D\uDD12"}</Text>
+        {/* Email (locked) — hidden for phone auth users who have no email */}
+        {email ? (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email</Text>
+            <View style={styles.lockedInputContainer}>
+              <TextInput
+                style={[styles.input, styles.lockedInput]}
+                value={email}
+                editable={false}
+                selectTextOnFocus={false}
+              />
+              <Text style={styles.lockIcon}>{"\uD83D\uDD12"}</Text>
+            </View>
           </View>
-        </View>
+        ) : null}
 
         {/* Phone (optional) */}
         <View style={styles.inputGroup}>

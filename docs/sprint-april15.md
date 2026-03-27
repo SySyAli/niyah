@@ -1,4 +1,4 @@
-# NIYAH: Technical Spec + Implementation Plan (v2)
+# Niyah: Technical Spec + Implementation Plan (v2)
 
 ## Context
 
@@ -337,6 +337,6 @@ Already covered in Phase 0 (0E) — `loadMyFollows` called on mount in `propose.
 1. Open app → show usage chart (top apps, time-of-day)
 2. Build smart schedule from calendar (shows events + suggested focus blocks)
 3. Confirm → schedule created, blocking activates at the right time
-4. Open blocked app → custom NIYAH shield appears
+4. Open blocked app → custom Niyah shield appears
 5. Group session: invite friend, both accept, both go active, timer counts, complete + payout
 6. Deposit via Apple Pay, withdraw to bank

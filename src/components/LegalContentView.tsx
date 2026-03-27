@@ -16,25 +16,25 @@ const TERMS_CONTENT = `Terms of Service
 Last updated: March 2026
 
 1. Overview
-NIYAH is a productivity app and commitment-contract service. Users stake money as a commitment device to support focus goals. Session outcomes depend on user action, not chance, luck, or random events.
+Niyah is a productivity app and commitment-contract service. Users stake money as a commitment device to support focus goals. Session outcomes depend on user action, not chance, luck, or random events.
 
 2. Eligibility
-You must be at least 18 years old and a U.S. resident to use NIYAH. You are responsible for maintaining the security of your account credentials.
+You must be at least 18 years old and a U.S. resident to use Niyah. You are responsible for maintaining the security of your account credentials.
 
 3. How Sessions Work
 You choose a session cadence (daily, weekly, or monthly) and stake an amount. If you complete the session, your stake is returned. If you surrender early, your stake is forfeited. In group sessions, completers share the pool of forfeited stakes.
 
 4. Not Gambling
-NIYAH is not a gambling, gaming, lottery, or betting service. Stakes are commitment devices — outcomes are determined entirely by your own actions during the session period.
+Niyah is not a gambling, gaming, lottery, or betting service. Stakes are commitment devices — outcomes are determined entirely by your own actions during the session period.
 
 5. Payments and Settlements
-Deposits and withdrawals are processed through Stripe. Group session settlements between participants may use Venmo or other peer-to-peer payment methods. NIYAH does not guarantee settlement between participants.
+Deposits and withdrawals are processed through Stripe. Group session settlements between participants may use Venmo or other peer-to-peer payment methods. Niyah does not guarantee settlement between participants.
 
 6. User Conduct
-You agree not to abuse the service, create fake accounts, manipulate sessions, or engage in fraudulent payment activity. NIYAH reserves the right to suspend or terminate accounts that violate these terms.
+You agree not to abuse the service, create fake accounts, manipulate sessions, or engage in fraudulent payment activity. Niyah reserves the right to suspend or terminate accounts that violate these terms.
 
 7. Limitation of Liability
-NIYAH is provided "as is" without warranties of any kind. We are not liable for indirect, incidental, or consequential damages arising from your use of the service.
+Niyah is provided "as is" without warranties of any kind. We are not liable for indirect, incidental, or consequential damages arising from your use of the service.
 
 8. Changes to Terms
 We may update these terms from time to time. When we do, you will be prompted to accept the new version before continuing to use the app.

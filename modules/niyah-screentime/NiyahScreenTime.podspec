@@ -1,11 +1,11 @@
 Pod::Spec.new do |s|
   s.name           = 'NiyahScreenTime'
   s.version        = '1.0.0'
-  s.summary        = 'Screen Time API bridge for NIYAH'
+  s.summary        = 'Screen Time API bridge for Niyah'
   s.description    = 'Custom Expo module bridging iOS FamilyControls, ManagedSettings, and DeviceActivity to JavaScript for app blocking during focus sessions.'
   s.homepage       = 'https://github.com/niyah'
   s.license        = 'MIT'
-  s.author         = 'NIYAH'
+  s.author         = 'Niyah'
   s.platforms      = { :ios => '15.1' }
   s.source         = { git: '' }
   s.static_framework = true

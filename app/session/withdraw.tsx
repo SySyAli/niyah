@@ -324,7 +324,7 @@ export default function WithdrawScreen() {
                 </View>
                 <Text style={styles.methodDescription}>
                   Instant bank transfer. 1.5% fee (min $0.50) — covered by
-                  NIYAH. You receive the full {formatMoney(amountInCents)}.
+                  Niyah. You receive the full {formatMoney(amountInCents)}.
                 </Text>
               </View>
             </Pressable>
@@ -361,7 +361,7 @@ export default function WithdrawScreen() {
                 <Text style={styles.setupTitle}>Connect Your Bank</Text>
                 <Text style={styles.setupDescription}>
                   Link your bank account to withdraw directly. Secure connection
-                  via Plaid — your credentials are never shared with NIYAH.
+                  via Plaid — your credentials are never shared with Niyah.
                 </Text>
                 <Button
                   title="Connect Bank Account"

@@ -74,7 +74,7 @@ function withGoogleServicesPlist(config) {
       group: "Resources",
     });
 
-    // 3. Add to the main project group (e.g., "NIYAH")
+    // 3. Add to the main project group (e.g., "Niyah")
     const groups = xcodeProject.hash.project.objects["PBXGroup"];
     for (const key of Object.keys(groups)) {
       const group = groups[key];

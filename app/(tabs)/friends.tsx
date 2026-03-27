@@ -4,13 +4,17 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
+  TextInput,
   Pressable,
   ActivityIndicator,
   Alert,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Contacts from "expo-contacts";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Spacing,
   Typography,
@@ -238,6 +242,60 @@ const makeStyles = (Colors: ThemeColors) =>
       fontSize: Typography.labelMedium,
       color: Colors.textMuted,
     },
+    inviteSearchInput: {
+      height: 36,
+      backgroundColor: Colors.backgroundSecondary,
+      borderRadius: Radius.md,
+      paddingHorizontal: Spacing.md,
+      fontSize: Typography.bodySmall,
+      color: Colors.text,
+      marginBottom: Spacing.sm,
+    },
+    inviteScrollBox: {
+      maxHeight: 240,
+      borderRadius: Radius.lg,
+    },
+    inviteRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.md,
+      gap: Spacing.sm,
+    },
+    inviteAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: Colors.backgroundTertiary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    inviteAvatarText: {
+      fontSize: Typography.labelMedium,
+      ...Font.semibold,
+      color: Colors.textSecondary,
+    },
+    inviteContactName: {
+      flex: 1,
+      fontSize: Typography.bodySmall,
+      ...Font.medium,
+      color: Colors.text,
+    },
+    inviteBtn: {
+      paddingVertical: 4,
+      paddingHorizontal: Spacing.md,
+      borderRadius: Radius.full,
+      backgroundColor: Colors.primaryMuted,
+      borderWidth: 1,
+      borderColor: Colors.primary,
+    },
+    inviteBtnText: {
+      fontSize: Typography.labelSmall,
+      ...Font.semibold,
+      color: Colors.primary,
+    },
   });
 
 // ─── Segment control ──────────────────────────────────────────────────────────
@@ -453,6 +511,28 @@ export default function FriendsScreen() {
   const [isImporting, setIsImporting] = useState(false);
   const hasImported = lastContactSyncAt !== null;
 
+  // Local contacts that are NOT on Niyah — shown with "Invite" button
+  const [nonMatchedContacts, setNonMatchedContacts] = useState<
+    { name: string; phone?: string; email?: string }[]
+  >([]);
+  const [inviteSearch, setInviteSearch] = useState("");
+
+  // Persist invite contacts to AsyncStorage
+  const CONTACTS_STORAGE_KEY = "@niyah/invite_contacts";
+
+  useEffect(() => {
+    AsyncStorage.getItem(CONTACTS_STORAGE_KEY).then((raw) => {
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setNonMatchedContacts(parsed);
+          }
+        } catch {}
+      }
+    });
+  }, []);
+
   const myUid = user?.id ?? "";
 
   useEffect(() => {
@@ -522,7 +602,10 @@ export default function FriendsScreen() {
 
   const handleImportContacts = useCallback(async () => {
     // Skip re-fetch if cache is fresh (< 5 min old) and we have results
-    if (!isContactSyncStale() && contactMatches.length > 0) {
+    if (
+      !isContactSyncStale() &&
+      (contactMatches.length > 0 || nonMatchedContacts.length > 0)
+    ) {
       return;
     }
 
@@ -532,7 +615,7 @@ export default function FriendsScreen() {
       if (status !== "granted") {
         Alert.alert(
           "Contacts Access Needed",
-          "Allow NIYAH to access contacts so you can find friends already on the app.",
+          "Allow Niyah to access contacts so you can find friends already on the app.",
           [{ text: "OK" }],
         );
         setIsImporting(false);
@@ -543,29 +626,57 @@ export default function FriendsScreen() {
         fields: [Contacts.Fields.PhoneNumbers, Contacts.Fields.Emails],
       });
 
+      // Build a map of contact name → phone/email for later "Invite" display
+      const contactMap: Record<
+        string,
+        { name: string; phone?: string; email?: string }
+      > = {};
+
       // Extract phone numbers and emails
       const phones: string[] = [];
       const emails: string[] = [];
       for (const contact of data) {
+        const name = [contact.firstName, contact.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+        if (!name) continue;
+
+        let primaryPhone: string | undefined;
+        let primaryEmail: string | undefined;
+
         if (contact.phoneNumbers) {
           for (const pn of contact.phoneNumbers) {
             if (pn.number) {
-              // Normalize: strip non-digits, add +1 if US number without country code
               const digits = pn.number.replace(/[^\d+]/g, "");
+              let normalized: string | null = null;
               if (digits.startsWith("+")) {
-                phones.push(digits);
+                normalized = digits;
               } else if (digits.length === 10) {
-                phones.push(`+1${digits}`);
+                normalized = `+1${digits}`;
               } else if (digits.length === 11 && digits.startsWith("1")) {
-                phones.push(`+${digits}`);
+                normalized = `+${digits}`;
+              }
+              if (normalized) {
+                phones.push(normalized);
+                if (!primaryPhone) primaryPhone = normalized;
               }
             }
           }
         }
         if (contact.emails) {
           for (const em of contact.emails) {
-            if (em.email) emails.push(em.email.toLowerCase());
+            if (em.email) {
+              const lower = em.email.toLowerCase();
+              emails.push(lower);
+              if (!primaryEmail) primaryEmail = lower;
+            }
           }
+        }
+
+        if (primaryPhone || primaryEmail) {
+          const key = primaryPhone || primaryEmail || name;
+          contactMap[key] = { name, phone: primaryPhone, email: primaryEmail };
         }
       }
 
@@ -578,23 +689,56 @@ export default function FriendsScreen() {
         return;
       }
 
-      const result = await findContactsOnNiyah(phones, emails);
+      // Filter to contacts with real names (not just phone numbers/emails)
+      // and who have a phone number (needed for SMS invite)
+      const isRealName = (name: string) => {
+        // Reject names that are just digits, emails, or phone-number-like
+        if (/^[\d+\-() ]+$/.test(name)) return false;
+        if (name.includes("@")) return false;
+        if (name.length < 2) return false;
+        // Must have at least one letter
+        return /[a-zA-Z]/.test(name);
+      };
 
-      // Filter out users we already follow
-      const newMatches = result.matches.filter(
-        (m) => !isFollowing(m.uid) && m.uid !== myUid,
-      );
+      const allLocalContacts = Object.values(contactMap)
+        .filter((c) => isRealName(c.name) && c.phone)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setNonMatchedContacts(allLocalContacts);
+      AsyncStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(allLocalContacts)).catch(() => {});
 
-      setContactMatches(newMatches);
+      // Now try to find which contacts are already on Niyah
+      try {
+        const result = await findContactsOnNiyah(phones, emails);
 
-      if (newMatches.length === 0) {
-        Alert.alert(
-          "No New Friends Found",
-          "None of your contacts are on NIYAH yet. Invite them!",
-          [
-            { text: "Invite", onPress: () => router.push("/invite") },
-            { text: "OK" },
-          ],
+        // Filter out users we already follow
+        const newMatches = result.matches.filter(
+          (m) => !isFollowing(m.uid) && m.uid !== myUid,
+        );
+
+        setContactMatches(newMatches);
+
+        // Remove matched users from the invite list
+        if (newMatches.length > 0) {
+          const matchedNames = new Set(
+            result.matches.map((m) => m.name.toLowerCase()),
+          );
+          setNonMatchedContacts((prev) => {
+            const filtered = prev.filter(
+              (c) => !matchedNames.has(c.name.toLowerCase()),
+            );
+            AsyncStorage.setItem(
+              CONTACTS_STORAGE_KEY,
+              JSON.stringify(filtered),
+            ).catch(() => {});
+            return filtered;
+          });
+        }
+      } catch (matchErr) {
+        // Cloud function failed (rate limit, etc.) — that's fine,
+        // we still show all contacts as invite-able
+        logger.warn(
+          "findContactsOnNiyah failed, showing all as invitable:",
+          matchErr,
         );
       }
     } catch (err) {
@@ -607,8 +751,8 @@ export default function FriendsScreen() {
     isFollowing,
     isContactSyncStale,
     contactMatches.length,
+    nonMatchedContacts.length,
     myUid,
-    router,
     setContactMatches,
   ]);
 
@@ -669,6 +813,18 @@ export default function FriendsScreen() {
     [loadingUids, isFollowing, router],
   );
 
+  const handleInviteContact = useCallback(
+    (contact: { name: string; phone?: string }) => {
+      if (!contact.phone) return;
+      const body = encodeURIComponent(
+        `Hey ${contact.name.split(" ")[0]}! Join me on Niyah\n\nIt blocks distracting apps & you can compete against friends with real money.\n\nDownload it here: https://niyah.live`,
+      );
+      // iOS sms: URL scheme opens iMessage with pre-filled body
+      Linking.openURL(`sms:${contact.phone}&body=${body}`);
+    },
+    [],
+  );
+
   const handleFollowMatch = useCallback(
     async (targetUid: string) => {
       setLoadingUids((prev) => ({ ...prev, [targetUid]: true }));
@@ -718,7 +874,7 @@ export default function FriendsScreen() {
           <View style={styles.contactMatchSection}>
             <View style={styles.contactMatchHeader}>
               <Text style={styles.contactMatchTitle}>
-                Friends on NIYAH ({contactMatches.length})
+                Friends on Niyah ({contactMatches.length})
               </Text>
               <Pressable onPress={clearContactMatches}>
                 <Text style={styles.contactMatchDismiss}>Dismiss</Text>
@@ -769,6 +925,60 @@ export default function FriendsScreen() {
           </View>
         )}
 
+        {/* ── Invite contacts (not on Niyah) ──────────────────────────────── */}
+        {nonMatchedContacts.length > 0 && (
+          <View style={styles.contactMatchSection}>
+            <View style={styles.contactMatchHeader}>
+              <Text style={styles.contactMatchTitle}>
+                Invite to Niyah ({nonMatchedContacts.length})
+              </Text>
+            </View>
+            <TextInput
+              style={styles.inviteSearchInput}
+              placeholder="Search contacts..."
+              placeholderTextColor={Colors.textMuted}
+              value={inviteSearch}
+              onChangeText={setInviteSearch}
+              autoCapitalize="none"
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+            />
+            <ScrollView
+              style={styles.inviteScrollBox}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+            >
+              {nonMatchedContacts
+                .filter((c) =>
+                  inviteSearch
+                    ? c.name.toLowerCase().includes(inviteSearch.toLowerCase())
+                    : true,
+                )
+                .map((contact, index) => (
+                  <View
+                    key={`invite-${contact.phone || contact.email || index}`}
+                    style={[styles.inviteRow, { marginBottom: Spacing.xs }]}
+                  >
+                    <View style={styles.inviteAvatar}>
+                      <Text style={styles.inviteAvatarText}>
+                        {contact.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={styles.inviteContactName} numberOfLines={1}>
+                      {contact.name}
+                    </Text>
+                    <Pressable
+                      style={styles.inviteBtn}
+                      onPress={() => handleInviteContact(contact)}
+                    >
+                      <Text style={styles.inviteBtnText}>Invite</Text>
+                    </Pressable>
+                  </View>
+                ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* ── Segment control ─────────────────────────────────────────────── */}
         <SegmentControl selected={tab} onChange={setTab} />
       </>
@@ -779,11 +989,14 @@ export default function FriendsScreen() {
       router,
       Colors,
       contactMatches,
+      nonMatchedContacts,
       isImporting,
       hasImported,
       loadingUids,
       handleImportContacts,
       handleFollowMatch,
+      handleInviteContact,
+      inviteSearch,
       clearContactMatches,
     ],
   );

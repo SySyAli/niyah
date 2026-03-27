@@ -115,14 +115,14 @@ export default function InviteScreen() {
     queryParams: uid ? { ref: uid } : undefined,
   });
   const message =
-    `I'm using NIYAH to stay focused by putting real money on the line. ` +
+    `I'm using Niyah to stay focused by putting real money on the line. ` +
     `Join me and we can keep each other accountable!\n\n${inviteLink}`;
 
   const handleShare = async () => {
     try {
       const result = await Share.share(
         { message },
-        { dialogTitle: "Invite a friend to NIYAH" },
+        { dialogTitle: "Invite a friend to Niyah" },
       );
 
       if (result.action === Share.sharedAction) {

@@ -529,12 +529,12 @@ describe("partnerStore", () => {
     it("generates correct Venmo deep link", () => {
       const link = usePartnerStore
         .getState()
-        .getVenmoPayLink(500, "@alice", "NIYAH session payout");
+        .getVenmoPayLink(500, "@alice", "Niyah session payout");
 
       expect(link).toContain("venmo://paycharge");
       expect(link).toContain("recipients=alice");
       expect(link).toContain("amount=5.00");
-      expect(link).toContain("note=NIYAH");
+      expect(link).toContain("note=Niyah");
     });
 
     it("strips @ from handle", () => {

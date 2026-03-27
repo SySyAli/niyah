@@ -135,7 +135,7 @@ Note the Wi-Fi IP it prints at the end.
 pnpm start   # inside WSL
 ```
 
-Open the NIYAH app on your iPhone. Enter the Metro URL: `http://<your-wifi-ip>:8081`
+Open the Niyah app on your iPhone. Enter the Metro URL: `http://<your-wifi-ip>:8081`
 
 All JS/TS code changes hot-reload instantly on your phone.
 
@@ -157,7 +157,7 @@ EAS gives you an install link at the end. Share it with teammates.
 ```bash
 npx expo prebuild --platform ios
 cd ios && pod install && cd ..
-open ios/NIYAH.xcworkspace
+open ios/Niyah.xcworkspace
 ```
 
 In Xcode:

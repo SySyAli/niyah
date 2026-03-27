@@ -1,5 +1,5 @@
 /**
- * NIYAH Firebase Cloud Functions
+ * Niyah Firebase Cloud Functions
  * Stripe payment processing + Connect for peer-to-peer transfers
  *
  * Deploy: firebase deploy --only functions
@@ -11,7 +11,13 @@ import { onRequest, type Request } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
 import Stripe from "stripe";
-import { PlaidApi, Configuration, PlaidEnvironments, Products, CountryCode } from "plaid";
+import {
+  PlaidApi,
+  Configuration,
+  PlaidEnvironments,
+  Products,
+  CountryCode,
+} from "plaid";
 import type { Response } from "express";
 import {
   buildStoredPayouts,
@@ -70,7 +76,8 @@ function getStripe(): Stripe {
 
 // Plaid environment: "sandbox" for testing, "production" for real banks + SMS
 // Switch to "production" once Plaid approves your production access request.
-const PLAID_ENV = (process.env.PLAID_ENV ?? "sandbox") as keyof typeof PlaidEnvironments;
+const PLAID_ENV = (process.env.PLAID_ENV ??
+  "sandbox") as keyof typeof PlaidEnvironments;
 
 function getPlaid(): PlaidApi {
   const config = new Configuration({
@@ -474,7 +481,7 @@ export const createPaymentIntent = onRequest(
 
 // ─── verifyAndCreditDeposit ─────────────────────────────────────────────────
 /**
- * Verifies a PaymentIntent and credits the user's NIYAH balance if appropriate.
+ * Verifies a PaymentIntent and credits the user's Niyah balance if appropriate.
  * Called client-side after PaymentSheet completes (success OR ACH processing).
  *
  * Returns one of three states:
@@ -848,7 +855,7 @@ export const createPlaidLinkToken = onRequest(
       const plaid = getPlaid();
       const response = await plaid.linkTokenCreate({
         user: { client_user_id: uid },
-        client_name: "NIYAH",
+        client_name: "Niyah",
         products: [Products.Auth],
         country_codes: [CountryCode.Us],
         language: "en",
@@ -995,13 +1002,9 @@ export const linkBankAccount = onRequest(
             access_token: accessToken,
             account_id: accountId,
           });
-        stripeBankToken =
-          processorResponse.data.stripe_bank_account_token;
+        stripeBankToken = processorResponse.data.stripe_bank_account_token;
       } catch (err) {
-        console.error(
-          "linkBankAccount step 3 (processor token) failed:",
-          err,
-        );
+        console.error("linkBankAccount step 3 (processor token) failed:", err);
         sendError(
           res,
           500,
@@ -1035,10 +1038,7 @@ export const linkBankAccount = onRequest(
           stripeAccountId = account.id;
         }
       } catch (err) {
-        console.error(
-          "linkBankAccount step 4 (Stripe account) failed:",
-          err,
-        );
+        console.error("linkBankAccount step 4 (Stripe account) failed:", err);
         sendError(res, 500, "Failed to create Stripe connected account");
         return;
       }
@@ -1060,10 +1060,7 @@ export const linkBankAccount = onRequest(
             "linkBankAccount step 5: bank already attached, continuing",
           );
         } else {
-          console.error(
-            "linkBankAccount step 5 (attach bank) failed:",
-            err,
-          );
+          console.error("linkBankAccount step 5 (attach bank) failed:", err);
           sendError(res, 500, "Failed to attach bank account to Stripe");
           return;
         }
@@ -1242,7 +1239,7 @@ export const handleSessionComplete = onRequest(
 // ─── handleSessionForfeit ───────────────────────────────────────────────────
 /**
  * Called when a user surrenders a session.
- * Stake is forfeited — goes to NIYAH (revenue). Firestore balance already
+ * Stake is forfeited — goes to Niyah (revenue). Firestore balance already
  * decremented when session started, so we just record the forfeit.
  * Body: { sessionId: string }
  * Returns: { success: boolean }
@@ -2099,7 +2096,7 @@ export const acceptLegalTerms = onRequest(
 // ─── createGroupSession ──────────────────────────────────────────────────────
 // ─── findContactsOnNiyah ────────────────────────────────────────────────────
 /**
- * Matches device contacts (phone numbers + emails) against existing NIYAH users.
+ * Matches device contacts (phone numbers + emails) against existing Niyah users.
  * Body: { phones: string[], emails: string[] }
  *   phones — E.164 formatted phone numbers (e.g. "+15551234567")
  *   emails — lowercase email addresses
@@ -2157,7 +2154,11 @@ export const findContactsOnNiyah = onRequest(
 
     try {
       const matchedUids = new Set<string>();
-      const matches: { uid: string; name: string; reputation: { score: number; level: string } }[] = [];
+      const matches: {
+        uid: string;
+        name: string;
+        reputation: { score: number; level: string };
+      }[] = [];
 
       // Firestore `in` queries are limited to 30 items, so we batch
       const batchQuery = async (field: string, values: string[]) => {

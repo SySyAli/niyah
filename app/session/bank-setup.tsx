@@ -228,7 +228,7 @@ export default function BankSetupScreen() {
             />
 
             <Text style={styles.disclaimer}>
-              Powered by Plaid. Your credentials are never shared with NIYAH. We
+              Powered by Plaid. Your credentials are never shared with Niyah. We
               only receive your account and routing numbers for transfers.
             </Text>
           </>

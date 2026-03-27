@@ -35,7 +35,7 @@ export interface AppSelectionToken {
 
 /**
  * Event fired when a user opens a shielded/blocked app during a session.
- * This is the key event that triggers money deduction in NIYAH.
+ * This is the key event that triggers money deduction in Niyah.
  */
 export interface ShieldViolationEvent {
   /** Timestamp (ms since epoch) when the violation occurred */

@@ -26,7 +26,7 @@ const googleIosShortId = googleIosClientId.replace(
 
 export default {
   expo: {
-    name: "NIYAH",
+    name: "Niyah",
     slug: "niyah",
     owner: "niyah-app",
     version: "1.0.0",
@@ -51,7 +51,7 @@ export default {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSContactsUsageDescription:
-          "NIYAH uses your contacts to invite friends to focus sessions.",
+          "Niyah uses your contacts to invite friends to focus sessions.",
       },
     },
     android: {

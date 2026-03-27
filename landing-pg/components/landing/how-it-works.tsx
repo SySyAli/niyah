@@ -13,7 +13,7 @@ const steps = [
     icon: Lock,
     title: "Apps get blocked",
     description:
-      "NIYAH uses Apple's Screen Time API to actually block your distracting apps at the system level. No bypassing, no honor system.",
+      "Niyah uses Apple's Screen Time API to actually block your distracting apps at the system level. No bypassing, no honor system.",
   },
   {
     number: "03",

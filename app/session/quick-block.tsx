@@ -222,7 +222,7 @@ export default function QuickBlockScreen() {
         if (result !== "approved") {
           Alert.alert(
             "Authorization Required",
-            "NIYAH needs Screen Time access to block distracting apps.",
+            "Niyah needs Screen Time access to block distracting apps.",
           );
           return;
         }
@@ -310,7 +310,7 @@ export default function QuickBlockScreen() {
         <Card style={styles.setupCard}>
           <Text style={styles.setupTitle}>Setup Required</Text>
           <Text style={styles.setupDescription}>
-            NIYAH needs Screen Time access to block apps on your device.
+            Niyah needs Screen Time access to block apps on your device.
           </Text>
 
           {!isAuthorized && (

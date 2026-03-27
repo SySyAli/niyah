@@ -11,12 +11,12 @@ const faqs = [
   {
     question: "Is this gambling?",
     answer:
-      "No. NIYAH is a commitment contract — the same model used by stickK and Beeminder for over 10 years. Whether you keep your money is entirely determined by your own effort and discipline, not luck or chance. The outcome is skill-based: you choose to stay focused or you choose to surrender. The app is categorized as Productivity, not Games.",
+      "No. Niyah is a commitment contract — the same model used by stickK and Beeminder for over 10 years. Whether you keep your money is entirely determined by your own effort and discipline, not luck or chance. The outcome is skill-based: you choose to stay focused or you choose to surrender. The app is categorized as Productivity, not Games.",
   },
   {
     question: "How does the app actually block my apps?",
     answer:
-      "NIYAH uses Apple's Screen Time API (FamilyControls) to block apps at the system level. This isn't a \"are you sure?\" nudge — it's a real block. You either pick which apps to block or let NIYAH auto-select your most-used distracting apps. Once a session starts, those apps show a branded block screen. Even deleting the app won't bypass the block because FamilyControls persists independently.",
+      "Niyah uses Apple's Screen Time API (FamilyControls) to block apps at the system level. This isn't a \"are you sure?\" nudge — it's a real block. You either pick which apps to block or let Niyah auto-select your most-used distracting apps. Once a session starts, those apps show a branded block screen. Even deleting the app won't bypass the block because FamilyControls persists independently.",
   },
   {
     question: "What happens if I quit a session early?",
@@ -34,9 +34,9 @@ const faqs = [
       "For the initial launch, settlement happens via Venmo between friends — simple and straightforward. All in-app payment infrastructure is built on Stripe, so your financial data is never handled directly by the app.",
   },
   {
-    question: "Can I use NIYAH solo?",
+    question: "Can I use Niyah solo?",
     answer:
-      "Solo mode exists, but group sessions are where NIYAH really shines. Financial stakes plus social accountability together create a fundamentally different incentive structure. Start by inviting a few friends — that's the strongest path to actually changing your habits.",
+      "Solo mode exists, but group sessions are where Niyah really shines. Financial stakes plus social accountability together create a fundamentally different incentive structure. Start by inviting a few friends — that's the strongest path to actually changing your habits.",
   },
   {
     question: "How much should I stake?",

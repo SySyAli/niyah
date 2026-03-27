@@ -14,7 +14,7 @@ export function Footer() {
                 </span>
               </div>
               <span className="text-xl font-bold tracking-tight text-foreground">
-                NIYAH
+                Niyah
               </span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -73,7 +73,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col gap-4 border-t border-border pt-8 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
-          <p>&copy; {new Date().getFullYear()} NIYAH. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Niyah. All rights reserved.</p>
           <p>App Store Category: Productivity &middot; Payments via Stripe</p>
         </div>
       </div>

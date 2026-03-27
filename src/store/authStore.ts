@@ -8,10 +8,13 @@ import {
   sendMagicLink,
   signInWithEmailLink,
   isEmailSignInLink,
+  sendPhoneVerification,
+  confirmPhoneCode,
   saveUserProfile,
   fetchUserProfile,
   updateUserDoc,
   type FirebaseUser,
+  type PhoneConfirmationResult,
 } from "../config/firebase";
 import * as SecureStore from "expo-secure-store";
 import {
@@ -103,6 +106,9 @@ interface AuthState {
   ) => Promise<void>;
   sendEmailLink: (email: string) => Promise<void>;
   completeEmailLink: (url: string) => Promise<void>;
+  sendPhoneCode: (phoneNumber: string) => Promise<void>;
+  verifyPhoneCode: (code: string) => Promise<void>;
+  phoneConfirmation: PhoneConfirmationResult | null;
   completeProfile: (data: {
     firstName: string;
     lastName: string;
@@ -448,6 +454,63 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  phoneConfirmation: null,
+
+  sendPhoneCode: async (phoneNumber: string) => {
+    set({ isLoading: true });
+    try {
+      const confirmation = await sendPhoneVerification(phoneNumber);
+      set({ phoneConfirmation: confirmation, isLoading: false });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  verifyPhoneCode: async (code: string) => {
+    const { phoneConfirmation } = get();
+    if (!phoneConfirmation) {
+      throw new Error("No pending phone verification. Send a code first.");
+    }
+
+    set({ isLoading: true });
+    try {
+      const firebaseUser = await confirmPhoneCode(phoneConfirmation, code);
+
+      // Fetch Firestore profile and build user state immediately
+      const firestoreData = await fetchUserProfile(firebaseUser.uid).catch(
+        () => null,
+      );
+      const user = buildUser(firebaseUser, firestoreData);
+      const profileComplete = user.profileComplete === true;
+
+      set({
+        firebaseUser,
+        user,
+        isAuthenticated: true,
+        profileComplete,
+        hasAcceptedCurrentLegal:
+          user.legalAcceptanceVersion === CURRENT_LEGAL_VERSION,
+        isNewUser: !profileComplete,
+        isLoading: false,
+        phoneConfirmation: null,
+      });
+
+      // Hydrate wallet and recover session (non-blocking)
+      hydrateWallet(firebaseUser.uid);
+      recoverSession(firebaseUser.uid);
+
+      // Initialize FCM notifications and subscribe to group session data
+      initNotifications().catch((err) =>
+        logger.error("Failed to init notifications:", err),
+      );
+      recoverGroupSessions(firebaseUser.uid);
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
   completeProfile: async (data) => {
     const { firebaseUser } = get();
     if (!firebaseUser) throw new Error("Not authenticated");
@@ -456,9 +519,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       const providerId = firebaseUser.providerId;
-      let authProvider: "google" | "apple" | "email" = "email";
+      let authProvider: "google" | "apple" | "email" | "phone" = "email";
       if (providerId === "google.com") authProvider = "google";
       else if (providerId === "apple.com") authProvider = "apple";
+      else if (providerId === "phone") authProvider = "phone";
 
       await saveUserProfile(firebaseUser.uid, {
         firstName: data.firstName,

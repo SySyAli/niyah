@@ -61,7 +61,7 @@ export function ScreenTimeCard() {
           ? appSelectionCount > 0
             ? `${appSelectionCount} app${appSelectionCount !== 1 ? "s" : ""} will be blocked during sessions`
             : "Select which apps to block during sessions"
-          : "Allow NIYAH to block distracting apps during sessions"}
+          : "Allow Niyah to block distracting apps during sessions"}
       </Text>
 
       {screenTimeAuth !== "approved" ? (
@@ -80,7 +80,7 @@ export function ScreenTimeCard() {
               if (status === "denied") {
                 Alert.alert(
                   "Permission Denied",
-                  "You can enable Screen Time access in Settings > NIYAH > Screen Time.",
+                  "You can enable Screen Time access in Settings > Niyah > Screen Time.",
                 );
               }
             } catch {

@@ -234,7 +234,7 @@ export default function ProfileScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>NIYAH v1.0.0</Text>
+          <Text style={styles.footerText}>Niyah v1.0.0</Text>
           <Text style={styles.footerSubtext}>Demo Mode</Text>
         </View>
       </ScrollView>

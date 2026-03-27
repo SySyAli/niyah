@@ -1,4 +1,4 @@
-// NIYAH Color System
+// Niyah Color System
 // Rich, grounded, premium feel — dark greens, deep blues, clay reds
 // Two themes: dark (deep earth tones) and light (warm cream tones)
 

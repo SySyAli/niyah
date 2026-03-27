@@ -1,15 +1,15 @@
 // Session configurations
 //
 // Phase 1 (App Store launch): GROUP SESSIONS ONLY
-//   Peer-to-peer pool. Completers split surrenderers' stakes. NIYAH takes no cut.
+//   Peer-to-peer pool. Completers split surrenderers' stakes. Niyah takes no cut.
 //   All money comes from participants — no Niyah treasury involvement.
 //
 // Phase 2 (future): SOLO SESSIONS
-//   NIYAH is the counterparty. Complete = earn SOLO_COMPLETION_MULTIPLIER × stake.
-//   Surrender = lose stake (NIYAH keeps it). Requires Niyah to fund payouts.
+//   Niyah is the counterparty. Complete = earn SOLO_COMPLETION_MULTIPLIER × stake.
+//   Surrender = lose stake (Niyah keeps it). Requires Niyah to fund payouts.
 
 // Payout multiplier for solo sessions (Phase 2, not yet active in sessionStore).
-// Stake $5, complete → earn $10. NIYAH profits if >50% of users surrender.
+// Stake $5, complete → earn $10. Niyah profits if >50% of users surrender.
 export const SOLO_COMPLETION_MULTIPLIER = 2;
 export const CADENCES = {
   daily: {
@@ -46,7 +46,7 @@ export const INITIAL_BALANCE = 5000; // $50.00 in cents
 
 // Reputation thresholds
 export const REPUTATION_LEVELS = {
-  seed: { min: 0, max: 20, label: "Seed", description: "New to NIYAH" },
+  seed: { min: 0, max: 20, label: "Seed", description: "New to Niyah" },
   sprout: { min: 21, max: 40, label: "Sprout", description: "Growing trust" },
   sapling: {
     min: 41,

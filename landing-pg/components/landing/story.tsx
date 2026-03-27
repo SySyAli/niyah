@@ -21,7 +21,7 @@ export function Story() {
           </p>
 
           <p className="text-muted-foreground">
-            We built NIYAH because we were tired of apps that told us how much
+            We built Niyah because we were tired of apps that told us how much
             we used our phones and then asked us to feel bad about it.
             Information doesn&apos;t change behavior. Incentives do.
           </p>
@@ -35,7 +35,7 @@ export function Story() {
 
           <p className="text-muted-foreground">
             Loss aversion is stronger than motivation. That&apos;s not a bug in
-            human psychology — it&apos;s a feature. And NIYAH is the first app
+            human psychology — it&apos;s a feature. And Niyah is the first app
             that uses it honestly, with friends, to help you take back your
             attention.
           </p>

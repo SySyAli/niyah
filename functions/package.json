@@ -1,6 +1,6 @@
 {
   "name": "niyah-functions",
-  "description": "Firebase Cloud Functions for NIYAH - Stripe payments + Connect",
+  "description": "Firebase Cloud Functions for Niyah - Stripe payments + Connect",
   "scripts": {
     "lint": "tsc --noEmit",
     "build": "tsc",

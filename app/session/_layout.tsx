@@ -17,7 +17,6 @@ export default function SessionLayout() {
       <Stack.Screen name="propose" />
       <Stack.Screen name="confirm" />
       <Stack.Screen name="waiting-room" />
-      <Stack.Screen name="schedule-builder" />
       <Stack.Screen name="active" options={{ gestureEnabled: false }} />
       <Stack.Screen name="surrender" options={{ presentation: "modal" }} />
       <Stack.Screen name="complete" options={{ gestureEnabled: false }} />

@@ -891,7 +891,7 @@ describe("groupSessionStore", () => {
     it("generates a valid Venmo deep link", () => {
       const link = useGroupSessionStore
         .getState()
-        .getVenmoPayLink(500, "@bob", "NIYAH session");
+        .getVenmoPayLink(500, "@bob", "Niyah session");
       expect(link).toContain("venmo://paycharge");
       expect(link).toContain("txn=pay");
       expect(link).toContain("recipients=bob");
@@ -922,7 +922,7 @@ describe("groupSessionStore", () => {
     it("URL-encodes the note", () => {
       const link = useGroupSessionStore
         .getState()
-        .getVenmoPayLink(500, "@bob", "NIYAH session & payment");
+        .getVenmoPayLink(500, "@bob", "Niyah session & payment");
       expect(link).not.toContain(" "); // spaces encoded
       expect(link).toContain("note=");
     });

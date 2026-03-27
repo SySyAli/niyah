@@ -63,7 +63,7 @@ describe("calculatePayouts", () => {
       { userId: "a", completed: true },
       { userId: "b", completed: true },
     ]);
-    // All fail → everyone gets 0 (NIYAH keeps pool)
+    // All fail → everyone gets 0 (Niyah keeps pool)
     expect(allFail.map((p) => p.payout)).toEqual([0, 0]);
     // All win → pool split evenly = stake each (net 0)
     expect(allWin.map((p) => p.payout)).toEqual([500, 500]);

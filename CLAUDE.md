@@ -1,4 +1,4 @@
-# NIYAH - Project Guide
+# Niyah - Project Guide
 
 > Focus app with financial stakes. Users deposit money, stake it on focus sessions, and earn more for completing them. Quit early = lose your stake.
 >
@@ -123,7 +123,7 @@ Full status and phases: [docs/roadmap.md](docs/roadmap.md)
 
 ## Legal
 
-NIYAH is a **commitment contract** app, NOT gambling. Same model as stickK and Beeminder.
+Niyah is a **commitment contract** app, NOT gambling. Same model as stickK and Beeminder.
 
 - Avoid: "bet," "wager," "gamble," "win"
 - Use: "stake," "commitment," "goal," "complete"

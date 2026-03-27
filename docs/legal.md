@@ -5,7 +5,7 @@
 
 ## Commitment Contract, Not Gambling
 
-NIYAH is a **commitment contract** app. Users stake money as a motivational device to achieve focus goals. This is the same legal model used by stickK and Beeminder for 10+ years.
+Niyah is a **commitment contract** app. Users stake money as a motivational device to achieve focus goals. This is the same legal model used by stickK and Beeminder for 10+ years.
 
 ### Three-Element Gambling Test
 
@@ -25,7 +25,7 @@ NIYAH is a **commitment contract** app. Users stake money as a motivational devi
 
 ### Important Distinction
 
-NIYAH is NOT an event contract (Kalshi model). It is a commitment contract where the user commits to a goal and stakes money as motivation.
+Niyah is NOT an event contract (Kalshi model). It is a commitment contract where the user commits to a goal and stakes money as motivation.
 
 ## Pool/Duo Mode -- Higher Risk
 
@@ -55,14 +55,14 @@ You are NOT a money transmitter if you:
 ```
 COMMITMENT CONTRACT DISCLAIMER
 
-NIYAH provides commitment contract services, not gambling services.
+Niyah provides commitment contract services, not gambling services.
 The outcome of each focus session is determined solely by the user's
 personal effort and action - not by chance, luck, or random events.
 
 Users stake funds as a commitment device to help achieve their goals.
 Successful completion is entirely within the user's control.
 
-NIYAH is not a gambling, gaming, lottery, or betting service.
+Niyah is not a gambling, gaming, lottery, or betting service.
 ```
 
 ## Outstanding Legal Actions

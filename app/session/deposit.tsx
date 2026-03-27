@@ -240,7 +240,7 @@ export default function DepositScreen() {
 
     Alert.alert(
       "Add Funds",
-      `Add ${formatMoney(finalAmount)} to your NIYAH balance?\n\nDemo mode — no real money charged.`,
+      `Add ${formatMoney(finalAmount)} to your Niyah balance?\n\nDemo mode — no real money charged.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -287,7 +287,7 @@ export default function DepositScreen() {
       setPendingVerifyAmount(finalAmount);
 
       const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: "NIYAH",
+        merchantDisplayName: "Niyah",
         paymentIntentClientSecret: clientSecret,
         defaultBillingDetails: {},
         returnURL: "niyah://stripe-redirect",
@@ -345,7 +345,7 @@ export default function DepositScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         Alert.alert(
           "Bank Transfer Initiated",
-          `Your $${(finalAmount / 100).toFixed(2)} bank transfer is being processed.\n\nFunds will appear in your NIYAH balance in ${result.estimatedArrival}. You'll be able to stake once the transfer clears.`,
+          `Your $${(finalAmount / 100).toFixed(2)} bank transfer is being processed.\n\nFunds will appear in your Niyah balance in ${result.estimatedArrival}. You'll be able to stake once the transfer clears.`,
           [{ text: "Got it", onPress: () => router.back() }],
         );
       } else {
@@ -353,7 +353,7 @@ export default function DepositScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(
           "Funds Added",
-          `${formatMoney(finalAmount)} added to your NIYAH balance.`,
+          `${formatMoney(finalAmount)} added to your Niyah balance.`,
           [{ text: "Done", onPress: () => router.back() }],
         );
       }
@@ -404,7 +404,7 @@ export default function DepositScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(
           "Funds Added",
-          `${formatMoney(pendingVerifyAmount)} added to your NIYAH balance.`,
+          `${formatMoney(pendingVerifyAmount)} added to your Niyah balance.`,
           [{ text: "Done", onPress: () => router.back() }],
         );
       }

@@ -17,7 +17,7 @@ export function CTA() {
           Ready to put your money where your mind is?
         </h2>
         <p className="mx-auto mb-10 max-w-xl text-lg text-primary-foreground/80">
-          Join the waitlist to be among the first to try NIYAH. We&apos;re
+          Join the waitlist to be among the first to try Niyah. We&apos;re
           launching with a small group of committed users.
         </p>
         <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer">

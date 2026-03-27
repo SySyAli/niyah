@@ -1,5 +1,5 @@
 /**
- * FCM Push Notification setup for NIYAH.
+ * FCM Push Notification setup for Niyah.
  *
  * Handles:
  * - Permission request
@@ -191,7 +191,7 @@ export function setupForegroundHandler(): () => void {
     if (!notification) return;
 
     // Show in-app alert for foreground messages
-    Alert.alert(notification.title || "NIYAH", notification.body || "", [
+    Alert.alert(notification.title || "Niyah", notification.body || "", [
       { text: "Dismiss", style: "cancel" },
       {
         text: "View",

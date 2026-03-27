@@ -16,6 +16,8 @@ import {
   onAuthStateChanged as rnfbOnAuthStateChanged,
   GoogleAuthProvider,
   AppleAuthProvider,
+  PhoneAuthProvider,
+  signInWithPhoneNumber as rnfbSignInWithPhoneNumber,
 } from "@react-native-firebase/auth";
 import type { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import {
@@ -202,6 +204,38 @@ export const signInWithEmailLink = async (
 };
 
 // ---------------------------------------------------------------------------
+// Phone auth (SMS verification)
+// ---------------------------------------------------------------------------
+
+export type PhoneConfirmationResult = FirebaseAuthTypes.ConfirmationResult;
+
+/**
+ * Send an SMS verification code to the given phone number.
+ * Returns a ConfirmationResult that can be used to verify the code.
+ * Phone number must be in E.164 format (e.g. "+12025551234").
+ */
+export const sendPhoneVerification = async (
+  phoneNumber: string,
+): Promise<PhoneConfirmationResult> => {
+  return rnfbSignInWithPhoneNumber(authInstance, phoneNumber);
+};
+
+/**
+ * Verify an SMS code and sign in the user.
+ * Returns a mapped FirebaseUser.
+ */
+export const confirmPhoneCode = async (
+  confirmation: PhoneConfirmationResult,
+  code: string,
+): Promise<FirebaseUser> => {
+  const result = await confirmation.confirm(code);
+  if (!result) {
+    throw new Error("Phone verification failed — no user returned");
+  }
+  return mapUser(result.user, result.additionalUserInfo?.isNewUser ?? false);
+};
+
+// ---------------------------------------------------------------------------
 // Firebase Auth helpers
 // ---------------------------------------------------------------------------
 
@@ -243,15 +277,20 @@ export const saveUserProfile = async (
       shapePreset: "peach" | "wave" | "petal";
       eyesPreset: "classic" | "happy" | "wink" | "sleepy" | "surprised";
     };
-    authProvider: "google" | "apple" | "email";
+    authProvider: "google" | "apple" | "email" | "phone";
   },
 ): Promise<void> => {
   const serverTs = serverTimestamp();
 
+  // Strip undefined values — Firestore rejects them
+  const cleanData = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined),
+  );
+
   await setDoc(
     doc(db, COLLECTIONS.USERS, uid),
     {
-      ...data,
+      ...cleanData,
       name: `${data.firstName} ${data.lastName}`.trim(),
       profileComplete: true,
       createdAt: serverTs,

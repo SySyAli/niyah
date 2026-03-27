@@ -33,7 +33,7 @@ const features = [
     icon: Bell,
     title: "Smart app selection",
     description:
-      "Pick which apps to block, or let NIYAH auto-select based on your screen time history.",
+      "Pick which apps to block, or let Niyah auto-select based on your screen time history.",
     highlight: false,
   },
   {

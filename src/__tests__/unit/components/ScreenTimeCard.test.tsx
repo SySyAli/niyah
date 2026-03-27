@@ -57,7 +57,7 @@ describe("ScreenTimeCard", () => {
       expect(screen.getByText("Enable Screen Time")).toBeTruthy();
       expect(
         screen.getByText(
-          "Allow NIYAH to block distracting apps during sessions",
+          "Allow Niyah to block distracting apps during sessions",
         ),
       ).toBeTruthy();
     });

@@ -7,9 +7,9 @@ import Foundation
 ///
 /// iOS launches this extension in a separate process when device activity
 /// events occur (interval start/end, threshold reached). It runs independently
-/// of the main NIYAH app.
+/// of the main Niyah app.
 ///
-/// For NIYAH, we use it to:
+/// For Niyah, we use it to:
 ///   1. Detect when a user opens a shielded app during a session
 ///   2. Record the violation timestamp to shared UserDefaults
 ///   3. The main app polls or observes shared defaults to trigger money deduction
@@ -56,7 +56,7 @@ class NiyahDeviceActivityMonitorExtension: DeviceActivityMonitor {
   }
 
   /// Called when a monitored activity interval ends.
-  /// This fires when the NIYAH session timer expires.
+  /// This fires when the Niyah session timer expires.
   override func intervalDidEnd(for activity: DeviceActivityName) {
     super.intervalDidEnd(for: activity)
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NIYAH - Put Your Money Where Your Mind Is",
+  title: "Niyah - Put Your Money Where Your Mind Is",
   description:
     "Focus sessions with real financial stakes. You and your friends stake money, lock distracting apps, and the people who stay focused earn more back.",
   icons: {

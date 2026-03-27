@@ -360,7 +360,7 @@ export default function WaitingRoomScreen() {
     if (!sessionId) return;
     try {
       await Share.share({
-        message: `Join my NIYAH focus session! https://niyah.app/join/${sessionId}`,
+        message: `Join my Niyah focus session! https://niyah.app/join/${sessionId}`,
       });
     } catch {
       // User cancelled share sheet

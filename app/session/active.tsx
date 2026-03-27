@@ -288,7 +288,12 @@ export default function ActiveSessionScreen() {
               completed: true,
             })),
           );
-          router.replace("/session/complete");
+          // Quick-block: go home instead of showing money completion screen
+          if (mode === "solo_quick") {
+            router.dismissAll();
+          } else {
+            router.replace("/session/complete");
+          }
         }
       }, 1000);
     },
@@ -381,7 +386,16 @@ export default function ActiveSessionScreen() {
                       if (isScreenTimeAvailable) {
                         stopBlocking().catch(() => {});
                       }
-                      if (effectiveFirestoreSession) {
+                      if (mode === "solo_quick") {
+                        // Quick-block: no money involved, just clear session and go home
+                        completeGroupSession(
+                          (activeGroupSession?.participants ?? []).map((p) => ({
+                            userId: p.userId,
+                            completed: false,
+                          })),
+                        );
+                        router.dismissAll();
+                      } else if (effectiveFirestoreSession) {
                         // Firestore-backed: report to server, then go to complete screen
                         try {
                           await reportSurrender(effectiveFirestoreSession.id);

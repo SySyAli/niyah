@@ -36,7 +36,7 @@ function withScreenTimeEntitlement(config) {
   // 2. Add Info.plist usage descriptions
   config = withInfoPlist(config, (config) => {
     config.modResults["NSFamilyControlsUsageDescription"] =
-      "NIYAH needs Screen Time access to block distracting apps during your focus sessions.";
+      "Niyah needs Screen Time access to block distracting apps during your focus sessions.";
     return config;
   });
 

@@ -12,7 +12,12 @@ const mockNativeModule = {
   requestAuthorization: jest.fn(() => Promise.resolve("approved")),
   getAuthorizationStatus: jest.fn(() => "approved"),
   presentAppPicker: jest.fn(() =>
-    Promise.resolve({ id: "x", appCount: 3, categoryCount: 0, label: "3 apps" }),
+    Promise.resolve({
+      id: "x",
+      appCount: 3,
+      categoryCount: 0,
+      label: "3 apps",
+    }),
   ),
   getSavedSelection: jest.fn(() => null),
   clearSelection: jest.fn(() => Promise.resolve()),
@@ -84,7 +89,11 @@ describe("screentime scheduled blocking", () => {
       await st.startScheduledBlocking(9, 0, 17, 0, "work-session");
 
       expect(mockNativeModule.startScheduledBlocking).toHaveBeenCalledWith(
-        9, 0, 17, 0, "work-session",
+        9,
+        0,
+        17,
+        0,
+        "work-session",
       );
     });
 
@@ -117,9 +126,9 @@ describe("screentime scheduled blocking", () => {
         new Error("not monitoring"),
       );
 
-      await expect(
-        st.stopScheduledBlocking("nonexistent"),
-      ).rejects.toThrow("not monitoring");
+      await expect(st.stopScheduledBlocking("nonexistent")).rejects.toThrow(
+        "not monitoring",
+      );
     });
   });
 

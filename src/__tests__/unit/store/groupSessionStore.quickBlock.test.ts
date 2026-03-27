@@ -101,8 +101,7 @@ describe("groupSessionStore quick-block", () => {
       const session = useGroupSessionStore.getState().activeGroupSession;
       expect(session).not.toBeNull();
 
-      const duration =
-        session!.endsAt.getTime() - session!.startedAt.getTime();
+      const duration = session!.endsAt.getTime() - session!.startedAt.getTime();
       // Allow 100ms tolerance for execution time
       expect(Math.abs(duration - customMs)).toBeLessThan(100);
     });
@@ -160,21 +159,15 @@ describe("groupSessionStore quick-block", () => {
 
   describe("error cases", () => {
     it("throws if session already active", () => {
-      useGroupSessionStore
-        .getState()
-        .startGroupSession("daily", [ME], 60000);
+      useGroupSessionStore.getState().startGroupSession("daily", [ME], 60000);
 
       expect(() =>
-        useGroupSessionStore
-          .getState()
-          .startGroupSession("daily", [ME], 60000),
+        useGroupSessionStore.getState().startGroupSession("daily", [ME], 60000),
       ).toThrow("A group session is already active");
     });
 
     it("quick-block session can be completed", () => {
-      useGroupSessionStore
-        .getState()
-        .startGroupSession("daily", [ME], 60000);
+      useGroupSessionStore.getState().startGroupSession("daily", [ME], 60000);
 
       const result = useGroupSessionStore
         .getState()
@@ -186,9 +179,7 @@ describe("groupSessionStore quick-block", () => {
     });
 
     it("quick-block session can be surrendered", () => {
-      useGroupSessionStore
-        .getState()
-        .startGroupSession("daily", [ME], 60000);
+      useGroupSessionStore.getState().startGroupSession("daily", [ME], 60000);
 
       const result = useGroupSessionStore
         .getState()

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { View, Text, StyleSheet, TextInput, Alert } from "react-native";
+import { View, Text, StyleSheet, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import {
@@ -46,30 +46,13 @@ export default function PhoneEntryScreen() {
 
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      console.log("[PhoneAuth] Sending verification to:", e164);
-      // Check if Firebase Messaging has an APNs token (required for silent push verification)
-      try {
-        const messaging = require("@react-native-firebase/messaging");
-        const apnsToken = await messaging.default().getAPNSToken();
-        console.log("[PhoneAuth] APNs token:", apnsToken ? `${apnsToken.slice(0, 20)}...` : "NULL - this is why SMS fails!");
-      } catch (msgErr) {
-        console.log("[PhoneAuth] Could not check APNs token:", msgErr);
-      }
       await sendPhoneCode(e164);
-      // Log the confirmation object to see if we got a real verificationId
-      const conf = useAuthStore.getState().phoneConfirmation;
-      console.log("[PhoneAuth] Confirmation result:", JSON.stringify({
-        exists: !!conf,
-        verificationId: conf?.verificationId ?? "NONE",
-      }));
-      console.log("[PhoneAuth] Verification sent successfully, navigating to verify screen");
       router.push({
         pathname: "/(auth)/verify-phone",
         params: { phone: e164 },
       });
     } catch (e: unknown) {
       const err = e as { message?: string; code?: string };
-      console.error("[PhoneAuth] Error:", JSON.stringify({ code: err?.code, message: err?.message }));
       logger.error("Phone verification error:", e);
       if (err?.code === "auth/too-many-requests") {
         setError("Too many attempts. Please wait a few minutes and try again.");

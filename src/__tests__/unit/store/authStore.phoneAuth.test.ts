@@ -11,9 +11,7 @@ const mockSaveUserProfile = jest.fn();
 const mockInitializeNotifications = jest
   .fn()
   .mockReturnValue(Promise.resolve(() => {}));
-const mockRemoveFCMToken = jest
-  .fn()
-  .mockReturnValue(Promise.resolve());
+const mockRemoveFCMToken = jest.fn().mockReturnValue(Promise.resolve());
 
 jest.mock("../../../config/firebase", () => ({
   onAuthStateChanged: jest.fn(() => jest.fn()),

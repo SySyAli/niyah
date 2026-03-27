@@ -528,7 +528,9 @@ export default function FriendsScreen() {
           if (Array.isArray(parsed) && parsed.length > 0) {
             setNonMatchedContacts(parsed);
           }
-        } catch {}
+        } catch {
+          // Corrupted storage — ignore
+        }
       }
     });
   }, []);
@@ -704,7 +706,10 @@ export default function FriendsScreen() {
         .filter((c) => isRealName(c.name) && c.phone)
         .sort((a, b) => a.name.localeCompare(b.name));
       setNonMatchedContacts(allLocalContacts);
-      AsyncStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(allLocalContacts)).catch(() => {});
+      AsyncStorage.setItem(
+        CONTACTS_STORAGE_KEY,
+        JSON.stringify(allLocalContacts),
+      ).catch(() => {});
 
       // Now try to find which contacts are already on Niyah
       try {

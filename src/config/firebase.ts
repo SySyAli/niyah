@@ -16,7 +16,6 @@ import {
   onAuthStateChanged as rnfbOnAuthStateChanged,
   GoogleAuthProvider,
   AppleAuthProvider,
-  PhoneAuthProvider,
   signInWithPhoneNumber as rnfbSignInWithPhoneNumber,
 } from "@react-native-firebase/auth";
 import type { FirebaseAuthTypes } from "@react-native-firebase/auth";

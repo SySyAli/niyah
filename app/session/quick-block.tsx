@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { View, Text, StyleSheet, Pressable, Alert, Platform } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import {
   Typography,
@@ -268,7 +268,7 @@ export default function QuickBlockScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/session/active?mode=solo_quick");
-    } catch (error) {
+    } catch {
       Alert.alert(
         "Failed to Start",
         "Could not start blocking. Please try again.",
@@ -301,9 +301,7 @@ export default function QuickBlockScreen() {
             disabled={isLoading}
             size="large"
           />
-          <Text style={styles.disclaimer}>
-            No money involved. Just focus.
-          </Text>
+          <Text style={styles.disclaimer}>No money involved. Just focus.</Text>
         </>
       }
     >

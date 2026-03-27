@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import Svg, { Circle, Path, LinearGradient, Stop, Defs } from "react-native-svg";
+import Svg, { Circle, LinearGradient, Stop, Defs } from "react-native-svg";
 import { BlobAvatar } from "../BlobAvatar";
 import {
   Typography,
@@ -22,8 +22,6 @@ import {
   generateBlobAvatarPreset,
   type BlobAvatarColorPreset,
   type BlobAvatarConfig,
-  type BlobAvatarEyesPreset,
-  type BlobAvatarShapePreset,
 } from "../../constants/blobAvatar";
 
 /** Gradient circle swatch used for color selection */

@@ -435,7 +435,10 @@ export default function DashboardScreen() {
             </View>
             <BlobAvatar
               size={56}
-              config={user?.blobAvatar ?? generateBlobAvatarPreset(user?.id || "guest")}
+              config={
+                user?.blobAvatar ??
+                generateBlobAvatarPreset(user?.id || "guest")
+              }
               onPress={() => router.push("/(tabs)/profile")}
             />
           </View>

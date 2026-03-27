@@ -341,7 +341,8 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
 
     const config = CADENCES[cadence];
     const duration =
-      customDurationMs ?? (USE_SHORT_TIMERS ? config.demoDuration : config.duration);
+      customDurationMs ??
+      (USE_SHORT_TIMERS ? config.demoDuration : config.duration);
     const stake = customDurationMs !== undefined ? 0 : config.stake;
 
     const fullParticipants: SessionParticipant[] = participants.map((p) => ({

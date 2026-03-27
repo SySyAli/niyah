@@ -366,9 +366,7 @@ export default function ActiveSessionScreen() {
             title={mode === "solo_quick" ? "End Session" : "Surrender"}
             onPress={() => {
               Alert.alert(
-                mode === "solo_quick"
-                  ? "End Blocking?"
-                  : "Surrender Session?",
+                mode === "solo_quick" ? "End Blocking?" : "Surrender Session?",
                 mode === "solo_quick"
                   ? "Are you sure you want to stop blocking apps?"
                   : `You will forfeit your ${formatMoney(stakeAmount)} stake. This cannot be undone.`,
@@ -405,7 +403,8 @@ export default function ActiveSessionScreen() {
           />
           {mode !== "solo_quick" && (
             <Text style={styles.warningText}>
-              Warning: Surrendering forfeits your {formatMoney(stakeAmount)} stake
+              Warning: Surrendering forfeits your {formatMoney(stakeAmount)}{" "}
+              stake
             </Text>
           )}
         </>

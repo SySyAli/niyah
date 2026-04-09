@@ -107,6 +107,21 @@ public class NiyahScreenTimeModule: Module {
 
     Events("onShieldViolation", "onAuthorizationChange", "onSurrenderRequested")
 
+    // When the user taps "Surrender Session" on the shield, the shield
+    // extension writes a flag to App Group UserDefaults, then iOS dismisses
+    // the shield and drops the user on the Home Screen (extensions cannot
+    // launch the main app). When the user re-opens Niyah, we must immediately
+    // check the flag — waiting for the 2-second polling timer to tick (which
+    // is paused while backgrounded) would race with the JS listener's ability
+    // to receive events.
+    OnAppEntersForeground {
+      NSLog("[NiyahScreenTime] App foregrounded — polling for pending surrender/violations")
+      self.checkForNewViolations()
+      if self.isCurrentlyBlocking && self.violationPollTimer == nil {
+        self.startViolationPolling()
+      }
+    }
+
     // ================================================================
     // MARK: - Authorization
     // ================================================================

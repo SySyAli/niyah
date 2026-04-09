@@ -188,7 +188,8 @@ export default function DepositScreen() {
   const initPaymentSheet =
     stripeApi?.initPaymentSheet ?? _unavailableStripeHook.initPaymentSheet;
   const presentPaymentSheet =
-    stripeApi?.presentPaymentSheet ?? _unavailableStripeHook.presentPaymentSheet;
+    stripeApi?.presentPaymentSheet ??
+    _unavailableStripeHook.presentPaymentSheet;
   const { deposit, balance } = useWalletStore();
   const [inputValue, setInputValue] = useState("");
   const [selectedQuickAmount, setSelectedQuickAmount] = useState<number | null>(

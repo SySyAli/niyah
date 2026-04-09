@@ -29,6 +29,7 @@ import {
   linkBankAccount,
 } from "../../src/config/functions";
 import { logger } from "../../src/utils/logger";
+import { getFunctionErrorMessage } from "../../src/utils/errors";
 
 export default function BankSetupScreen() {
   useScreenProtection("bank-setup");
@@ -95,11 +96,13 @@ export default function BankSetupScreen() {
             );
           } catch (err) {
             logger.error("linkBankAccount error:", err);
-            const message =
-              err instanceof Error
-                ? err.message
-                : "Failed to link bank account. Please try again.";
-            Alert.alert("Link Failed", message);
+            Alert.alert(
+              "Link Failed",
+              getFunctionErrorMessage(
+                err,
+                "Failed to link bank account. Please try again.",
+              ),
+            );
           } finally {
             setIsLinking(false);
           }

@@ -82,7 +82,7 @@ pnpm start
 ### Testing & Code Quality
 
 ```bash
-pnpm test        # Run all tests (401 tests)
+pnpm test        # Run all tests (1018 tests)
 pnpm typecheck   # TypeScript strict mode check
 pnpm lint        # ESLint
 pnpm ci          # Full CI: lint + typecheck + test

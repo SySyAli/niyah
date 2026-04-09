@@ -27,8 +27,9 @@ function withScreenTimeEntitlement(config) {
     // data sharing (UserDefaults suite, shared container)
     config.modResults["com.apple.security.application-groups"] = [APP_GROUP_ID];
 
-    // Push Notifications
-    config.modResults["aps-environment"] = "development";
+    // Push Notifications — must be "production" for TestFlight and App Store builds.
+    // EAS manages the actual signing; this entitlement value controls APNs routing.
+    config.modResults["aps-environment"] = "production";
 
     return config;
   });

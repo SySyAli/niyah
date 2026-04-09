@@ -55,7 +55,7 @@ npx expo start --clear # Clear cache and start
 ### Testing
 
 ```bash
-pnpm test              # All tests once (401 tests, 20 suites)
+pnpm test              # All tests once (1018 tests, 48 suites)
 pnpm test:watch        # Watch mode
 pnpm test:coverage     # Coverage report
 pnpm test:integration  # Integration tests only
@@ -109,23 +109,34 @@ pnpm start:device              # connect via USB (skips build)
 
 ## Cloud Functions
 
-13 Cloud Functions deployed to Firebase:
+24 Cloud Functions deployed to Firebase:
 
-| Function                  | Purpose                                   |
-| ------------------------- | ----------------------------------------- |
-| `createPaymentIntent`     | Stripe deposit PaymentIntent              |
-| `verifyAndCreditDeposit`  | Verify payment + credit wallet            |
-| `createConnectAccount`    | Create Stripe Connect account             |
-| `createAccountLink`       | Generate Stripe Connect onboarding URL    |
-| `getConnectAccountStatus` | Check Connect account status              |
-| `handleSessionComplete`   | Process session completion + payout       |
-| `handleSessionForfeit`    | Process session surrender + forfeit       |
-| `requestWithdrawal`       | Initiate Stripe payout                    |
-| `distributeGroupPayouts`  | Calculate + distribute group session pool |
-| `awardReferral`           | Process referral bonus                    |
-| `followUserFn`            | Follow a user                             |
-| `unfollowUserFn`          | Unfollow a user                           |
-| `stripeWebhook`           | Handle Stripe webhook events              |
+| Function                    | Purpose                                        |
+| --------------------------- | ---------------------------------------------- |
+| `createPaymentIntent`       | Stripe deposit PaymentIntent                   |
+| `verifyAndCreditDeposit`    | Verify payment + credit wallet                 |
+| `createConnectAccount`      | Create Stripe Connect account                  |
+| `createAccountLink`         | Generate Stripe Connect onboarding URL         |
+| `getConnectAccountStatus`   | Check Connect account status                   |
+| `createPlaidLinkToken`      | Create Plaid Link token for bank connection    |
+| `linkBankAccount`           | Link bank account via Plaid → Stripe           |
+| `handleSessionComplete`     | Process session completion + payout            |
+| `handleSessionForfeit`      | Process session surrender + forfeit            |
+| `requestWithdrawal`         | Initiate Stripe payout                         |
+| `distributeGroupPayouts`    | Calculate + distribute group session pool      |
+| `createGroupSession`        | Create group session + send invites            |
+| `respondToGroupInvite`      | Accept/decline group invite                    |
+| `markOnlineForSession`      | Signal ready for group session                 |
+| `startGroupSession`         | Start group session (proposer action)          |
+| `reportSessionStatus`       | Report completion/surrender for group session  |
+| `cancelGroupSession`        | Cancel group session (proposer)                |
+| `autoTimeoutGroupSessions`  | Auto-cancel stale sessions (scheduled, 5 min)  |
+| `awardReferral`             | Process referral bonus                         |
+| `followUserFn`              | Follow a user                                  |
+| `unfollowUserFn`            | Unfollow a user                                |
+| `findContactsOnNiyah`       | Search contacts against user directory         |
+| `acceptLegalTerms`          | Record T&C acceptance with server timestamp    |
+| `stripeWebhook`             | Handle Stripe webhook events                   |
 
 Deploy: `firebase deploy --only functions`
 Deploy rules: `firebase deploy --only firestore:rules`

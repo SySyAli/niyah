@@ -1,4 +1,10 @@
-export type CadenceType = "daily" | "weekly" | "monthly";
+export type CadenceType =
+  | "test"
+  | "focus"
+  | "hour"
+  | "daily"
+  | "weekly"
+  | "monthly";
 
 export interface PublicProfile {
   uid: string;
@@ -204,6 +210,7 @@ export interface GroupSessionParticipant {
   completed?: boolean;
   surrendered?: boolean;
   surrenderedAt?: Date;
+  violationCount?: number;
 }
 
 // The Firestore document shape for group sessions

@@ -5,13 +5,14 @@
 
 ## Authentication
 
-Three sign-in methods, all backed by Firebase Auth:
+Four sign-in methods, all backed by Firebase Auth:
 
 1. **Google Sign-In** -- native dialog via `@react-native-google-signin/google-signin`
 2. **Apple Sign-In** -- native via `expo-apple-authentication` with nonce
 3. **Email Magic Link** -- passwordless email link via Firebase
+4. **Phone SMS OTP** -- Firebase phone auth with SMS verification code
 
-**Flow**: `auth-entry.tsx` -> (if new user) `profile-setup.tsx` -> tabs
+**Flow**: `auth-entry.tsx` -> (phone: `phone-entry.tsx` -> `verify-phone.tsx`) -> (if new user) `profile-setup.tsx` -> `screentime-setup.tsx` -> tabs
 
 Auth state managed by `authStore.ts`, which listens to Firebase `onAuthStateChanged` and hydrates user data from Firestore.
 
@@ -29,6 +30,12 @@ Auth state managed by `authStore.ts`, which listens to Firebase `onAuthStateChan
 4. User can "surrender" early (lose stake) or complete (get stake back)
 
 Sessions persist to Firestore `sessions` collection with crash recovery via `recoverActiveSession`. Cloud Function calls gated behind `DEMO_MODE`.
+
+### Quick Block (Solo, No Stake)
+
+**Screen**: `app/session/quick-block.tsx`
+
+One-tap app blocking without money. User picks a duration (25 min / 1 hr / 2 hr / 4 hr / Until tonight), taps "Block Apps", and selected apps are shielded immediately. Reuses the active session timer view. Part of the April 15 sprint rearchitecture toward schedule-based blocking.
 
 ### Duo Session
 
@@ -66,7 +73,7 @@ See [Payments](./payments.md) for Stripe integration and payout formulas.
 
 - **Following/Followers** -- backed by Firestore `userFollows` collection
 - **Public Profiles** -- view other users' stats and reputation
-- **Contacts Integration** -- `expo-contacts` for friend discovery
+- **Contacts Integration** -- `expo-contacts` for friend discovery via `findContactsOnNiyah` Cloud Function, cached in `socialStore` with 5-min staleness check
 
 ### Reputation System
 
@@ -96,15 +103,15 @@ See [Payments](./payments.md) for Stripe integration and payout formulas.
 
 ## Demo Mode
 
-Currently active (`DEMO_MODE = true` in `src/constants/config.ts`):
+Controlled by env var (`EXPO_PUBLIC_DEMO_MODE=true`):
 
 | Area        | Behavior                                                                                                                     |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Auth        | Real Firebase authentication (Google, Apple, Email)                                                                          |
+| Auth        | Real Firebase authentication (Google, Apple, Email, Phone)                                                                   |
 | Profile     | Real Firestore persistence (reads + writes)                                                                                  |
 | Sessions    | Short timers (10s daily, 60s weekly, 90s monthly). Persisted to Firestore with crash recovery. Cloud Function calls skipped. |
 | Wallet      | Starts at $50. Non-demo hydrates from Firestore.                                                                             |
-| Screen Time | Module scaffolded, not integrated into session lifecycle                                                                     |
+| Screen Time | Module production-quality, onboarding flow built (`screentime-setup.tsx`), quick-block wired. Full session lifecycle wiring pending. |
 | Payments    | Trust model (virtual balances, settle outside app)                                                                           |
 
 ## Trust Model (Current)

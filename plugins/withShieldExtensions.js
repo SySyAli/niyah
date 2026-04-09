@@ -5,12 +5,12 @@
  *   NiyahShieldConfiguration — ShieldConfigurationDataSource
  *     Shows custom Niyah branding instead of Apple's default shield screen
  *     when a user opens a blocked app during a focus session.
- *     NSExtensionPointIdentifier: com.apple.managed-settings.shield-config
+ *     NSExtensionPointIdentifier: com.apple.ManagedSettingsUI.shield-configuration-service
  *
  *   NiyahShieldAction — ShieldActionDelegate
  *     Handles "Stay Focused" (close) and "Surrender Session" (flag +
  *     close) button taps on the shield screen.
- *     NSExtensionPointIdentifier: com.apple.managed-settings.shield-action
+ *     NSExtensionPointIdentifier: com.apple.ManagedSettings.shield-action-service
  *
  * Both extensions share the main app's App Group so the shield action can
  * write a surrender flag that the main app reads via violation polling.
@@ -33,16 +33,21 @@ const SHIELD_CONFIG = {
   name: "NiyahShieldConfiguration",
   bundleSuffix: ".shield-config",
   sourceFile: "ShieldConfigurationExtension.swift",
-  extensionPoint: "com.apple.managed-settings.shield-config",
+  // Apple's exact identifier — case-sensitive, "ManagedSettingsUI" (not
+  // "managed-settings"). Wrong values silently fall back to the system shield.
+  extensionPoint: "com.apple.ManagedSettingsUI.shield-configuration-service",
   principalClass: "$(PRODUCT_MODULE_NAME).NiyahShieldConfigurationDataSource",
-  frameworks: ["ShieldConfiguration", "ManagedSettings", "UIKit"],
+  // ShieldConfiguration types live in ManagedSettingsUI, NOT a "ShieldConfiguration"
+  // framework. Linking -framework ShieldConfiguration fails with "framework not found".
+  frameworks: ["ManagedSettingsUI", "ManagedSettings", "UIKit"],
 };
 
 const SHIELD_ACTION = {
   name: "NiyahShieldAction",
   bundleSuffix: ".shield-action",
   sourceFile: "ShieldActionExtension.swift",
-  extensionPoint: "com.apple.managed-settings.shield-action",
+  // ShieldAction lives in plain ManagedSettings (NOT ManagedSettingsUI).
+  extensionPoint: "com.apple.ManagedSettings.shield-action-service",
   principalClass: "$(PRODUCT_MODULE_NAME).NiyahShieldActionExtension",
   frameworks: ["ManagedSettings", "DeviceActivity"],
 };
@@ -175,10 +180,17 @@ function withShieldExtensions(config) {
 
       // --- Add PBXGroup for the extension files ---
       const groupKey = project.pbxCreateGroup(ext.name, ext.name);
-      project.addFile(`${ext.name}/${ext.sourceFile}`, groupKey, {
-        target: target.uuid,
-        lastKnownFileType: "sourcecode.swift",
-      });
+      // IMPORTANT: use addSourceFile (not addFile) AND pass just the
+      // filename (not prefixed with ext.name). The group's path already
+      // provides the directory prefix — passing ext.name/filename would
+      // double it ("NiyahShieldAction/NiyahShieldAction/File.swift").
+      // addFile() alone skips the PBXSourcesBuildPhase → .appex gets no
+      // executable → iOS silently falls back to the system shield.
+      project.addSourceFile(
+        ext.sourceFile,
+        { target: target.uuid },
+        groupKey,
+      );
 
       // Attach group to main project group
       const mainGroupKey = project.getFirstProject().firstProject.mainGroup;

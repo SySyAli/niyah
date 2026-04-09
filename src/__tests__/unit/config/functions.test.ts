@@ -229,6 +229,16 @@ describe("callFunction (core behaviour)", () => {
     );
   });
 
+  it("extracts message from JSON error envelope", async () => {
+    mockFetch.mockResolvedValue(
+      mockErrorResponse(400, JSON.stringify({ error: "Insufficient balance" })),
+    );
+
+    await expect(createPaymentIntent(500)).rejects.toThrow(
+      "[createPaymentIntent] 400: Insufficient balance",
+    );
+  });
+
   it("propagates network errors from fetch", async () => {
     mockFetch.mockRejectedValue(new TypeError("Network request failed"));
 

@@ -12,6 +12,29 @@
 // Stake $5, complete → earn $10. Niyah profits if >50% of users surrender.
 export const SOLO_COMPLETION_MULTIPLIER = 2;
 export const CADENCES = {
+  // ── Short sessions (for testing + quick use) ──────────────────────────────
+  test: {
+    id: "test",
+    name: "Test",
+    duration: 60 * 1000, // 1 minute
+    demoDuration: 10 * 1000, // 10 seconds for demo
+    stake: 100, // $1.00 in cents
+  },
+  focus: {
+    id: "focus",
+    name: "Focus",
+    duration: 25 * 60 * 1000, // 25 minutes (Pomodoro)
+    demoDuration: 15 * 1000, // 15 seconds for demo
+    stake: 200, // $2.00 in cents
+  },
+  hour: {
+    id: "hour",
+    name: "Hour",
+    duration: 60 * 60 * 1000, // 1 hour
+    demoDuration: 30 * 1000, // 30 seconds for demo
+    stake: 500, // $5.00 in cents
+  },
+  // ── Long sessions (real commitments) ──────────────────────────────────────
   daily: {
     id: "daily",
     name: "Daily",
@@ -34,6 +57,9 @@ export const CADENCES = {
     stake: 10000, // $100.00 in cents
   },
 } as const;
+
+export const SHORT_CADENCES: readonly string[] = ["test", "focus", "hour"];
+export const LONG_CADENCES: readonly string[] = ["daily", "weekly", "monthly"];
 
 // Demo mode: driven by env var so production builds can't accidentally ship demo.
 // Set EXPO_PUBLIC_DEMO_MODE=true in .env for development; omit or set false for production.

@@ -39,6 +39,16 @@ if (!DEMO_MODE && STRIPE_PK) {
   } catch (error) {
     logger.warn("Stripe SDK unavailable in this build:", error);
   }
+
+  // Pre-warm heavy native modules at app startup. Without this, the first
+  // navigation to deposit/withdraw triggers a synchronous require() that
+  // blocks the JS thread mid-modal-animation, leaving a black screen and
+  // sometimes crashing before the screen finishes mounting.
+  try {
+    require("react-native-plaid-link-sdk");
+  } catch (error) {
+    logger.warn("Plaid SDK unavailable in this build:", error);
+  }
 }
 
 // Apply SF Pro Rounded globally as the default font family

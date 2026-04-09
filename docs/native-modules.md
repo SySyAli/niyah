@@ -10,8 +10,9 @@ React Native Firebase packages provide Auth and Firestore:
 | Package                            | Purpose                                              |
 | ---------------------------------- | ---------------------------------------------------- |
 | `@react-native-firebase/app`       | Core initialization (Expo plugin in `app.config.ts`) |
-| `@react-native-firebase/auth`      | Google, Apple, and email magic link sign-in          |
-| `@react-native-firebase/firestore` | User profiles, wallets, sessions, follows            |
+| `@react-native-firebase/auth`      | Google, Apple, email magic link, and phone SMS sign-in |
+| `@react-native-firebase/firestore` | User profiles, wallets, sessions, follows              |
+| `@react-native-firebase/messaging` | FCM push notifications (token management, foreground)  |
 
 **Config files**: `GoogleService-Info.plist` (iOS) and `google-services.json` (Android) live in `firebase/` (gitignored). Injected at build time by the `withGoogleServicesPlist` and `withGoogleServicesJson` config plugins. `withFirebaseStaticFrameworks` handles CocoaPods static framework linking.
 
@@ -23,11 +24,13 @@ Custom Expo module bridging iOS Screen Time API to JavaScript.
 
 ### Swift Components
 
-| File                                   | Purpose                                                                                                                                                                                                                               |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NiyahScreenTimeModule.swift`          | FamilyControls auth, FamilyActivityPicker, ManagedSettings shield (block/unblock). App selection persisted via App Groups `UserDefaults` with `PropertyListEncoder`. Polls for violations and emits `onShieldViolation` events to JS. |
-| `AppPickerHostingController.swift`     | SwiftUI wrapper for `FamilyActivityPicker`, presented modally as `UIHostingController`. Supports Done and Cancel callbacks.                                                                                                           |
-| `DeviceActivityMonitorExtension.swift` | App Extension (separate process). Detects blocked app opens during sessions, records violation timestamps to shared `UserDefaults`. Uses named `ManagedSettingsStore(.niyahSession)`.                                                 |
+| File                                     | Purpose                                                                                                                                                                                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NiyahScreenTimeModule.swift`            | FamilyControls auth, FamilyActivityPicker, ManagedSettings shield (block/unblock). App selection persisted via App Groups `UserDefaults` with `PropertyListEncoder`. Polls for violations and emits `onShieldViolation` events to JS. |
+| `AppPickerHostingController.swift`       | SwiftUI wrapper for `FamilyActivityPicker`, presented modally as `UIHostingController`. Supports Done and Cancel callbacks.                                                                                                           |
+| `DeviceActivityMonitorExtension.swift`   | App Extension (separate process). Detects blocked app opens during sessions, records violation timestamps to shared `UserDefaults`. Uses named `ManagedSettingsStore(.niyahSession)`.                                                 |
+| `ShieldActionExtension.swift`            | Handles user actions on the shield overlay (e.g., "Surrender Session" button tap). Communicates back to main app.                                                                                                                     |
+| `ShieldConfigurationExtension.swift`     | Configures custom shield appearance — Niyah-branded overlay with "Stay Focused" / "Surrender Session" buttons instead of generic system block.                                                                                        |
 
 ### JS Wrapper
 
@@ -52,20 +55,20 @@ Custom Expo module bridging iOS Screen Time API to JavaScript.
 
 ### Status
 
-Swift code is production-quality. JS wrapper complete. **Not yet integrated into `sessionStore.ts`** -- calling `startBlocking()`/`stopBlocking()` from session lifecycle is the remaining wiring step.
+Swift code is production-quality. JS wrapper complete. Custom shield UI built and branded. Quick-block flow (`quick-block.tsx`) is wired to `startBlocking()`/`stopBlocking()`. Full session lifecycle wiring (calling blocking from `sessionStore.ts` on session start/end) is the remaining step.
 
-The extension embed phase in `withDeviceActivityMonitor.js` is intentionally disabled (caused `lstat` build failures). Will be re-enabled when Screen Time is wired into sessions. See [Roadmap > Phase 1](./roadmap.md#13-screen-time-blocking).
+The extension embed phase in `withDeviceActivityMonitor.js` is intentionally disabled (caused `lstat` build failures). Will be re-enabled when Screen Time is fully wired into sessions. See [Roadmap](./roadmap.md).
 
-### Planned Shield UX
+### Custom Shield UX
 
-Instead of silently blocking apps, the planned UX uses `ManagedSettings ShieldConfiguration`:
+The custom Niyah-branded shield is implemented via `ShieldConfigurationExtension.swift` and `ShieldActionExtension.swift`:
 
-- User starts a focus session and selects distraction apps
-- Opening a restricted app shows a **custom shield screen** with the Niyah blob
-- Two options: **"Surrender"** (lose stake, end session) or **"Stay Focused"** (dismiss, return)
-- Button actions handled by the `DeviceActivityMonitorExtension`
+- User starts a focus session (or quick block) and selects distraction apps
+- Opening a restricted app shows a **custom shield screen** with Niyah branding
+- Two options: **"Surrender Session"** (lose stake, end session) or **"Stay Focused"** (dismiss, return)
+- Button actions handled by `ShieldActionExtension`, which communicates back to the main app
 
-iOS does not allow injecting modals into other apps. The custom shield via `ManagedSettingsStore` is the only API-compliant approach. Custom shield UI (`ShieldConfigurationDataSource` + `ShieldActionExtension`) is planned for [Phase 2](./roadmap.md#phase-2-beta-cohort).
+iOS does not allow injecting modals into other apps. The custom shield via `ManagedSettingsStore` is the only API-compliant approach.
 
 ## JITAI Module (`src/jitai/`)
 

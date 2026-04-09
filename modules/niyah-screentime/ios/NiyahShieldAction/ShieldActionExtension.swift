@@ -1,9 +1,11 @@
+import Foundation
 import ManagedSettings
-import DeviceActivity
 
 /// Handles user interactions with the Niyah shield screen.
 ///
-/// Primary button   "Stay Focused"      → dismisses shield, stays blocked.
+/// Primary button   "Stay Focused"      → returns user to home screen, blocking
+///                                        stays active so the next launch is
+///                                        also blocked.
 /// Secondary button "Surrender Session" → writes a flag to shared App Group
 ///                                        UserDefaults so the main app can
 ///                                        detect and process the surrender,
@@ -24,24 +26,24 @@ class NiyahShieldActionExtension: ShieldActionDelegate {
     // ── ShieldActionDelegate overrides ─────────────────────────────────────────
 
     override func handle(
-        _ action: ShieldAction,
-        for application: Application,
+        action: ShieldAction,
+        for application: ApplicationToken,
         completionHandler: @escaping (ShieldActionResponse) -> Void
     ) {
         handleAction(action, completionHandler: completionHandler)
     }
 
     override func handle(
-        _ action: ShieldAction,
-        for webDomain: WebDomain,
+        action: ShieldAction,
+        for webDomain: WebDomainToken,
         completionHandler: @escaping (ShieldActionResponse) -> Void
     ) {
         handleAction(action, completionHandler: completionHandler)
     }
 
     override func handle(
-        _ action: ShieldAction,
-        for category: ActivityCategory,
+        action: ShieldAction,
+        for category: ActivityCategoryToken,
         completionHandler: @escaping (ShieldActionResponse) -> Void
     ) {
         handleAction(action, completionHandler: completionHandler)
@@ -55,8 +57,7 @@ class NiyahShieldActionExtension: ShieldActionDelegate {
     ) {
         switch action {
         case .primaryButtonPressed:
-            // "Close" — dismiss the shield, return to Home Screen.
-            // Blocking stays active.
+            // "Stay Focused" — return user to Home Screen. Blocking stays active.
             completionHandler(.close)
 
         case .secondaryButtonPressed:

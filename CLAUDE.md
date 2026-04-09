@@ -13,9 +13,9 @@
 - **Styling**: StyleSheet, SF Pro Rounded, dark/light theme
 - **Build**: EAS Build (production), `expo-dev-client` (dev) -- NOT Expo Go
 - **Backend**: Firebase Auth + Firestore via `@react-native-firebase/*`
-- **Auth**: Google Sign-In, Apple Sign-In, Email magic link
+- **Auth**: Google Sign-In, Apple Sign-In, Email magic link, Phone SMS OTP
 - **Payments**: Stripe (`@stripe/stripe-react-native`, Cloud Functions backend)
-- **Testing**: Jest + jest-expo (401 tests)
+- **Testing**: Jest + jest-expo (1018 tests)
 - **Linting**: ESLint 9 + Prettier
 - **Package Manager**: pnpm
 
@@ -50,7 +50,7 @@ src/
   constants/      # Colors, spacing, config (DEMO_MODE, cadences)
   utils/          # Formatting, payout algorithm, logger
 modules/          # Custom native Expo modules (Screen Time)
-functions/        # Firebase Cloud Functions (13 deployed)
+functions/        # Firebase Cloud Functions (24 deployed)
 plugins/          # Expo config plugins (Firebase, Screen Time, entitlements)
 firebase/         # Config files (gitignored) + Firestore rules
 docs/             # Detailed documentation (architecture, roadmap, security, ...)
@@ -106,20 +106,28 @@ Full tree: [docs/architecture.md](docs/architecture.md)
 
 ## Current Phase
 
-**Phase 1: Group Mode MVP** (4-person internal test)
+**April 15 Sprint** — rearchitecting toward schedule-based blocking + group challenges for demo day.
+
+Completed:
+- Phone SMS OTP auth + Screen Time onboarding flow
+- One-tap quick-block screen
+- Contact-based friend discovery (enhanced)
+- Shield branding update (custom Niyah shield UI)
+- Group session Cloud Functions (create, invite, accept, start, complete, cancel, timeout)
+- Plaid bank linking + legal acceptance Cloud Functions
 
 Key remaining work:
-
-- Group session Firebase backend (Firestore + Cloud Functions)
-- FCM push notifications
-- Screen Time blocking wired into session lifecycle
+- Schedule-based blocking (scheduleStore, schedule-builder screen)
+- Calendar integration (expo-calendar gap detection)
+- DeviceActivityReport chart bridging
+- FCM push notification wiring
 - FamilyControls entitlement (BLOCKER)
 
-Full status and phases: [docs/roadmap.md](docs/roadmap.md)
+Full status and phases: [docs/roadmap.md](docs/roadmap.md) | Sprint spec: [docs/sprint-april15.md](docs/sprint-april15.md)
 
 ## Demo Mode
 
-`DEMO_MODE = true` in `src/constants/config.ts`. Real Firebase auth, short session timers, $50 starting balance, Cloud Function calls skipped. See [docs/features.md](docs/features.md#demo-mode).
+`DEMO_MODE` is env-var driven (`EXPO_PUBLIC_DEMO_MODE=true`). Real Firebase auth, short session timers, $50 starting balance, Cloud Function calls skipped. See [docs/features.md](docs/features.md#demo-mode).
 
 ## Legal
 

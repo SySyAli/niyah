@@ -10,7 +10,7 @@
 - `@stripe/stripe-react-native` -- PaymentSheet for deposits
 - Publishable key via `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` env var
 
-### Cloud Functions (13 deployed)
+### Cloud Functions (24 deployed)
 
 | Function                  | Purpose                                           |
 | ------------------------- | ------------------------------------------------- |

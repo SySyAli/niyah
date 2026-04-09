@@ -81,12 +81,12 @@ Replace flat SVG blob characters with photorealistic 3D gemstones via SceneKit:
 | Tool                         | Role                        | Cost            | Status                      |
 | ---------------------------- | --------------------------- | --------------- | --------------------------- |
 | Firebase (Auth + Firestore)  | Backend, auth, data         | Free tier       | Implemented (RNFB)          |
-| Firebase Cloud Functions     | Server-side logic, payments | Free tier       | 13 functions deployed       |
+| Firebase Cloud Functions     | Server-side logic, payments | Free tier       | 24 functions deployed       |
 | EAS Build                    | iOS/Android builds          | Free tier       | Configured and in use       |
 | react-native-reanimated      | Animations                  | Free            | Partially used (onboarding) |
 | react-native-gesture-handler | Gesture tracking            | Free            | Used by router              |
 | react-native-svg             | SVG illustrations           | Free            | In use                      |
 | expo-haptics                 | Tactile feedback            | Free            | In use                      |
-| Jest + jest-expo             | Testing                     | Free            | 401 tests passing           |
+| Jest + jest-expo             | Testing                     | Free            | 1018 tests passing          |
 | ESLint 9 + Prettier          | Linting + formatting        | Free            | Configured, 0 errors        |
 | Stripe                       | Payments                    | Per-transaction | Integrated (test mode)      |

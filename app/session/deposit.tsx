@@ -181,7 +181,14 @@ export default function DepositScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  // Defensive: useStripe() can return null/undefined on the very first call
+  // before the StripeSdk native bridge finishes warming up. Destructuring
+  // directly would crash the screen on first cold mount.
+  const stripeApi = useStripe() as StripeHook | null | undefined;
+  const initPaymentSheet =
+    stripeApi?.initPaymentSheet ?? _unavailableStripeHook.initPaymentSheet;
+  const presentPaymentSheet =
+    stripeApi?.presentPaymentSheet ?? _unavailableStripeHook.presentPaymentSheet;
   const { deposit, balance } = useWalletStore();
   const [inputValue, setInputValue] = useState("");
   const [selectedQuickAmount, setSelectedQuickAmount] = useState<number | null>(

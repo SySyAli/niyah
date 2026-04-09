@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { View, Text, StyleSheet, Alert } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
@@ -11,14 +11,18 @@ import {
 } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useAuthStore } from "../../src/store/authStore";
 import { useCountdown } from "../../src/hooks/useCountdown";
 import { formatMoney } from "../../src/utils/format";
 import { SOLO_COMPLETION_MULTIPLIER } from "../../src/constants/config";
 import {
+  startBlocking,
   stopBlocking,
   onShieldViolation,
+  onSurrenderRequested,
   isScreenTimeAvailable,
 } from "../../src/config/screentime";
+import { reportShieldViolation as reportShieldViolationCF } from "../../src/config/functions";
 
 type SessionMode = "solo_quick" | "solo_scheduled" | "group";
 
@@ -205,6 +209,17 @@ export default function ActiveSessionScreen() {
           color: Colors.textSecondary,
           ...Font.medium,
         },
+        participantViolations: {
+          fontSize: Typography.labelSmall,
+          ...Font.semibold,
+          color: Colors.loss,
+          marginRight: Spacing.sm,
+        },
+        participantYouTag: {
+          fontSize: Typography.labelSmall,
+          color: Colors.textMuted,
+          ...Font.medium,
+        },
         warningText: {
           textAlign: "center",
           color: Colors.textMuted,
@@ -223,6 +238,7 @@ export default function ActiveSessionScreen() {
     reportSurrender,
     subscribeToSession,
   } = useGroupSessionStore();
+  const currentUserId = useAuthStore((s) => s.user?.id);
   // Tracks intentional navigation away (complete or surrender) so the
   // useEffect guard doesn't redirect home when activeGroupSession clears.
   const isNavigatingAwayRef = useRef(false);
@@ -250,6 +266,48 @@ export default function ActiveSessionScreen() {
   const participantCount = effectiveFirestoreSession
     ? Object.keys(effectiveFirestoreSession.participants).length
     : (activeGroupSession?.participants.length ?? 0);
+
+  // Live leaderboard rows. For Firestore sessions we read participant status
+  // (active/completed/surrendered) and violation counts directly from the
+  // synced doc; legacy in-memory sessions just show the participant list.
+  // Current user always rendered first.
+  const leaderboard = useMemo(() => {
+    type Row = {
+      userId: string;
+      name: string;
+      completed?: boolean;
+      surrendered?: boolean;
+      violationCount: number;
+      isCurrentUser: boolean;
+    };
+    let rows: Row[] = [];
+    if (effectiveFirestoreSession) {
+      rows = Object.entries(effectiveFirestoreSession.participants).map(
+        ([uid, p]) => ({
+          userId: uid,
+          name: p.name || "Friend",
+          completed: p.completed,
+          surrendered: p.surrendered,
+          violationCount: p.violationCount ?? 0,
+          isCurrentUser: uid === currentUserId,
+        }),
+      );
+    } else if (activeGroupSession) {
+      rows = activeGroupSession.participants.map((p) => ({
+        userId: p.userId,
+        name: p.name || "Friend",
+        completed: p.completed,
+        surrendered: false,
+        violationCount: 0,
+        isCurrentUser: p.userId === currentUserId,
+      }));
+    }
+    return rows.sort((a, b) => {
+      if (a.isCurrentUser && !b.isCurrentUser) return -1;
+      if (!a.isCurrentUser && b.isCurrentUser) return 1;
+      return 0;
+    });
+  }, [effectiveFirestoreSession, activeGroupSession, currentUserId]);
 
   const { timeRemaining, start } = useCountdown({
     onComplete: () => {
@@ -306,11 +364,31 @@ export default function ActiveSessionScreen() {
   const hasActiveSession = !!(
     activeGroupSession?.id ?? effectiveFirestoreSession?.id
   );
+  // Group sessions arrive here via Firestore status change without going through
+  // sessionStore.startSession(), so we re-start blocking here to cover both paths.
+  useEffect(() => {
+    if (!isScreenTimeAvailable || !hasActiveSession) return;
+    startBlocking().catch(() => {});
+  }, [hasActiveSession]);
+
+  // Stable ref so the violation listener doesn't re-subscribe when the
+  // Firestore session updates (would race with rapid violations).
+  const firestoreSessionIdRef = useRef<string | undefined>(undefined);
+  firestoreSessionIdRef.current = effectiveFirestoreSession?.id;
   useEffect(() => {
     if (!isScreenTimeAvailable || !hasActiveSession) return;
     const unsubscribe = onShieldViolation(() => {
       setViolationCount((prev) => prev + 1);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      // Group sessions: notify the server so other participants see it on
+      // their leaderboard and get a push. Fire-and-forget — local count is
+      // the source of truth for the current user's UI.
+      const sid = firestoreSessionIdRef.current;
+      if (sid) {
+        reportShieldViolationCF(sid).catch((err) => {
+          console.warn("reportShieldViolation failed:", err);
+        });
+      }
     });
     return unsubscribe;
   }, [hasActiveSession]);
@@ -346,6 +424,59 @@ export default function ActiveSessionScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionEndsAtMs, router]);
 
+  // Shared surrender handler — called from the in-app Surrender button (after
+  // user confirms via Alert) and from the shield screen's "Surrender Session"
+  // button (no extra confirmation since the user already tapped on the shield).
+  const performSurrender = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    isNavigatingAwayRef.current = true;
+    if (isScreenTimeAvailable) {
+      stopBlocking().catch(() => {});
+    }
+    if (mode === "solo_quick") {
+      completeGroupSession(
+        (activeGroupSession?.participants ?? []).map((p) => ({
+          userId: p.userId,
+          completed: false,
+        })),
+      );
+      router.dismissAll();
+    } else if (effectiveFirestoreSession) {
+      try {
+        await reportSurrender(effectiveFirestoreSession.id);
+      } catch (err) {
+        console.warn("Server surrender report failed:", err);
+      }
+      router.replace("/session/complete");
+    } else {
+      router.push("/session/surrender");
+    }
+  }, [
+    mode,
+    activeGroupSession,
+    completeGroupSession,
+    effectiveFirestoreSession,
+    reportSurrender,
+    router,
+  ]);
+
+  // Surrender via the custom shield screen ("Surrender Session" button).
+  // The ShieldActionExtension writes a flag to shared UserDefaults; the native
+  // module polls and emits this event. The user has already confirmed by
+  // tapping the shield button, so we surrender immediately without an Alert.
+  //
+  // Read performSurrender via a ref so the subscription doesn't tear down on
+  // every Firestore snapshot — same pattern as the violation listener above.
+  const performSurrenderRef = useRef(performSurrender);
+  performSurrenderRef.current = performSurrender;
+  useEffect(() => {
+    if (!isScreenTimeAvailable || !hasActiveSession) return;
+    const unsubscribe = onSurrenderRequested(() => {
+      performSurrenderRef.current();
+    });
+    return unsubscribe;
+  }, [hasActiveSession]);
+
   if (!activeGroupSession && !effectiveFirestoreSession) {
     return null;
   }
@@ -380,34 +511,7 @@ export default function ActiveSessionScreen() {
                   {
                     text: mode === "solo_quick" ? "End" : "Surrender",
                     style: "destructive",
-                    onPress: async () => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                      isNavigatingAwayRef.current = true;
-                      if (isScreenTimeAvailable) {
-                        stopBlocking().catch(() => {});
-                      }
-                      if (mode === "solo_quick") {
-                        // Quick-block: no money involved, just clear session and go home
-                        completeGroupSession(
-                          (activeGroupSession?.participants ?? []).map((p) => ({
-                            userId: p.userId,
-                            completed: false,
-                          })),
-                        );
-                        router.dismissAll();
-                      } else if (effectiveFirestoreSession) {
-                        // Firestore-backed: report to server, then go to complete screen
-                        try {
-                          await reportSurrender(effectiveFirestoreSession.id);
-                        } catch (err) {
-                          console.warn("Server surrender report failed:", err);
-                        }
-                        router.replace("/session/complete");
-                      } else {
-                        // Legacy flow: surrender screen handles payment + local state
-                        router.push("/session/surrender");
-                      }
-                    },
+                    onPress: performSurrender,
                   },
                 ],
               );
@@ -466,8 +570,52 @@ export default function ActiveSessionScreen() {
         </Card>
       )}
 
-      {/* Violation Counter */}
-      {violationCount > 0 && (
+      {/* Live Leaderboard — only for group sessions (2+ participants) */}
+      {leaderboard.length >= 2 && (
+        <View style={styles.participantsCard}>
+          <Text style={styles.participantsTitle}>Live Standings</Text>
+          {leaderboard.map((p) => {
+            // For self, show whichever count is higher (local fires instantly,
+            // Firestore lags one round-trip behind).
+            const displayViolations = p.isCurrentUser
+              ? Math.max(violationCount, p.violationCount)
+              : p.violationCount;
+            const dotColor = p.surrendered
+              ? Colors.loss
+              : p.completed
+                ? Colors.gain
+                : Colors.primary;
+            const statusText = p.surrendered
+              ? "Out"
+              : p.completed
+                ? "Done"
+                : "Focused";
+            return (
+              <View key={p.userId} style={styles.participantRow}>
+                <View
+                  style={[styles.participantDot, { backgroundColor: dotColor }]}
+                />
+                <Text style={styles.participantName} numberOfLines={1}>
+                  {p.name}
+                  {p.isCurrentUser && (
+                    <Text style={styles.participantYouTag}> (you)</Text>
+                  )}
+                </Text>
+                {displayViolations > 0 && (
+                  <Text style={styles.participantViolations}>
+                    {displayViolations} slip
+                    {displayViolations === 1 ? "" : "s"}
+                  </Text>
+                )}
+                <Text style={styles.participantStatus}>{statusText}</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Standalone violation counter — only for solo (no leaderboard) */}
+      {leaderboard.length < 2 && violationCount > 0 && (
         <Card style={styles.violationCard}>
           <Text style={styles.violationLabel}>Blocked app attempts</Text>
           <Text style={styles.violationCount}>{violationCount}</Text>

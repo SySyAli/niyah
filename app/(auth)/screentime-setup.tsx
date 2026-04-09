@@ -15,6 +15,8 @@ import {
   isScreenTimeAvailable,
   requestScreenTimeAuth,
   getScreenTimeAuthStatus,
+  presentAppPicker,
+  getSavedAppSelection,
 } from "../../src/config/screentime";
 
 export default function ScreenTimeSetupScreen() {
@@ -25,6 +27,9 @@ export default function ScreenTimeSetupScreen() {
   const [isRequesting, setIsRequesting] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(
     isScreenTimeAvailable && getScreenTimeAuthStatus() === "approved",
+  );
+  const [hasSelection, setHasSelection] = useState(
+    isScreenTimeAvailable && !!getSavedAppSelection(),
   );
 
   const handleConnect = async () => {
@@ -40,8 +45,8 @@ export default function ScreenTimeSetupScreen() {
       if (result === "approved") {
         setIsAuthorized(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Brief delay so user sees the success state
-        setTimeout(() => router.replace("/(tabs)"), 600);
+        // Don't auto-advance — let the user pick which apps to block.
+        setIsRequesting(false);
       } else {
         // User denied — let them skip
         setIsRequesting(false);
@@ -51,33 +56,56 @@ export default function ScreenTimeSetupScreen() {
     }
   };
 
+  const handlePickApps = async () => {
+    if (!isScreenTimeAvailable) {
+      router.replace("/(tabs)");
+      return;
+    }
+    setIsRequesting(true);
+    try {
+      await presentAppPicker();
+      // Re-check after picker dismisses (user may have cancelled).
+      const selection = getSavedAppSelection();
+      if (selection) {
+        setHasSelection(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setTimeout(() => router.replace("/(tabs)"), 600);
+      }
+    } catch {
+      // User cancelled or picker failed — let them try again or skip.
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
   const handleSkip = () => {
     router.replace("/(tabs)");
   };
 
+  const title = hasSelection
+    ? "All Set!"
+    : isAuthorized
+      ? "Pick Apps to Block"
+      : "Connect Niyah to\nScreen Time, Securely.";
+  const subtitle = hasSelection
+    ? "Niyah will block your selected apps during focus sessions."
+    : isAuthorized
+      ? "Choose the apps and categories you want to block during focus sessions. You can change these later in your profile."
+      : "To block distracting apps on this iPhone, Niyah will need your permission.";
+
   return (
-    <AuthScreenScaffold
-      showBack={false}
-      title={
-        isAuthorized ? "Connected!" : "Connect Niyah to\nScreen Time, Securely."
-      }
-      subtitle={
-        isAuthorized
-          ? "Niyah can now block distracting apps during your focus sessions."
-          : "To block distracting apps on this iPhone, Niyah will need your permission."
-      }
-    >
+    <AuthScreenScaffold showBack={false} title={title} subtitle={subtitle}>
       <View style={styles.content}>
         {/* Visual indicator */}
         <View style={styles.iconContainer}>
           <View
             style={[
               styles.iconCircle,
-              isAuthorized && styles.iconCircleSuccess,
+              hasSelection && styles.iconCircleSuccess,
             ]}
           >
             <Text style={styles.iconText}>
-              {isAuthorized ? "\u2713" : "\u23F1"}
+              {hasSelection ? "\u2713" : isAuthorized ? "\u2691" : "\u23F1"}
             </Text>
           </View>
         </View>
@@ -118,6 +146,22 @@ export default function ScreenTimeSetupScreen() {
             <Button
               title={isRequesting ? "Connecting..." : "Connect Screen Time"}
               onPress={handleConnect}
+              disabled={isRequesting}
+              loading={isRequesting}
+              size="large"
+            />
+            <Button
+              title="Skip for Now"
+              onPress={handleSkip}
+              variant="outline"
+              size="large"
+            />
+          </>
+        ) : !hasSelection ? (
+          <>
+            <Button
+              title={isRequesting ? "Opening picker..." : "Choose Apps"}
+              onPress={handlePickApps}
               disabled={isRequesting}
               loading={isRequesting}
               size="large"

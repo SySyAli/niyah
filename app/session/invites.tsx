@@ -23,6 +23,7 @@ import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
+import { getFunctionErrorMessage } from "../../src/utils/errors";
 import type { GroupInvite } from "../../src/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -69,9 +70,10 @@ export default function GroupInvitesScreen() {
           `/session/waiting-room?sessionId=${invite.sessionId}` as RelativePathString,
         );
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to accept invite.";
-        Alert.alert("Could Not Accept", message);
+        Alert.alert(
+          "Could Not Accept",
+          getFunctionErrorMessage(err, "Failed to accept invite."),
+        );
       } finally {
         setLoadingAccept(null);
       }
@@ -84,8 +86,11 @@ export default function GroupInvitesScreen() {
       setLoadingDecline(inviteId);
       try {
         await declineInvite(inviteId);
-      } catch {
-        Alert.alert("Error", "Failed to decline invite. Please try again.");
+      } catch (err) {
+        Alert.alert(
+          "Could Not Decline",
+          getFunctionErrorMessage(err, "Please try again."),
+        );
       } finally {
         setLoadingDecline(null);
       }

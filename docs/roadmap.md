@@ -3,31 +3,36 @@
 > Development phases, current status, and blockers.
 > See also: [Features](./features.md) | [Payments](./payments.md) | [Native Modules](./native-modules.md)
 
-## Current Status (Mar 2026)
+## Current Status (Apr 2026)
 
-| Area                     | Status      | Notes                                                                   |
-| ------------------------ | ----------- | ----------------------------------------------------------------------- |
-| Firebase Auth            | Done        | Google, Apple, Email magic link via RNFB                                |
-| Firestore                | Done        | Profiles, wallets, follows, sessions. Crash recovery.                   |
-| Solo Sessions            | Done        | Cadence, stake, timer, surrender/complete. Firestore persistence.       |
-| Duo Sessions             | Done        | Partner store, lifecycle, Venmo deep links                              |
-| Group Sessions (UI)      | Done        | N-person, payout algorithm, transfer tracking, propose.tsx              |
-| Group Sessions (Backend) | Not Started | No Firebase writes, no real-time listeners, no push notifications       |
-| Social Features          | Done        | Following/followers, public profiles, reputation (5 tiers)              |
-| Referral System          | Done        | Deep link invites, reputation boost, partner auto-connect               |
-| Theme System             | Done        | Dark/light via themeStore + useColors hook                              |
-| Onboarding               | In Progress | 10 scene components, animations need polish                             |
-| JITAI Module             | Parked      | Simulation-only, awaiting real Screen Time data                         |
-| Testing                  | Done        | 401 tests (20 suites), unit + integration coverage                      |
-| Screen Time (Swift)      | Done        | Production-quality. Auth, picker, blocking, violation polling.          |
-| Screen Time (Wiring)     | Not Started | sessionStore doesn't call startBlocking/stopBlocking                    |
-| Screen Time (Stats)      | Not Started | DeviceActivityReport not imported                                       |
-| Push Notifications       | Not Started | APNs configured, no FCM implementation                                  |
-| Stripe Payments          | In Progress | Client lib, 13 Cloud Functions deployed, deposit/withdrawal/KYC screens |
-| Firestore Rules          | Done        | Hardened rules for users, wallets, follows, sessions. Default deny.     |
-| Security Audit           | Done        | Server-side validation, rate limiting, SSL pinning, screen protection   |
-| Config Externalized      | Done        | Firebase config gitignored, env vars, keys rotated                      |
-| Payout Algorithm         | Done        | Solo 2x multiplier, group pool split. Not yet wired to solo store.      |
+| Area                     | Status      | Notes                                                                           |
+| ------------------------ | ----------- | ------------------------------------------------------------------------------- |
+| Firebase Auth            | Done        | Google, Apple, Email magic link, Phone SMS OTP via RNFB                         |
+| Firestore                | Done        | Profiles, wallets, follows, sessions. Crash recovery.                           |
+| Solo Sessions            | Done        | Cadence, stake, timer, surrender/complete. Firestore persistence.               |
+| Quick Block              | Done        | One-tap blocking without stake (`quick-block.tsx`)                              |
+| Duo Sessions             | Done        | Partner store, lifecycle, Venmo deep links                                      |
+| Group Sessions (UI)      | Done        | N-person, payout algorithm, transfer tracking, propose, waiting room, invites   |
+| Group Sessions (Backend) | Done        | 7 Cloud Functions (create, invite, accept, start, report, cancel, auto-timeout) |
+| Social Features          | Done        | Following/followers, public profiles, reputation (5 tiers)                      |
+| Contact Discovery        | Done        | `findContactsOnNiyah` Cloud Function, cached in socialStore                     |
+| Referral System          | Done        | Deep link invites, reputation boost, partner auto-connect                       |
+| Theme System             | Done        | Dark/light via themeStore + useColors hook                                      |
+| Onboarding               | Done        | Screen Time setup flow, blob scenes, profile setup                              |
+| JITAI Module             | Parked      | Simulation-only, awaiting real Screen Time data                                 |
+| Testing                  | Done        | 1018 tests (48 suites), unit + integration coverage                             |
+| Screen Time (Swift)      | Done        | Production-quality. Auth, picker, blocking, violation polling, custom shield.   |
+| Screen Time (Shield)     | Done        | Custom Niyah-branded shield with "Stay Focused" / "Surrender" buttons           |
+| Screen Time (Wiring)     | In Progress | Quick-block wired. Full session lifecycle wiring pending.                       |
+| Screen Time (Stats)      | Not Started | DeviceActivityReport not imported                                               |
+| Schedule Blocking        | Not Started | scheduleStore, schedule-builder, calendar integration (sprint planned)          |
+| Push Notifications       | In Progress | FCM messaging installed, token management scaffolded, wiring pending            |
+| Stripe Payments          | Done        | 24 Cloud Functions deployed, deposit/withdrawal/KYC/Plaid bank linking          |
+| Legal Acceptance         | Done        | `acceptLegalTerms` Cloud Function, server-timestamped                           |
+| Firestore Rules          | Done        | Hardened rules for users, wallets, follows, sessions. Default deny.             |
+| Security Audit           | Done        | Server-side validation, rate limiting, SSL pinning, screen protection           |
+| Config Externalized      | Done        | Firebase config gitignored, env vars, keys rotated                              |
+| Payout Algorithm         | Done        | Solo 2x multiplier, group pool split. Not yet wired to solo store.              |
 
 ### Apple Developer Account
 
@@ -38,10 +43,10 @@
 ### Firebase Project
 
 - [x] Firebase project with Auth + Firestore
-- [x] 13 Cloud Functions deployed (Stripe payments, session lifecycle, social, webhook)
+- [x] 24 Cloud Functions deployed (Stripe, Plaid, session lifecycle, group sessions, social, legal, webhook)
 - [x] Firestore security rules hardened and ready to deploy
-- [ ] Cloud Functions for group sessions (not started)
-- [ ] FCM push notification infrastructure (not started)
+- [x] Cloud Functions for group sessions (7 functions: create, invite, accept, start, report, cancel, auto-timeout)
+- [ ] FCM push notification wiring (messaging package installed, token management scaffolded)
 
 ## Launch Strategy
 

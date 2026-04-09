@@ -21,6 +21,7 @@ import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney, formatTime } from "../../src/utils/format";
+import { getFunctionErrorMessage } from "../../src/utils/errors";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -326,8 +327,11 @@ export default function WaitingRoomScreen() {
     if (!sessionId) return;
     try {
       await startSession(sessionId);
-    } catch {
-      Alert.alert("Error", "Failed to start session. Please try again.");
+    } catch (err) {
+      Alert.alert(
+        "Could Not Start Session",
+        getFunctionErrorMessage(err, "Please try again."),
+      );
     }
   }, [sessionId, startSession]);
 
@@ -344,10 +348,10 @@ export default function WaitingRoomScreen() {
           onPress: async () => {
             try {
               await cancelSession(sessionId);
-            } catch {
+            } catch (err) {
               Alert.alert(
-                "Error",
-                "Failed to cancel session. Please try again.",
+                "Could Not Cancel Session",
+                getFunctionErrorMessage(err, "Please try again."),
               );
             }
           },

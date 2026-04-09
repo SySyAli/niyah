@@ -40,6 +40,7 @@ import {
   type LinkExit,
 } from "react-native-plaid-link-sdk";
 import { logger } from "../../src/utils/logger";
+import { getFunctionErrorMessage } from "../../src/utils/errors";
 
 type WithdrawMethod = "standard" | "instant";
 
@@ -134,11 +135,10 @@ export default function WithdrawScreen() {
       );
       void result; // transferId/payoutId logged server-side
     } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.";
-      Alert.alert("Withdrawal Failed", message);
+      Alert.alert(
+        "Withdrawal Failed",
+        getFunctionErrorMessage(err, "Something went wrong. Please try again."),
+      );
       // Resync wallet from Firestore in case server processed but client errored
       const uid = user?.id;
       if (uid) {
@@ -194,11 +194,10 @@ export default function WithdrawScreen() {
             );
           } catch (err) {
             logger.error("linkBankAccount error:", err);
-            const msg =
-              err instanceof Error
-                ? err.message
-                : "Failed to link bank account.";
-            Alert.alert("Link Failed", msg);
+            Alert.alert(
+              "Link Failed",
+              getFunctionErrorMessage(err, "Failed to link bank account."),
+            );
           } finally {
             setIsLinkingBank(false);
           }

@@ -1,13 +1,13 @@
-import ShieldConfiguration
 import ManagedSettings
+import ManagedSettingsUI
 import UIKit
 
 /// Custom shield appearance shown when a user opens a blocked app during a
 /// Niyah focus session. iOS discovers this extension automatically when apps
 /// are shielded via ManagedSettingsStore.
 ///
-/// Primary button  → "Stay Focused"   (handled by NiyahShieldAction extension)
-/// Secondary button → "Close"          (handled by NiyahShieldAction extension)
+/// Primary button  → "Stay Focused"     (returns user to home screen)
+/// Secondary button → "Surrender Session" (forfeits stake, ends session)
 class NiyahShieldConfigurationDataSource: ShieldConfigurationDataSource {
 
     // ── Brand colours (must be hardcoded — no access to the main app bundle) ──
@@ -44,29 +44,27 @@ class NiyahShieldConfigurationDataSource: ShieldConfigurationDataSource {
     // ── Shared config factory ─────────────────────────────────────────────────
 
     private func makeConfiguration() -> ShieldConfiguration {
+        // NOTE: ShieldConfiguration.Label only accepts (text, color). Apple
+        // controls fonts for shield UI consistency — no font override allowed.
         ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
             backgroundColor: backgroundDark,
             icon: nil,
             title: ShieldConfiguration.Label(
                 text: "Niyah",
-                font: .systemFont(ofSize: 32, weight: .heavy),
                 color: textPrimary
             ),
             subtitle: ShieldConfiguration.Label(
                 text: "This app was blocked during\nyour focus session.\n\nYou're saving time.\nKeep going.",
-                font: .systemFont(ofSize: 16, weight: .regular),
                 color: textSecondary
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: "Close",
-                font: .systemFont(ofSize: 17, weight: .semibold),
+                text: "Stay Focused",
                 color: .white
             ),
             primaryButtonBackgroundColor: primaryGreen,
             secondaryButtonLabel: ShieldConfiguration.Label(
                 text: "Surrender Session",
-                font: .systemFont(ofSize: 15, weight: .medium),
                 color: dangerRed
             )
         )

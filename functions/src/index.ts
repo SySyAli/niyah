@@ -382,6 +382,7 @@ const RATE_LIMITS = {
   markOnlineForSession: { maxCalls: 30, windowMs: 600_000 }, // 30/10min
   startGroupSession: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
   reportSessionStatus: { maxCalls: 10, windowMs: 3_600_000 }, // 10/hr
+  reportShieldViolation: { maxCalls: 100, windowMs: 600_000 }, // 100/10min — high cap, hot path
   cancelGroupSession: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
   createPlaidLinkToken: { maxCalls: 10, windowMs: 600_000 }, // 10/10min
   linkBankAccount: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
@@ -3054,7 +3055,11 @@ export const reportSessionStatus = onRequest(
 
         if (!allReported) {
           txn.update(sessionRef, updateData);
-          return { sessionComplete: false };
+          return {
+            sessionComplete: false,
+            participantIds,
+            actorName: sessionData.participants?.[uid]?.name ?? "Someone",
+          };
         }
 
         const payouts = calculateGroupSessionPayouts(
@@ -3079,6 +3084,21 @@ export const reportSessionStatus = onRequest(
       });
 
       if (!outcome.sessionComplete) {
+        // Notify other participants when someone gives up mid-session
+        if (
+          action === "surrender" &&
+          outcome.participantIds &&
+          outcome.actorName
+        ) {
+          sendPushToUsers(
+            outcome.participantIds.filter((pid: string) => pid !== uid),
+            {
+              title: `${outcome.actorName} surrendered`,
+              body: "Stay strong — the pool just grew for everyone still in.",
+            },
+            { type: "session_surrender", sessionId },
+          );
+        }
         console.log(
           `reportSessionStatus: session=${sessionId}, user=${uid}, action=${action}, allReported=false`,
         );
@@ -3139,6 +3159,118 @@ export const reportSessionStatus = onRequest(
       } else {
         console.error("reportSessionStatus error:", err);
         sendError(res, 500, "Failed to report session status");
+      }
+    }
+  },
+);
+
+// ─── reportShieldViolation ───────────────────────────────────────────────────
+/**
+ * Records that a participant tried to open a blocked app during an active
+ * group session. Increments their `participants.{uid}.violationCount` and
+ * pushes a notification to other participants ("Sarah just slipped").
+ *
+ * Body: { sessionId: string }
+ * Returns: { success: true, violationCount: number }
+ *
+ * SECURITY: Validates the caller is a participant and the session is active.
+ * High rate limit (100/10min) — this is a hot path on the violation hook.
+ */
+export const reportShieldViolation = onRequest(
+  PUBLIC_HTTP_OPTIONS,
+  async (req, res) => {
+    if (req.method !== "POST") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (
+      await checkRateLimit(
+        uid,
+        "reportShieldViolation",
+        RATE_LIMITS.reportShieldViolation,
+      )
+    ) {
+      sendError(res, 429, "Too many requests — try again later");
+      return;
+    }
+
+    const { sessionId } = req.body as { sessionId: string };
+    if (!sessionId || typeof sessionId !== "string") {
+      sendError(res, 400, "Missing sessionId");
+      return;
+    }
+
+    try {
+      const sessionRef = db.collection("groupSessions").doc(sessionId);
+      const result = await db.runTransaction(async (txn) => {
+        const snap = await txn.get(sessionRef);
+        if (!snap.exists) {
+          throw new Error("Session not found");
+        }
+        const data = snap.data()!;
+        const participantIds = Array.isArray(data.participantIds)
+          ? data.participantIds.filter(
+              (p): p is string => typeof p === "string" && p.length > 0,
+            )
+          : [];
+        if (!participantIds.includes(uid)) {
+          throw new Error("Not a participant in this session");
+        }
+        if (data.status !== "active") {
+          throw new Error(
+            `Session is not active (current status: ${data.status})`,
+          );
+        }
+        const participant = data.participants?.[uid];
+        const newCount = (participant?.violationCount ?? 0) + 1;
+        const actorName = participant?.name || "Someone";
+        txn.update(sessionRef, {
+          [`participants.${uid}.violationCount`]: newCount,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { newCount, actorName, participantIds };
+      });
+
+      // Notify other participants — fire and forget
+      sendPushToUsers(
+        result.participantIds.filter((pid: string) => pid !== uid),
+        {
+          title: `${result.actorName} slipped`,
+          body: "They just opened a blocked app.",
+        },
+        { type: "shield_violation", sessionId },
+      );
+
+      console.log(
+        `reportShieldViolation: session=${sessionId}, user=${uid}, count=${result.newCount}`,
+      );
+
+      res.json({ success: true, violationCount: result.newCount });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (
+        message.includes("not found") ||
+        message.includes("not active") ||
+        message.includes("Not a participant")
+      ) {
+        const statusCode = message.includes("not found")
+          ? 404
+          : message.includes("Not a participant")
+            ? 403
+            : 400;
+        sendError(res, statusCode, message);
+      } else {
+        console.error("reportShieldViolation error:", err);
+        sendError(res, 500, "Failed to report shield violation");
       }
     }
   },

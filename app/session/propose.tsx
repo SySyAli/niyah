@@ -25,6 +25,7 @@ import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
+import { getFunctionErrorMessage } from "../../src/utils/errors";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -408,8 +409,11 @@ export default function ProposeSessionScreen() {
       router.replace(
         `/session/waiting-room?sessionId=${sessionId}` as RelativePathString,
       );
-    } catch {
-      Alert.alert("Error", "Failed to create group session. Please try again.");
+    } catch (err) {
+      Alert.alert(
+        "Could Not Create Session",
+        getFunctionErrorMessage(err, "Please try again."),
+      );
       setLoading(false);
     }
   };

@@ -22,6 +22,19 @@ const normalizeErrorBody = (status: number, body: string): string => {
       : "Server returned an HTML error page";
   }
 
+  // Cloud Functions respond with { error: "message" }. Extract just the message
+  // so users see "Insufficient balance" instead of the raw JSON envelope.
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed.error === "string" && parsed.error.trim()) {
+        return parsed.error;
+      }
+    } catch {
+      // Fall through and return the raw body
+    }
+  }
+
   return trimmed;
 };
 
@@ -349,6 +362,20 @@ export async function cancelGroupSession(
 ): Promise<{ success: boolean; refundedCount: number }> {
   return callFunction<{ success: boolean; refundedCount: number }>(
     "cancelGroupSession",
+    { sessionId },
+  );
+}
+
+/**
+ * Reports a shield violation (user opened a blocked app during an active
+ * group session). Server increments the participant's violationCount and
+ * sends an FCM push to other participants.
+ */
+export async function reportShieldViolation(
+  sessionId: string,
+): Promise<{ success: boolean; violationCount: number }> {
+  return callFunction<{ success: boolean; violationCount: number }>(
+    "reportShieldViolation",
     { sessionId },
   );
 }

@@ -12,17 +12,31 @@ import { useColors } from "../../src/hooks/useColors";
 import { Card, Button, SessionScreenScaffold } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../../src/store/walletStore";
-import { CADENCES, DEMO_MODE } from "../../src/constants/config";
+import {
+  CADENCES,
+  SHORT_CADENCES,
+  LONG_CADENCES,
+  USE_SHORT_TIMERS,
+} from "../../src/constants/config";
 import type { CadenceType } from "../../src/types";
-import { formatMoney } from "../../src/utils/format";
+import { formatMoney, formatDuration } from "../../src/utils/format";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
+    sectionTitle: {
+      fontSize: Typography.labelMedium,
+      ...Font.semibold,
+      color: Colors.textSecondary,
+      textTransform: "uppercase" as const,
+      letterSpacing: 0.5,
+      marginBottom: Spacing.sm,
+      marginTop: Spacing.md,
+    },
     options: {
       gap: Spacing.md,
-      marginBottom: Spacing.xl,
+      marginBottom: Spacing.lg,
     },
     optionCard: {
       backgroundColor: Colors.backgroundCard,
@@ -170,7 +184,6 @@ const makeStyles = (Colors: ThemeColors) =>
   });
 
 interface CadenceOptionProps {
-  cadenceKey: CadenceType;
   config: (typeof CADENCES)[CadenceType];
   isSelected: boolean;
   canAfford: boolean;
@@ -178,7 +191,6 @@ interface CadenceOptionProps {
 }
 
 const CadenceOption: React.FC<CadenceOptionProps> = ({
-  cadenceKey,
   config,
   isSelected,
   canAfford,
@@ -227,13 +239,9 @@ const CadenceOption: React.FC<CadenceOptionProps> = ({
             )}
           </View>
           <Text style={styles.optionDuration}>
-            {DEMO_MODE
+            {USE_SHORT_TIMERS
               ? `${config.demoDuration / 1000}s demo session`
-              : cadenceKey === "daily"
-                ? "24 hours"
-                : cadenceKey === "weekly"
-                  ? "7 days"
-                  : "30 days"}
+              : formatDuration(config.duration)}
           </Text>
           <View style={styles.optionPricing}>
             <View style={styles.priceColumn}>
@@ -263,7 +271,7 @@ export default function SelectCadenceScreen() {
   const params = useLocalSearchParams();
   const balance = useWalletStore((state) => state.balance);
   const [selectedCadence, setSelectedCadence] = useState<CadenceType>(
-    (params.cadence as CadenceType) || "daily",
+    (params.cadence as CadenceType) || "focus",
   );
 
   const config = CADENCES[selectedCadence];
@@ -297,12 +305,26 @@ export default function SelectCadenceScreen() {
         </>
       }
     >
-      {/* Options */}
+      {/* Quick Sessions */}
+      <Text style={styles.sectionTitle}>Quick Sessions</Text>
       <View style={styles.options}>
-        {(Object.keys(CADENCES) as CadenceType[]).map((key) => (
+        {(SHORT_CADENCES as CadenceType[]).map((key) => (
           <CadenceOption
             key={key}
-            cadenceKey={key}
+            config={CADENCES[key]}
+            isSelected={selectedCadence === key}
+            canAfford={balance >= CADENCES[key].stake}
+            onSelect={() => setSelectedCadence(key)}
+          />
+        ))}
+      </View>
+
+      {/* Endurance Sessions */}
+      <Text style={styles.sectionTitle}>Endurance Sessions</Text>
+      <View style={styles.options}>
+        {(LONG_CADENCES as CadenceType[]).map((key) => (
+          <CadenceOption
+            key={key}
             config={CADENCES[key]}
             isSelected={selectedCadence === key}
             canAfford={balance >= CADENCES[key].stake}

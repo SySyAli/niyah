@@ -11,7 +11,7 @@ The repo is **public** (school requirement). Security cannot depend on hiding co
 
 ### Server-Side Validation (Cloud Functions)
 
-All 13 Cloud Functions validate:
+All 24 Cloud Functions validate:
 
 - Firebase Auth token (`context.auth.uid`)
 - Request parameters (types, ranges, required fields)
@@ -81,4 +81,4 @@ All keys were rotated after removing config files from the repo:
 - **Firebase App Check** -- biggest remaining gap. Without it, anyone with the project ID can call Cloud Functions. Needs Firebase Console setup + `context.app` check in functions.
 - **Android API key restriction** -- add SHA-256 fingerprint when first Android build is done via EAS.
 - **Delete old rotated keys** -- remove deprecated keys in GCP Console after confirming stability.
-- **Node.js runtime upgrade** -- Cloud Functions warn Node.js 20 deprecated 2026-04-30; upgrade to 22.
+- ~~Node.js runtime upgrade~~ -- Done. Cloud Functions upgraded to Node.js 22.

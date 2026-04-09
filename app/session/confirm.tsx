@@ -21,7 +21,7 @@ import {
   SOLO_COMPLETION_MULTIPLIER,
 } from "../../src/constants/config";
 import type { CadenceType } from "../../src/types";
-import { formatMoney } from "../../src/utils/format";
+import { formatMoney, formatDuration } from "../../src/utils/format";
 import {
   isScreenTimeAvailable,
   startBlocking,
@@ -295,16 +295,7 @@ export default function ConfirmSessionScreen() {
 
   const getDurationText = () => {
     if (USE_SHORT_TIMERS) return `${config.demoDuration / 1000} seconds (demo)`;
-    switch (cadence) {
-      case "daily":
-        return "24 hours";
-      case "weekly":
-        return "7 days";
-      case "monthly":
-        return "30 days";
-      default:
-        return "";
-    }
+    return formatDuration(config.duration);
   };
 
   const getReputationLabel = (level: string) => {

@@ -2,7 +2,7 @@
   "name": "niyah",
   "version": "1.0.0",
   "main": "expo-router/entry",
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "start": "node scripts/print-dev-url.js & expo start --dev-client",
     "start:device": "SKIP_BUILD=true bash scripts/dev-device.sh",
@@ -41,7 +41,7 @@
     "@react-native-firebase/firestore": "^23.8.8",
     "@react-native-firebase/messaging": "^23.8.8",
     "@react-native-google-signin/google-signin": "^14.0.2",
-    "@react-navigation/native": "^7.2.0",
+    "@react-navigation/native": "^7.2.2",
     "@stripe/stripe-react-native": "^0.59.2",
     "expo": "~54.0.33",
     "expo-apple-authentication": "^8.0.8",
@@ -57,7 +57,7 @@
     "expo-linking": "~8.0.11",
     "expo-router": "~6.0.23",
     "expo-screen-capture": "^8.0.9",
-    "expo-secure-store": "^55.0.9",
+    "expo-secure-store": "^55.0.11",
     "expo-sms": "~14.0.8",
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
@@ -87,7 +87,7 @@
     "babel-preset-expo": "^54.0.10",
     "cross-env": "^10.1.0",
     "eas": "^0.1.0",
-    "eas-cli": "^18.4.0",
+    "eas-cli": "^18.5.0",
     "eslint": "^9.39.4",
     "eslint-config-expo": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
@@ -100,7 +100,7 @@
     "react-native-web": "~0.20.0",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.57.2"
+    "typescript-eslint": "^8.58.0"
   },
   "private": true,
   "pnpm": {

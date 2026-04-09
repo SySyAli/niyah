@@ -80,6 +80,7 @@ function parseParticipants(
       completed: p.completed as boolean | undefined,
       surrendered: p.surrendered as boolean | undefined,
       surrenderedAt: parseTimestamp(p.surrenderedAt),
+      violationCount: (p.violationCount as number) ?? 0,
     };
   }
   return result;

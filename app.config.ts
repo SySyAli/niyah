@@ -103,6 +103,7 @@ export default {
         },
       ],
       "./plugins/withFollyCoroutinesFix",
+      "./plugins/withFmtConstevalFix",
       "./plugins/withGoogleServicesPlist",
       "./plugins/withGoogleServicesJson",
       "./plugins/withFirebaseStaticFrameworks",

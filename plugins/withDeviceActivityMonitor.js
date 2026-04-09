@@ -134,11 +134,16 @@ function withDeviceActivityMonitor(config) {
     // --- Add PBXGroup for the extension files ---
     const groupKey = project.pbxCreateGroup(EXTENSION_NAME, EXTENSION_NAME);
 
-    // Add file references to the group
-    const swiftFileRef = project.addFile(
-      `${EXTENSION_NAME}/DeviceActivityMonitorExtension.swift`,
+    // IMPORTANT: use addSourceFile (not addFile) AND pass just the filename
+    // (not prefixed with EXTENSION_NAME). The group's path already supplies
+    // the directory prefix — prefixing again would produce a doubled path
+    // like "NiyahDeviceActivityMonitor/NiyahDeviceActivityMonitor/File.swift"
+    // that Xcode can't resolve. addFile() alone skips the PBXSourcesBuildPhase
+    // entirely, so the .appex gets no executable and iOS refuses to install.
+    project.addSourceFile(
+      "DeviceActivityMonitorExtension.swift",
+      { target: target.uuid },
       groupKey,
-      { target: target.uuid, lastKnownFileType: "sourcecode.swift" },
     );
 
     // Add the group to the main project group

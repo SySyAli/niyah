@@ -70,22 +70,20 @@ class NiyahShieldActionExtension: ShieldActionDelegate {
             completionHandler(.close)
 
         case .secondaryButtonPressed:
-            // "Surrender Session" — three independent actions for robustness:
-            //   1. Clear shields directly from this extension process so the
-            //      user can immediately use their apps (doesn't depend on the
-            //      main app launching).
-            //   2. Write the surrender flag to shared UserDefaults so the main
-            //      app can detect and report the surrender to the server when
-            //      the user eventually opens Niyah.
-            //   3. Attempt to launch Niyah via the custom URL scheme (undoc'd
-            //      NSExtensionContext trick). If this works, the main app
-            //      foregrounds immediately; if not, user has to open it
-            //      manually — but the shields are already cleared, so they
-            //      don't feel stuck.
-            NSLog("[NiyahShieldAction] Surrender tapped — clearing shields + setting flag")
-            ManagedSettingsStore(named: .niyahSession).clearAllSettings()
+            // "Surrender Session" — set a flag and open the main app.
+            // Blocking stays ACTIVE until the user confirms surrender in the
+            // Niyah app (type QUIT). This prevents the desync where the shield
+            // used to unblock apps immediately but the app still showed the
+            // session as active.
+            //
+            //   1. Write the surrender flag to shared UserDefaults so the main
+            //      app can detect the request on foreground.
+            //   2. Attempt to launch Niyah via the custom URL scheme so the
+            //      user lands directly in the surrender confirmation flow.
+            //   3. Do NOT clear shields — the app will call stopBlocking()
+            //      after the user confirms surrender.
+            NSLog("[NiyahShieldAction] Surrender tapped — setting flag, keeping shields active")
             sharedDefaults.set(true, forKey: Self.surrenderKey)
-            sharedDefaults.set(false, forKey: Self.blockingKey)
             sharedDefaults.synchronize()
             openMainApp(urlString: "niyah://surrender")
             completionHandler(.close)

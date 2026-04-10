@@ -180,3 +180,14 @@ export const onSurrenderRequested = (callback: () => void): (() => void) => {
   );
   return () => subscription.remove();
 };
+
+/**
+ * Check for a pending surrender flag from the shield extension.
+ * Call on mount to catch surrenders that happened before the JS event
+ * listener was attached (cold-start race condition). If a pending
+ * surrender is found, clears the flag and emits onSurrenderRequested.
+ */
+export const checkPendingSurrender = (): boolean => {
+  if (!isScreenTimeAvailable) return false;
+  return NiyahScreenTime.checkPendingSurrender();
+};

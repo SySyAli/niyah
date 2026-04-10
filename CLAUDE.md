@@ -105,7 +105,7 @@ Full tree: [docs/architecture.md](docs/architecture.md)
 
 ## Current Phase
 
-**April 15 Sprint** — rearchitecting toward schedule-based blocking + group challenges for demo day.
+**Final Sprint — Demo Day April 15, 2026** (live phone demo, real Stripe payments)
 
 Completed:
 
@@ -115,16 +115,26 @@ Completed:
 - Shield branding update (custom Niyah shield UI)
 - Group session Cloud Functions (create, invite, accept, start, complete, cancel, timeout)
 - Plaid bank linking + legal acceptance Cloud Functions
+- FamilyControls Distribution entitlement approved (main app)
+- Stripe live mode business account ready
+- Plaid production access approved
+- Niyah, Inc. incorporated with EIN
+- Landing page at niyah.live
 
-Key remaining work:
+Key remaining work (5 days):
 
-- Schedule-based blocking (scheduleStore, schedule-builder screen)
-- Calendar integration (expo-calendar gap detection)
-- DeviceActivityReport chart bridging
-- FCM push notification wiring
-- FamilyControls entitlement (BLOCKER)
+- Fix shield surrender desync bug (shield unblocks but app still shows active)
+- Switch to live Stripe/Plaid keys + deploy Cloud Functions
+- Cut unfinished features from UI (schedule blocking, calendar, reports)
+- E2E test all demo flows with real money
+- Group session testing on multiple devices
+- FCM push notification wiring (group invites)
+- TestFlight build + team distribution
+- Submit FamilyControls Distribution for 3 extension App IDs
 
-Full status and phases: [docs/roadmap.md](docs/roadmap.md) | Sprint spec: [docs/sprint-april15.md](docs/sprint-april15.md)
+Cut for post-demo: schedule blocking, calendar integration, DeviceActivityReport, threshold nudges.
+
+Full plan: [docs/sprint-april15.md](docs/sprint-april15.md) | Roadmap: [docs/roadmap.md](docs/roadmap.md)
 
 ## Demo Mode
 

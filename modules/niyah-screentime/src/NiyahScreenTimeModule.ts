@@ -76,6 +76,28 @@ declare class NiyahScreenTimeModuleClass extends NativeModule<NiyahScreenTimeMod
 
   /** Stop all scheduled monitoring. */
   stopAllScheduledBlocking(): Promise<void>;
+
+  // ------------------------------------------------------------------
+  // Session context
+  // ------------------------------------------------------------------
+
+  /** Write session context for the dynamic shield display. */
+  setSessionContext(contextJson: string): Promise<void>;
+
+  /** Clear session context when session ends. */
+  clearSessionContext(): Promise<void>;
+
+  // ------------------------------------------------------------------
+  // Surrender check
+  // ------------------------------------------------------------------
+
+  /**
+   * Check for a pending surrender flag from the shield extension.
+   * Solves the cold-start race condition where the onSurrenderRequested
+   * event fires before the JS listener is attached.
+   * If found, clears the flag and emits onSurrenderRequested.
+   */
+  checkPendingSurrender(): boolean;
 }
 
 export default requireNativeModule<NiyahScreenTimeModuleClass>(

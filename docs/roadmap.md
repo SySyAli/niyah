@@ -37,8 +37,18 @@
 ### Apple Developer Account
 
 - [x] Apple Developer Program ($99) -- active
-- [ ] FamilyControls Development entitlement -- **BLOCKER for Phase 1**
-- [ ] FamilyControls Distribution entitlement -- requires Apple approval (2-4 weeks)
+- [x] FamilyControls Development entitlement -- approved
+- [x] FamilyControls Distribution entitlement -- approved 2026-04-09 for `com.niyah.app`
+- [ ] FamilyControls Distribution for extensions -- submit ASAP for `device-activity-monitor`, `shield-action`, `shield-config`
+
+### Business & Payments (as of 2026-04-10)
+
+- [x] Niyah, Inc. incorporated with EIN
+- [x] Stripe live mode -- business account active, live API keys available
+- [x] Plaid production -- approved, pay-as-you-go ($1.50/initial Link call)
+- [x] Landing page live at niyah.live
+- [ ] Live keys deployed to .env + Firebase Secret Manager
+- [ ] Stripe production webhook endpoint configured
 
 ### Firebase Project
 
@@ -119,8 +129,11 @@ See [Payments](./payments.md) and [Native Modules > Planned Shield UX](./native-
 
 ## Blockers
 
-| Blocker                                | Impact                                                         | Resolution                                                  |
-| -------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------- |
-| FamilyControls Development entitlement | Cannot test Screen Time on device                              | Apply in Apple Developer portal                             |
-| Screen Time statistics                 | `DeviceActivityReport` is a SwiftUI view API, not a data query | Evaluate `UIHostingController` bridge or extension approach |
-| Firebase App Check                     | Anyone with project ID can call Cloud Functions                | Firebase Console setup + code changes                       |
+| Blocker                                        | Impact                                                         | Resolution                                                  | Status       |
+| ---------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------- | ------------ |
+| ~~FamilyControls Development entitlement~~     | ~~Cannot test Screen Time on device~~                          | ~~Apply in Apple Developer portal~~                         | **Resolved** |
+| ~~FamilyControls Distribution (main app)~~     | ~~Cannot distribute via TestFlight/App Store~~                 | ~~Apple approved 2026-04-09~~                               | **Resolved** |
+| FamilyControls Distribution (3 extensions)     | Extensions may not work in TestFlight builds                   | Submit for `device-activity-monitor`, `shield-action`, `shield-config` | Submit Apr 10 |
+| Shield surrender desync bug                    | Shield unblocks apps but Niyah app still shows session active  | Fix shield to open app instead of unblocking directly       | Fix Apr 10   |
+| Screen Time statistics                         | `DeviceActivityReport` is a SwiftUI view API, not a data query | Deferred post-demo                                          | Cut for demo |
+| Firebase App Check                             | Anyone with project ID can call Cloud Functions                | Firebase Console setup + code changes                       | Post-demo    |

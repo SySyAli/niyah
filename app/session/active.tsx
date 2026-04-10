@@ -26,6 +26,7 @@ import {
   stopBlocking,
   onShieldViolation,
   onSurrenderRequested,
+  checkPendingSurrender,
   isScreenTimeAvailable,
 } from "../../src/config/screentime";
 import { reportShieldViolation as reportShieldViolationCF } from "../../src/config/functions";
@@ -468,8 +469,8 @@ export default function ActiveSessionScreen() {
 
   // Surrender via the custom shield screen ("Surrender Session" button).
   // The ShieldActionExtension writes a flag to shared UserDefaults; the native
-  // module polls and emits this event. The user has already confirmed by
-  // tapping the shield button, so we surrender immediately without an Alert.
+  // module polls and emits this event. The shield no longer unblocks apps
+  // directly — blocking stays active until performSurrender calls stopBlocking.
   //
   // Read performSurrender via a ref so the subscription doesn't tear down on
   // every Firestore snapshot — same pattern as the violation listener above.
@@ -480,6 +481,10 @@ export default function ActiveSessionScreen() {
     const unsubscribe = onSurrenderRequested(() => {
       performSurrenderRef.current();
     });
+    // Cold-start race condition fix: if the app was opened via the
+    // niyah://surrender deep link, the foreground event may have fired
+    // before this listener was attached. Check the flag manually.
+    checkPendingSurrender();
     return unsubscribe;
   }, [hasActiveSession]);
 

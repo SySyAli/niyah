@@ -82,7 +82,7 @@ export default function RootLayout() {
     initializeSslPinning();
   }, []);
 
-  // Handle deep links for email magic link sign-in and referral invites
+  // Handle deep links for email magic link sign-in, surrender, and referral invites
   useEffect(() => {
     const handleUrl = async (url: string) => {
       if (await isEmailSignInLink(url)) {
@@ -91,6 +91,16 @@ export default function RootLayout() {
         } catch (error) {
           logger.error("Error completing email link sign-in:", error);
         }
+        return;
+      }
+
+      // Shield surrender deep link — the ShieldActionExtension opens
+      // niyah://surrender when the user taps "Surrender Session". The
+      // native module's foreground hook will detect the flag and emit
+      // onSurrenderRequested, but we need to ensure the active session
+      // screen is visible so the listener is mounted.
+      if (url.includes("surrender")) {
+        logger.info("Surrender deep link received");
         return;
       }
 

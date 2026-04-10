@@ -1,6 +1,127 @@
 # Niyah: Technical Spec + Implementation Plan (v2)
 
-## Progress (as of Apr 4, 2026)
+## FINAL 5-DAY SPRINT: April 10-15, 2026 (Demo Day)
+
+**Format**: Live phone demo in front of an audience.
+**Goal**: Polished E2E product with real money flowing via live Stripe.
+
+### Demo Flows (all four required)
+
+1. **Solo session + Screen Time blocking** — deposit → stake → timer → apps blocked → complete → earn
+2. **Group challenge** — invite friends → everyone stakes → group session → payouts
+3. **Quick block (no money)** — one-tap → apps blocked → done
+4. **Real deposit + withdraw** — Stripe card payment → balance update → Plaid bank link → withdraw to bank
+
+### What Was Cut for Demo
+
+- Schedule-based blocking (scheduleStore, schedule-builder) — post-demo
+- Calendar integration — post-demo
+- DeviceActivityReport chart — post-demo
+- Threshold nudges — post-demo
+
+Remove any UI buttons/cards that link to these unbuilt features.
+
+### Day 1 — April 10: Entitlements + Bug Fix + Live Keys
+
+**FIRST (15 min)**: Submit FamilyControls Distribution for 3 extension App IDs:
+- `com.niyah.app.device-activity-monitor`
+- `com.niyah.app.shield-action`
+- `com.niyah.app.shield-config`
+
+Apple Developer portal → Certificates, Identifiers & Profiles → each extension → request FamilyControls (Distribution). Demo runs on dev build regardless, but start the clock on approval for TestFlight.
+
+**Fix shield surrender desync bug (~2-3 hours)**:
+
+The bug: Shield's Surrender button clears `ManagedSettingsStore` immediately (unblocks apps), but the Niyah app still shows the session as active because the JS event listener isn't ready when the app cold-starts from the deep link.
+
+Files and changes:
+1. `modules/niyah-screentime/ios/NiyahShieldAction/ShieldActionExtension.swift` (~line 86): **Remove** `ManagedSettingsStore(named: .niyahSession).clearAllSettings()` from the surrender handler. Shield should only set the flag + open the app, NOT unblock.
+2. `app/_layout.tsx` (~line 85-127): **Add** `niyah://surrender` to the deep link handler. When received, navigate to the surrender confirmation screen.
+3. `app/session/active.tsx`: **Add** a foreground check — on app resume, check the `niyah_surrender_requested` UserDefaults flag as a backup (in case the event listener missed it).
+4. Optional: `src/config/screentime.ts` — add `checkSurrenderFlag()` callable from JS.
+
+After fix: Shield Surrender → opens Niyah app → type QUIT → app calls `stopBlocking()` → session ends. If user cancels, blocking stays active.
+
+**Cut dead UI (~1 hour)**:
+- Audit `(tabs)/index.tsx`, `(tabs)/session.tsx`, session screens for buttons linking to schedule/calendar/reports
+- Remove those UI elements (keep code, just hide entry points)
+
+**Switch to live payment keys (~1-2 hours)**:
+1. `.env`: Update `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` to live key
+2. Firebase Secret Manager: `firebase functions:secrets:set STRIPE_SECRET_KEY` (live key)
+3. Firebase Secret Manager: `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET` (live webhook secret)
+4. Update Plaid credentials to production
+5. `firebase deploy --only functions`
+6. Stripe Dashboard: Create webhook endpoint → production Cloud Function URL
+7. Test: deposit $1 real money, verify it credits
+
+### Day 2 — April 11: E2E Testing Solo + Payments
+
+- Fresh sign-up → profile setup → Screen Time setup
+- Deposit real money ($5) via Stripe
+- Solo session: stake → timer → blocked apps → complete → payout
+- Solo session: stake → surrender via app (type QUIT) → forfeit
+- Solo session: stake → surrender via shield → verify new fix works
+- Quick block: one-tap → blocking → end
+- Withdraw to bank: Plaid link → Stripe payout
+- Fix all bugs found
+
+### Day 3 — April 12: Group Sessions + Push + TestFlight
+
+- Group session E2E on 2-3 test devices:
+  - Device A creates challenge, invites B and C
+  - B and C accept
+  - All mark online → session auto-starts
+  - Screen Time blocks on all devices
+  - One surrenders, others complete → payouts verified
+  - Host cancels before start → refunds verified
+- Wire FCM push notifications (at minimum: group invite, session starting)
+- First TestFlight build: `DEMO_MODE=false`, EAS production build, upload, distribute to team
+
+### Day 4 — April 13: Polish + Team Testing
+
+- UI polish (Fardeen's personal pass — animations, gradients, spacing)
+- Bug fixes from TestFlight feedback
+- Verify niyah.live deep links work
+
+### Day 5 — April 14: Demo Prep
+
+- Final TestFlight build with all fixes
+- Demo flow rehearsal on stage device
+- Pre-load demo account with balance
+- Have backup accounts ready
+- Emergency fixes only — no new features
+
+### Suggested Demo Script (3-5 min)
+
+1. Open app → clean dashboard, real balance visible
+2. Quick Block → one tap → show apps blocked → end
+3. Deposit → $10 via Stripe → balance updates live
+4. Solo Session → stake $5 → timer starts → open Instagram → custom Niyah shield → "Stay Focused" → go back → session completes → $5 earned
+5. Group Challenge → invite teammate in audience → they accept on phone → stakes locked → session starts → multi-device blocking
+6. Withdraw → show earnings → initiate bank withdrawal → "real money, real consequences"
+
+### Verification Checklist
+
+- [ ] Extension entitlements submitted to Apple
+- [ ] Shield surrender → app opens → type QUIT → session ends (both directions)
+- [ ] Real Stripe deposit processes and credits balance
+- [ ] Real Stripe withdrawal initiates to linked bank
+- [ ] Plaid bank linking works in production
+- [ ] Solo session: start → block → complete → payout
+- [ ] Solo session: start → block → surrender → forfeit
+- [ ] Quick block: start → blocks → end
+- [ ] Group session: create → invite → accept → start → complete → payouts
+- [ ] Group session: cancel → refund
+- [ ] Push notifications fire for group events
+- [ ] No dead-end buttons in UI
+- [ ] `DEMO_MODE=false` in production build
+- [ ] TestFlight installs and runs on team devices
+- [ ] Demo account pre-loaded with balance
+
+---
+
+## Previous Sprint Progress (as of Apr 4, 2026)
 
 | Phase | Item                                                              | Status      |
 | ----- | ----------------------------------------------------------------- | ----------- |
@@ -10,12 +131,12 @@
 | 0D    | findContactsOnNiyah rate limit + socialStore caching              | Done        |
 | 0E    | Quick flow fixes (profile, propose, sessionStore)                 | Partial     |
 | 1     | One-tap quick block (`quick-block.tsx`)                           | Done        |
-| 1     | DeviceActivitySchedule integration (scheduled blocking)           | Not Started |
-| 1     | `scheduleStore.ts`                                                | Not Started |
-| 2     | Calendar integration (`schedule-builder.tsx`, `calendarUtils.ts`) | Not Started |
-| 3     | DeviceActivityReport chart (`niyah-report/`, `usage-report.tsx`)  | Not Started |
-| 4     | Threshold nudges                                                  | Not Started |
-| 5     | Group session `scheduledStartAt` wiring                           | Not Started |
+| 1     | DeviceActivitySchedule integration (scheduled blocking)           | Cut (post-demo) |
+| 1     | `scheduleStore.ts`                                                | Cut (post-demo) |
+| 2     | Calendar integration (`schedule-builder.tsx`, `calendarUtils.ts`) | Cut (post-demo) |
+| 3     | DeviceActivityReport chart (`niyah-report/`, `usage-report.tsx`)  | Cut (post-demo) |
+| 4     | Threshold nudges                                                  | Cut (post-demo) |
+| 5     | Group session `scheduledStartAt` wiring                           | Cut (post-demo) |
 
 Also completed (not in original sprint scope):
 
@@ -23,6 +144,12 @@ Also completed (not in original sprint scope):
 - Screen Time onboarding flow (`screentime-setup.tsx`)
 - Contact invite list (enhanced `friends.tsx`)
 - Group session Cloud Functions (7 new functions)
+- Custom Niyah shield with branding
+- FamilyControls Distribution approved (main app)
+- Stripe live mode business account ready
+- Plaid production access approved
+- Landing page at niyah.live
+- Niyah, Inc. incorporated with EIN
 
 ---
 

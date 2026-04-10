@@ -328,6 +328,26 @@ public class NiyahScreenTimeModule: Module {
       self?.sharedDefaults.removeObject(forKey: Self.sessionContextKey)
       NSLog("[NiyahScreenTime] clearSessionContext")
     }
+
+    // ================================================================
+    // MARK: - Surrender Check (race condition fix)
+    // ================================================================
+
+    /// Synchronously check if the shield extension wrote a pending surrender
+    /// flag. Called from JS on mount to catch surrenders that fired before
+    /// the event listener was attached (cold-start race condition).
+    /// If found, clears the flag and emits the onSurrenderRequested event.
+    Function("checkPendingSurrender") { [weak self] () -> Bool in
+      guard let self = self else { return false }
+      if self.sharedDefaults.bool(forKey: Self.surrenderKey) {
+        NSLog("[NiyahScreenTime] Pending surrender found via manual check")
+        self.sharedDefaults.removeObject(forKey: Self.surrenderKey)
+        self.sharedDefaults.synchronize()
+        self.sendEvent("onSurrenderRequested", [:])
+        return true
+      }
+      return false
+    }
   }
 
   // ================================================================

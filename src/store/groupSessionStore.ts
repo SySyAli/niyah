@@ -36,6 +36,7 @@ import {
   subscribeToActiveGroupSessions,
 } from "../config/firebase";
 import { logger } from "../utils/logger";
+import { setSessionContext, clearSessionContext } from "../config/screentime";
 
 // Participants are provided without the fields the store sets internally.
 type NewParticipant = Omit<
@@ -369,6 +370,20 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
     }
 
     set({ activeGroupSession: session });
+
+    // Sync participant names + stake to shared UserDefaults so the shield
+    // extension can show dynamic messages like "Sarah and Mike are watching."
+    if (fullParticipants.length > 1) {
+      const myId = useAuthStore.getState().user?.id;
+      const otherNames = fullParticipants
+        .filter((p) => p.userId !== myId)
+        .map((p) => p.name || "Friend");
+      setSessionContext({
+        names: otherNames,
+        stake,
+        type: "group",
+      }).catch(() => {});
+    }
   },
 
   completeGroupSession: (results) => {
@@ -463,6 +478,9 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
         });
       }
     }
+
+    // Clear dynamic shield context now that the session is over
+    clearSessionContext().catch(() => {});
 
     set({
       activeGroupSession: null,
@@ -673,6 +691,7 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
   getVenmoPayLink,
 
   reset: () => {
+    clearSessionContext().catch(() => {});
     set({
       // Firestore-backed state
       activeSession: null,

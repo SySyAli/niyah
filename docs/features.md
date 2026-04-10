@@ -105,14 +105,14 @@ See [Payments](./payments.md) for Stripe integration and payout formulas.
 
 Controlled by env var (`EXPO_PUBLIC_DEMO_MODE=true`):
 
-| Area        | Behavior                                                                                                                     |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Auth        | Real Firebase authentication (Google, Apple, Email, Phone)                                                                   |
-| Profile     | Real Firestore persistence (reads + writes)                                                                                  |
-| Sessions    | Short timers (10s daily, 60s weekly, 90s monthly). Persisted to Firestore with crash recovery. Cloud Function calls skipped. |
-| Wallet      | Starts at $50. Non-demo hydrates from Firestore.                                                                             |
+| Area        | Behavior                                                                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Auth        | Real Firebase authentication (Google, Apple, Email, Phone)                                                                           |
+| Profile     | Real Firestore persistence (reads + writes)                                                                                          |
+| Sessions    | Short timers (10s daily, 60s weekly, 90s monthly). Persisted to Firestore with crash recovery. Cloud Function calls skipped.         |
+| Wallet      | Starts at $50. Non-demo hydrates from Firestore.                                                                                     |
 | Screen Time | Module production-quality, onboarding flow built (`screentime-setup.tsx`), quick-block wired. Full session lifecycle wiring pending. |
-| Payments    | Trust model (virtual balances, settle outside app)                                                                           |
+| Payments    | Trust model (virtual balances, settle outside app)                                                                                   |
 
 ## Trust Model (Current)
 

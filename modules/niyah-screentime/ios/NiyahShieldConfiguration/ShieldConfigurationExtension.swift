@@ -51,17 +51,16 @@ class NiyahShieldConfigurationDataSource: ShieldConfigurationDataSource {
         makeConfiguration()
     }
 
+    // ── App Group for reading session context from main app ─────────────────
+
+    private let appGroupID = "group.com.niyah.app"
+    private let sessionContextKey = "niyah_session_context"
+
     // ── Shared config factory ─────────────────────────────────────────────────
 
     private func makeConfiguration() -> ShieldConfiguration {
-        // NOTE: ShieldConfiguration.Label only accepts (text, color). Apple
-        // controls fonts for shield UI consistency — no font override allowed.
-        // The icon is the biggest visual lever we have.
-        //
-        // Copy sets expectations for the two-tap surrender flow — iOS does
-        // not let a shield extension continue the user INTO the blocked app,
-        // only dismiss the shield and return to home. Making this explicit
-        // prevents confusion about "why didn't it just let me in".
+        let subtitleText = buildSubtitle()
+
         ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
             backgroundColor: backgroundDark,
@@ -71,7 +70,7 @@ class NiyahShieldConfigurationDataSource: ShieldConfigurationDataSource {
                 color: textPrimary
             ),
             subtitle: ShieldConfiguration.Label(
-                text: "Real money is on the line.\nYour stake is safe as long as this app stays closed.\n\nUnlocking will forfeit your stake and return you to your home screen — from there, you can tap the app to use it.",
+                text: subtitleText,
                 color: textSecondary
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
@@ -84,5 +83,55 @@ class NiyahShieldConfigurationDataSource: ShieldConfigurationDataSource {
                 color: dangerRed
             )
         )
+    }
+
+    /// Build a dynamic subtitle based on session context from the main app.
+    /// For group sessions, shows participant names and fun messages.
+    /// Falls back to the default solo message if no context is available.
+    private func buildSubtitle() -> String {
+        guard let defaults = UserDefaults(suiteName: appGroupID),
+              let json = defaults.string(forKey: sessionContextKey),
+              let data = json.data(using: .utf8),
+              let context = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let names = context["names"] as? [String],
+              !names.isEmpty else {
+            // Solo / quick-block — default message
+            return "Real money is on the line.\nYour stake is safe as long as this app stays closed.\n\nUnlocking will forfeit your stake and return you to your home screen — from there, you can tap the app to use it."
+        }
+
+        let namesList = formatNames(names)
+        let stake = context["stake"] as? Int ?? 0
+        let stakeStr = stake > 0 ? String(format: "$%.2f", Double(stake) / 100.0) : nil
+
+        // Rotate fun messages based on the current minute — each time the user
+        // opens a blocked app they may see a different quip.
+        let messages: [String] = buildMessages(namesList: namesList, stakeStr: stakeStr)
+        let index = Int(Date().timeIntervalSince1970 / 60) % messages.count
+
+        return messages[index] + "\n\nUnlocking will forfeit your stake and return you to your home screen."
+    }
+
+    private func buildMessages(namesList: String, stakeStr: String?) -> [String] {
+        var messages = [
+            "\(namesList) are counting on you.\nStay strong!",
+            "\(namesList) will know if you open this app.\nDon't be the one who quits.",
+            "Your friends are focusing right now.\n\(namesList) stayed off their phones — can you?",
+        ]
+        if let stake = stakeStr {
+            messages.append("\(stake) says you can't stay off this app.\nProve them wrong.")
+            messages.append("\(namesList) have \(stake) riding on this.\nDon't let them down.")
+        }
+        return messages
+    }
+
+    /// Format ["Sarah", "Mike", "Jake"] → "Sarah, Mike, and Jake"
+    private func formatNames(_ names: [String]) -> String {
+        switch names.count {
+        case 1: return names[0]
+        case 2: return "\(names[0]) and \(names[1])"
+        default:
+            let allButLast = names.dropLast().joined(separator: ", ")
+            return "\(allButLast), and \(names.last!)"
+        }
     }
 }

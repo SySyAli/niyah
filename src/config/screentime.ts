@@ -102,6 +102,31 @@ export const stopAllScheduledBlocking = async (): Promise<void> => {
 };
 
 // ---------------------------------------------------------------------------
+// Session context (for dynamic shield)
+// ---------------------------------------------------------------------------
+
+/**
+ * Set session context so the shield extension can display dynamic messages
+ * with participant names and stake amounts during group sessions.
+ */
+export const setSessionContext = async (context: {
+  names: string[];
+  stake: number;
+  type: "solo" | "group";
+}): Promise<void> => {
+  if (!isScreenTimeAvailable) return;
+  return NiyahScreenTime.setSessionContext(JSON.stringify(context));
+};
+
+/**
+ * Clear session context (call when session ends).
+ */
+export const clearSessionContext = async (): Promise<void> => {
+  if (!isScreenTimeAvailable) return;
+  return NiyahScreenTime.clearSessionContext();
+};
+
+// ---------------------------------------------------------------------------
 // Violation events
 // ---------------------------------------------------------------------------
 

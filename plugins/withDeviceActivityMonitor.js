@@ -177,15 +177,21 @@ function withDeviceActivityMonitor(config) {
           // simulator. Restricting to iphoneos prevents the extension from being
           // embedded in simulator builds (which would cause install failures).
           SUPPORTED_PLATFORMS: "iphoneos",
+          SDKROOT: "iphoneos",
+          OTHER_LDFLAGS:
+            '"$(inherited) -weak_framework DeviceActivity -weak_framework ManagedSettings"',
         });
       }
     }
 
-    // NOTE: We intentionally do NOT add a target dependency or embed phase here.
-    // The DeviceActivityMonitor extension requires the DeviceActivity + ManagedSettings
-    // frameworks (device-only APIs). The embed phase will be wired up properly when
-    // Screen Time is integrated into sessionStore (see CLAUDE.md: Critical Next Steps).
-    // Adding a broken embed phase caused lstat failures on both simulator and device builds.
+    // Add target dependency so the extension builds before the main app.
+    // addTarget("app_extension") already creates a "Copy Files" embed phase
+    // on the main target (same as withShieldExtensions.js). The original
+    // lstat failures were caused by missing SDKROOT: "iphoneos" — without
+    // it, the build system tried to compile for simulator and hit device-only
+    // frameworks.
+    const mainTarget = project.getFirstTarget();
+    project.addTargetDependency(mainTarget.uuid, [target.uuid]);
 
     return config;
   });

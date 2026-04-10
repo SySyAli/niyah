@@ -13,6 +13,11 @@ import { isEmailSignInLink } from "../src/config/firebase";
 import { DEMO_MODE, PENDING_REFERRAL_KEY } from "../src/constants/config";
 import { logger } from "../src/utils/logger";
 import { initializeSslPinning } from "../src/config/sslPinning";
+import { setupBackgroundHandler } from "../src/config/notifications";
+
+// Firebase requires the background message handler to be registered at the
+// module level (outside any component) before the app renders.
+setupBackgroundHandler();
 
 // Set in .env as EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
 // Use pk_test_... for development, pk_live_... for production

@@ -2,22 +2,23 @@
 
 ## Progress (as of Apr 4, 2026)
 
-| Phase | Item | Status |
-| ----- | ---- | ------ |
-| 0A | ManagedSettingsStore.Name fix + custom shield branding | Done |
-| 0B | linkBankAccount error handling + idempotency | Done |
-| 0C | Withdraw text fix | Done |
-| 0D | findContactsOnNiyah rate limit + socialStore caching | Done |
-| 0E | Quick flow fixes (profile, propose, sessionStore) | Partial |
-| 1 | One-tap quick block (`quick-block.tsx`) | Done |
-| 1 | DeviceActivitySchedule integration (scheduled blocking) | Not Started |
-| 1 | `scheduleStore.ts` | Not Started |
-| 2 | Calendar integration (`schedule-builder.tsx`, `calendarUtils.ts`) | Not Started |
-| 3 | DeviceActivityReport chart (`niyah-report/`, `usage-report.tsx`) | Not Started |
-| 4 | Threshold nudges | Not Started |
-| 5 | Group session `scheduledStartAt` wiring | Not Started |
+| Phase | Item                                                              | Status      |
+| ----- | ----------------------------------------------------------------- | ----------- |
+| 0A    | ManagedSettingsStore.Name fix + custom shield branding            | Done        |
+| 0B    | linkBankAccount error handling + idempotency                      | Done        |
+| 0C    | Withdraw text fix                                                 | Done        |
+| 0D    | findContactsOnNiyah rate limit + socialStore caching              | Done        |
+| 0E    | Quick flow fixes (profile, propose, sessionStore)                 | Partial     |
+| 1     | One-tap quick block (`quick-block.tsx`)                           | Done        |
+| 1     | DeviceActivitySchedule integration (scheduled blocking)           | Not Started |
+| 1     | `scheduleStore.ts`                                                | Not Started |
+| 2     | Calendar integration (`schedule-builder.tsx`, `calendarUtils.ts`) | Not Started |
+| 3     | DeviceActivityReport chart (`niyah-report/`, `usage-report.tsx`)  | Not Started |
+| 4     | Threshold nudges                                                  | Not Started |
+| 5     | Group session `scheduledStartAt` wiring                           | Not Started |
 
 Also completed (not in original sprint scope):
+
 - Phone SMS OTP auth (`phone-entry.tsx`, `verify-phone.tsx`)
 - Screen Time onboarding flow (`screentime-setup.tsx`)
 - Contact invite list (enhanced `friends.tsx`)

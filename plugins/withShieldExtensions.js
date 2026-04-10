@@ -186,11 +186,7 @@ function withShieldExtensions(config) {
       // double it ("NiyahShieldAction/NiyahShieldAction/File.swift").
       // addFile() alone skips the PBXSourcesBuildPhase → .appex gets no
       // executable → iOS silently falls back to the system shield.
-      project.addSourceFile(
-        ext.sourceFile,
-        { target: target.uuid },
-        groupKey,
-      );
+      project.addSourceFile(ext.sourceFile, { target: target.uuid }, groupKey);
 
       // Attach group to main project group
       const mainGroupKey = project.getFirstProject().firstProject.mainGroup;

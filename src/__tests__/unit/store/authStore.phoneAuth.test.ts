@@ -27,6 +27,8 @@ jest.mock("../../../config/firebase", () => ({
   saveUserProfile: (...args: unknown[]) => mockSaveUserProfile(...args),
   updateUserDoc: jest.fn(),
   signOut: jest.fn(() => Promise.resolve()),
+  subscribeToGroupInvites: jest.fn(() => jest.fn()),
+  subscribeToActiveGroupSessions: jest.fn(() => jest.fn()),
 }));
 
 jest.mock("../../../config/notifications", () => ({

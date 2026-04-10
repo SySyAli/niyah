@@ -93,21 +93,25 @@ describe("notifications", () => {
     });
 
     it("returns false when DENIED", async () => {
+      const spy = jest.spyOn(console, "warn").mockImplementation(() => {});
       sharedInstance.requestPermission.mockResolvedValue(
         AuthorizationStatus.DENIED,
       );
 
       const result = await requestNotificationPermission();
       expect(result).toBe(false);
+      spy.mockRestore();
     });
 
     it("returns false when NOT_DETERMINED", async () => {
+      const spy = jest.spyOn(console, "warn").mockImplementation(() => {});
       sharedInstance.requestPermission.mockResolvedValue(
         AuthorizationStatus.NOT_DETERMINED,
       );
 
       const result = await requestNotificationPermission();
       expect(result).toBe(false);
+      spy.mockRestore();
     });
   });
 
@@ -435,6 +439,7 @@ describe("notifications", () => {
     });
 
     it("returns noop when permission is denied", async () => {
+      const spy = jest.spyOn(console, "warn").mockImplementation(() => {});
       sharedInstance.requestPermission.mockResolvedValue(
         AuthorizationStatus.DENIED,
       );
@@ -446,6 +451,7 @@ describe("notifications", () => {
       expect(sharedInstance.onNotificationOpenedApp).not.toHaveBeenCalled();
 
       expect(() => cleanup()).not.toThrow();
+      spy.mockRestore();
     });
   });
 });

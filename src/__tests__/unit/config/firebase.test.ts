@@ -700,9 +700,11 @@ describe("firebase config layer", () => {
     });
 
     it("swallows errors (fire-and-forget)", async () => {
+      const spy = jest.spyOn(console, "warn").mockImplementation(() => {});
       mockAwardReferral.mockRejectedValue(new Error("CF error"));
       // Should not throw
       await expect(awardReferralToUser("uid")).resolves.toBeUndefined();
+      spy.mockRestore();
     });
   });
 

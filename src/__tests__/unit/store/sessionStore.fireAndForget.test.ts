@@ -64,8 +64,11 @@ const flushPromises = (): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("sessionStore — fire-and-forget paths", () => {
+  let warnSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 
     useSessionStore.setState({
       currentSession: null,
@@ -113,6 +116,10 @@ describe("sessionStore — fire-and-forget paths", () => {
       isAuthenticated: true,
       isLoading: false,
     });
+  });
+
+  afterEach(() => {
+    warnSpy.mockRestore();
   });
 
   // ─── startBlocking error (line 69) ──────────────────────────────────────────

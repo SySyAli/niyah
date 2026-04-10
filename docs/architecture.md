@@ -69,7 +69,6 @@ niyah/
 │   │   ├── useColors.ts          # Current theme colors from themeStore
 │   │   ├── useScreenProtection.ts # Prevent screenshots/screen recording
 │   │   └── ScrollContext.tsx      # Shared scroll context
-│   ├── jitai/                    # JITAI adaptive intervention engine
 │   ├── types/index.ts            # All app type definitions
 │   ├── constants/
 │   │   ├── colors.ts             # DarkColors, LightColors, Spacing, Typography, Font, Radius

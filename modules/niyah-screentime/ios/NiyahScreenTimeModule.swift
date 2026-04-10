@@ -47,8 +47,9 @@ public class NiyahScreenTimeModule: Module {
   }
 
   // ── Violation + surrender polling ──────────────────────────────────────────
-  private static let violationsKey  = "niyah_shield_violations"
-  private static let surrenderKey   = "niyah_surrender_requested"
+  private static let violationsKey    = "niyah_shield_violations"
+  private static let surrenderKey     = "niyah_surrender_requested"
+  private static let sessionContextKey = "niyah_session_context"
   private var violationPollTimer: Timer?
   private var lastViolationCount: Int = 0
 
@@ -308,6 +309,24 @@ public class NiyahScreenTimeModule: Module {
       guard #available(iOS 16.0, *) else { return }
       DeviceActivityCenter().stopMonitoring()
       NSLog("[NiyahScreenTime] stopAllScheduledBlocking: all monitoring stopped")
+    }
+
+    // ================================================================
+    // MARK: - Session Context (for Dynamic Shield)
+    // ================================================================
+
+    /// Write session context (participant names, stake, type) to shared
+    /// UserDefaults so the ShieldConfigurationExtension can display
+    /// dynamic messages like "Sarah and Mike are watching."
+    AsyncFunction("setSessionContext") { [weak self] (contextJson: String) in
+      self?.sharedDefaults.set(contextJson, forKey: Self.sessionContextKey)
+      NSLog("[NiyahScreenTime] setSessionContext: \(contextJson)")
+    }
+
+    /// Clear session context (call when session ends).
+    AsyncFunction("clearSessionContext") { [weak self] () in
+      self?.sharedDefaults.removeObject(forKey: Self.sessionContextKey)
+      NSLog("[NiyahScreenTime] clearSessionContext")
     }
   }
 

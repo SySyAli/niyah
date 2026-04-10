@@ -249,7 +249,7 @@ Detailed docs are in the [`docs/`](docs/) directory:
 - [Architecture](docs/architecture.md) -- project structure, directory tree
 - [Development](docs/development.md) -- full command reference, env vars, Cloud Functions
 - [Features](docs/features.md) -- auth, sessions, wallet, social, demo mode
-- [Native Modules](docs/native-modules.md) -- Firebase, Screen Time, JITAI
+- [Native Modules](docs/native-modules.md) -- Firebase, Screen Time, config plugins
 - [Security](docs/security.md) -- SSL pinning, key management, Firestore rules
 - [Roadmap](docs/roadmap.md) -- current status, phases, blockers
 - [Payments](docs/payments.md) -- Stripe, payout formulas, settlement models

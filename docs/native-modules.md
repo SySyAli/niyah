@@ -1,15 +1,15 @@
 # Native Modules
 
-> Firebase, Screen Time, JITAI, and config plugins.
+> Firebase, Screen Time, and config plugins.
 > See also: [Architecture](./architecture.md) | [Roadmap](./roadmap.md) | [Security](./security.md)
 
 ## Firebase (RNFB)
 
 React Native Firebase packages provide Auth and Firestore:
 
-| Package                            | Purpose                                              |
-| ---------------------------------- | ---------------------------------------------------- |
-| `@react-native-firebase/app`       | Core initialization (Expo plugin in `app.config.ts`) |
+| Package                            | Purpose                                                |
+| ---------------------------------- | ------------------------------------------------------ |
+| `@react-native-firebase/app`       | Core initialization (Expo plugin in `app.config.ts`)   |
 | `@react-native-firebase/auth`      | Google, Apple, email magic link, and phone SMS sign-in |
 | `@react-native-firebase/firestore` | User profiles, wallets, sessions, follows              |
 | `@react-native-firebase/messaging` | FCM push notifications (token management, foreground)  |
@@ -24,13 +24,13 @@ Custom Expo module bridging iOS Screen Time API to JavaScript.
 
 ### Swift Components
 
-| File                                     | Purpose                                                                                                                                                                                                                               |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NiyahScreenTimeModule.swift`            | FamilyControls auth, FamilyActivityPicker, ManagedSettings shield (block/unblock). App selection persisted via App Groups `UserDefaults` with `PropertyListEncoder`. Polls for violations and emits `onShieldViolation` events to JS. |
-| `AppPickerHostingController.swift`       | SwiftUI wrapper for `FamilyActivityPicker`, presented modally as `UIHostingController`. Supports Done and Cancel callbacks.                                                                                                           |
-| `DeviceActivityMonitorExtension.swift`   | App Extension (separate process). Detects blocked app opens during sessions, records violation timestamps to shared `UserDefaults`. Uses named `ManagedSettingsStore(.niyahSession)`.                                                 |
-| `ShieldActionExtension.swift`            | Handles user actions on the shield overlay (e.g., "Surrender Session" button tap). Communicates back to main app.                                                                                                                     |
-| `ShieldConfigurationExtension.swift`     | Configures custom shield appearance — Niyah-branded overlay with "Stay Focused" / "Surrender Session" buttons instead of generic system block.                                                                                        |
+| File                                   | Purpose                                                                                                                                                                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NiyahScreenTimeModule.swift`          | FamilyControls auth, FamilyActivityPicker, ManagedSettings shield (block/unblock). App selection persisted via App Groups `UserDefaults` with `PropertyListEncoder`. Polls for violations and emits `onShieldViolation` events to JS. |
+| `AppPickerHostingController.swift`     | SwiftUI wrapper for `FamilyActivityPicker`, presented modally as `UIHostingController`. Supports Done and Cancel callbacks.                                                                                                           |
+| `DeviceActivityMonitorExtension.swift` | App Extension (separate process). Detects blocked app opens during sessions, records violation timestamps to shared `UserDefaults`. Uses named `ManagedSettingsStore(.niyahSession)`.                                                 |
+| `ShieldActionExtension.swift`          | Handles user actions on the shield overlay (e.g., "Surrender Session" button tap). Communicates back to main app.                                                                                                                     |
+| `ShieldConfigurationExtension.swift`   | Configures custom shield appearance — Niyah-branded overlay with "Stay Focused" / "Surrender Session" buttons instead of generic system block.                                                                                        |
 
 ### JS Wrapper
 
@@ -69,19 +69,6 @@ The custom Niyah-branded shield is implemented via `ShieldConfigurationExtension
 - Button actions handled by `ShieldActionExtension`, which communicates back to the main app
 
 iOS does not allow injecting modals into other apps. The custom shield via `ManagedSettingsStore` is the only API-compliant approach.
-
-## JITAI Module (`src/jitai/`)
-
-Adaptive smartphone overuse intervention engine (research-oriented, simulation-only):
-
-| File                    | Purpose                                                               |
-| ----------------------- | --------------------------------------------------------------------- |
-| `usageDetector.ts`      | Simulates and analyzes usage episodes, detects anomalous patterns     |
-| `contextClassifier.ts`  | Extracts context features, classifies episodes using weighted scoring |
-| `interventionEngine.ts` | Multi-armed bandit algorithm for selecting interventions              |
-| `humanFeedbackLoop.ts`  | Processes user feedback, adapts intervention strategy                 |
-
-**Status**: Parked. Will integrate with real Screen Time API data when available.
 
 ## Key Apple Frameworks Reference
 

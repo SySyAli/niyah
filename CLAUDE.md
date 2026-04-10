@@ -45,7 +45,6 @@ src/
   config/         # Firebase, Cloud Functions client, Screen Time wrapper, SSL pinning
   store/          # Zustand stores (auth, session, wallet, partner, group, social, theme)
   hooks/          # useCountdown, useColors, useScreenProtection
-  jitai/          # Adaptive intervention engine (simulation-only)
   types/          # TypeScript type definitions
   constants/      # Colors, spacing, config (DEMO_MODE, cadences)
   utils/          # Formatting, payout algorithm, logger
@@ -109,6 +108,7 @@ Full tree: [docs/architecture.md](docs/architecture.md)
 **April 15 Sprint** — rearchitecting toward schedule-based blocking + group challenges for demo day.
 
 Completed:
+
 - Phone SMS OTP auth + Screen Time onboarding flow
 - One-tap quick-block screen
 - Contact-based friend discovery (enhanced)
@@ -117,6 +117,7 @@ Completed:
 - Plaid bank linking + legal acceptance Cloud Functions
 
 Key remaining work:
+
 - Schedule-based blocking (scheduleStore, schedule-builder screen)
 - Calendar integration (expo-calendar gap detection)
 - DeviceActivityReport chart bridging

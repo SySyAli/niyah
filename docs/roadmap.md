@@ -19,7 +19,7 @@
 | Referral System          | Done        | Deep link invites, reputation boost, partner auto-connect                       |
 | Theme System             | Done        | Dark/light via themeStore + useColors hook                                      |
 | Onboarding               | Done        | Screen Time setup flow, blob scenes, profile setup                              |
-| JITAI Module             | Parked      | Simulation-only, awaiting real Screen Time data                                 |
+| JITAI Module             | Removed     | Was simulation-only, never wired into app. Deleted Apr 2026.                    |
 | Testing                  | Done        | 1018 tests (48 suites), unit + integration coverage                             |
 | Screen Time (Swift)      | Done        | Production-quality. Auth, picker, blocking, violation polling, custom shield.   |
 | Screen Time (Shield)     | Done        | Custom Niyah-branded shield with "Stay Focused" / "Surrender" buttons           |

@@ -180,13 +180,50 @@ function withShieldExtensions(config) {
 
       // --- Add PBXGroup for the extension files ---
       const groupKey = project.pbxCreateGroup(ext.name, ext.name);
-      // IMPORTANT: use addSourceFile (not addFile) AND pass just the
-      // filename (not prefixed with ext.name). The group's path already
-      // provides the directory prefix — passing ext.name/filename would
-      // double it ("NiyahShieldAction/NiyahShieldAction/File.swift").
-      // addFile() alone skips the PBXSourcesBuildPhase → .appex gets no
-      // executable → iOS silently falls back to the system shield.
-      project.addSourceFile(ext.sourceFile, { target: target.uuid }, groupKey);
+
+      // NOTE: Do NOT use addSourceFile here. The xcode npm package's
+      // addSourceFile with { target } option is broken — it compares target
+      // UUIDs against build-phase UUIDs (which never match), so the file
+      // always lands in the main app target's Sources phase. Additionally,
+      // addTarget("app_extension") does NOT create a Sources build phase
+      // for the extension target. We construct everything manually.
+
+      // 1. Create PBXFileReference and add to the extension's group
+      const file = project.addFile(ext.sourceFile, groupKey, {});
+
+      // 2. Create PBXBuildFile referencing the source file
+      const buildFileUuid = project.generateUuid();
+      project.hash.project.objects["PBXBuildFile"][buildFileUuid] = {
+        isa: "PBXBuildFile",
+        fileRef: file.fileRef,
+        fileRef_comment: ext.sourceFile,
+      };
+      project.hash.project.objects["PBXBuildFile"][buildFileUuid + "_comment"] =
+        `${ext.sourceFile} in Sources`;
+
+      // 3. Create a Sources build phase for the extension target
+      const sourcesPhaseUuid = project.generateUuid();
+      project.hash.project.objects["PBXSourcesBuildPhase"][sourcesPhaseUuid] = {
+        isa: "PBXSourcesBuildPhase",
+        buildActionMask: 2147483647,
+        files: [
+          {
+            value: buildFileUuid,
+            comment: `${ext.sourceFile} in Sources`,
+          },
+        ],
+        runOnlyForDeploymentPostprocessing: 0,
+      };
+      project.hash.project.objects["PBXSourcesBuildPhase"][
+        sourcesPhaseUuid + "_comment"
+      ] = "Sources";
+
+      // 4. Register the Sources phase on the extension target
+      const extNative = project.pbxNativeTargetSection()[target.uuid];
+      extNative.buildPhases.push({
+        value: sourcesPhaseUuid,
+        comment: "Sources",
+      });
 
       // Attach group to main project group
       const mainGroupKey = project.getFirstProject().firstProject.mainGroup;

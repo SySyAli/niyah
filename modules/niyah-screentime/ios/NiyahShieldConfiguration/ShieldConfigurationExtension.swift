@@ -61,7 +61,7 @@ class NiyahShieldConfigurationDataSource: ShieldConfigurationDataSource {
     private func makeConfiguration() -> ShieldConfiguration {
         let subtitleText = buildSubtitle()
 
-        ShieldConfiguration(
+        return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
             backgroundColor: backgroundDark,
             icon: brandIcon,

@@ -5,34 +5,34 @@
 
 ## Current Status (Apr 2026)
 
-| Area                     | Status      | Notes                                                                           |
-| ------------------------ | ----------- | ------------------------------------------------------------------------------- |
-| Firebase Auth            | Done        | Google, Apple, Email magic link, Phone SMS OTP via RNFB                         |
-| Firestore                | Done        | Profiles, wallets, follows, sessions. Crash recovery.                           |
-| Solo Sessions            | Done        | Cadence, stake, timer, surrender/complete. Firestore persistence.               |
-| Quick Block              | Done        | One-tap blocking without stake (`quick-block.tsx`)                              |
-| Duo Sessions             | Done        | Partner store, lifecycle, Venmo deep links                                      |
-| Group Sessions (UI)      | Done        | N-person, payout algorithm, transfer tracking, propose, waiting room, invites   |
-| Group Sessions (Backend) | Done        | 7 Cloud Functions (create, invite, accept, start, report, cancel, auto-timeout) |
-| Social Features          | Done        | Following/followers, public profiles, reputation (5 tiers)                      |
-| Contact Discovery        | Done        | `findContactsOnNiyah` Cloud Function, cached in socialStore                     |
-| Referral System          | Done        | Deep link invites, reputation boost, partner auto-connect                       |
-| Theme System             | Done        | Dark/light via themeStore + useColors hook                                      |
-| Onboarding               | Done        | Screen Time setup flow, blob scenes, profile setup                              |
-| JITAI Module             | Removed     | Was simulation-only, never wired into app. Deleted Apr 2026.                    |
-| Testing                  | Done        | 1018 tests (48 suites), unit + integration coverage                             |
-| Screen Time (Swift)      | Done        | Production-quality. Auth, picker, blocking, violation polling, custom shield.   |
-| Screen Time (Shield)     | Done        | Custom Niyah-branded shield with "Stay Focused" / "Surrender" buttons           |
-| Screen Time (Wiring)     | In Progress | Quick-block wired. Full session lifecycle wiring pending.                       |
-| Screen Time (Stats)      | Not Started | DeviceActivityReport not imported                                               |
-| Schedule Blocking        | Not Started | scheduleStore, schedule-builder, calendar integration (sprint planned)          |
-| Push Notifications       | In Progress | FCM messaging installed, token management scaffolded, wiring pending            |
-| Stripe Payments          | Done        | 24 Cloud Functions deployed, deposit/withdrawal/KYC/Plaid bank linking          |
-| Legal Acceptance         | Done        | `acceptLegalTerms` Cloud Function, server-timestamped                           |
-| Firestore Rules          | Done        | Hardened rules for users, wallets, follows, sessions. Default deny.             |
-| Security Audit           | Done        | Server-side validation, rate limiting, SSL pinning, screen protection           |
-| Config Externalized      | Done        | Firebase config gitignored, env vars, keys rotated                              |
-| Payout Algorithm         | Done        | Solo 2x multiplier, group pool split. Not yet wired to solo store.              |
+| Area                     | Status       | Notes                                                                           |
+| ------------------------ | ------------ | ------------------------------------------------------------------------------- |
+| Firebase Auth            | Done         | Google, Apple, Email magic link, Phone SMS OTP via RNFB                         |
+| Firestore                | Done         | Profiles, wallets, follows, sessions. Crash recovery.                           |
+| Solo Sessions            | Done         | Cadence, stake, timer, surrender/complete. Firestore persistence.               |
+| Quick Block              | Done         | One-tap blocking without stake (`quick-block.tsx`)                              |
+| Duo Sessions             | Done         | Partner store, lifecycle, Venmo deep links                                      |
+| Group Sessions (UI)      | Done         | N-person, payout algorithm, transfer tracking, propose, waiting room, invites   |
+| Group Sessions (Backend) | Done         | 7 Cloud Functions (create, invite, accept, start, report, cancel, auto-timeout) |
+| Social Features          | Done         | Following/followers, public profiles, reputation (5 tiers)                      |
+| Contact Discovery        | Done         | `findContactsOnNiyah` Cloud Function, cached in socialStore                     |
+| Referral System          | Done         | Deep link invites, reputation boost, partner auto-connect                       |
+| Theme System             | Done         | Dark/light via themeStore + useColors hook                                      |
+| Onboarding               | Done         | Screen Time setup flow, blob scenes, profile setup                              |
+| JITAI Module             | Removed      | Was simulation-only, never wired into app. Deleted Apr 2026.                    |
+| Testing                  | Done         | 1018 tests (48 suites), unit + integration coverage                             |
+| Screen Time (Swift)      | Done         | Production-quality. Auth, picker, blocking, violation polling, custom shield.   |
+| Screen Time (Shield)     | Done         | Custom Niyah-branded shield with "Stay Focused" / "Surrender" buttons           |
+| Screen Time (Wiring)     | In Progress  | Quick-block wired. Full session lifecycle wiring pending.                       |
+| Screen Time (Stats)      | Cut for demo | DeviceActivityReport deferred post-demo                                         |
+| Schedule Blocking        | Cut for demo | scheduleStore, schedule-builder, calendar integration deferred post-demo        |
+| Push Notifications       | Done         | FCM token management, 9 notification types wired in Cloud Functions             |
+| Stripe Payments          | Done         | 24 Cloud Functions deployed, deposit/withdrawal/KYC/Plaid bank linking          |
+| Legal Acceptance         | Done         | `acceptLegalTerms` Cloud Function, server-timestamped                           |
+| Firestore Rules          | Done         | Hardened rules for users, wallets, follows, sessions. Default deny.             |
+| Security Audit           | Done         | Server-side validation, rate limiting, SSL pinning, screen protection           |
+| Config Externalized      | Done         | Firebase config gitignored, env vars, keys rotated                              |
+| Payout Algorithm         | Done         | Solo 2x multiplier, group pool split. Not yet wired to solo store.              |
 
 ### Apple Developer Account
 
@@ -56,7 +56,7 @@
 - [x] 24 Cloud Functions deployed (Stripe, Plaid, session lifecycle, group sessions, social, legal, webhook)
 - [x] Firestore security rules hardened and ready to deploy
 - [x] Cloud Functions for group sessions (7 functions: create, invite, accept, start, report, cancel, auto-timeout)
-- [ ] FCM push notification wiring (messaging package installed, token management scaffolded)
+- [x] FCM push notifications (9 notification types: group invite, accept, decline, ready, start, surrender, complete, violation, cancel)
 
 ## Launch Strategy
 
@@ -72,36 +72,21 @@ Social accountability + financial stakes is the strongest hook. One person invit
 
 **Goal**: 4 developers can create, join, and complete group focus sessions with real stakes, app blocking, and automated settlement.
 
-### 1.1 Group Session Firebase Backend
+### 1.1 Group Session Firebase Backend -- DONE
 
-The `propose.tsx` screen and `groupSessionStore.ts` are built with local state. Missing: multi-user coordination.
+7 Cloud Functions deployed: `createGroupSession`, `respondToGroupInvite`, `markOnlineForSession`, `startGroupSession`, `reportShieldViolation`, `cancelGroupSession`, `autoTimeoutGroupSessions`. Plus `distributeGroupPayouts` for settlement. Real-time Firestore listeners wired in `groupSessionStore.ts`.
 
-**Tasks**: Firestore schema + rules for `groupSessions`/`groupInvites`, Cloud Functions (`createGroupSession`, `joinGroupSession`, `recordParticipantResult`, `completeGroupSession`), real-time listeners, wire `propose.tsx` to backend, incoming invites screen, group dashboard.
+### 1.2 Push Notifications (FCM) -- DONE
 
-**Firestore schema**: see [Payments > Group Settlement](./payments.md#group-payout-formula).
+FCM fully wired: token management, foreground/background handlers, 9 notification types (group invite, accept, decline, ready, start, surrender, complete, violation, cancel). Deep link navigation from notifications to appropriate screens.
 
-### 1.2 Push Notifications (FCM)
+### 1.3 Screen Time Blocking -- DONE
 
-- Create APNs key, configure FCM
-- Install `@react-native-firebase/messaging`
-- Store FCM device tokens in Firestore
-- Cloud Function triggers: invite, all-accepted, complete, settlement reminder
+FamilyControls entitlement approved. Quick-block and group session flows call `startBlocking()`/`stopBlocking()`. Shield violation events subscribed in `active.tsx`. Custom Niyah-branded shield with "Stay Focused" / "Surrender Session" buttons.
 
-### 1.3 Screen Time Blocking
+### 1.4 Settlement Model -- DONE
 
-Wire existing module into session lifecycle. **Blocking only** -- statistics deferred to Phase 2.
-
-1. Enable FamilyControls entitlement on App ID (**BLOCKER**)
-2. Re-enable extension embed in `withDeviceActivityMonitor.js`
-3. Build new dev client
-4. Physical device validation
-5. Call `startBlocking()` from session start
-6. Call `stopBlocking()` from session complete/surrender
-7. Subscribe to `onShieldViolation` in session store
-
-### 1.4 Settlement Model
-
-Honor-based with Venmo deep links. Stripe escrow deferred to Phase 2.
+Stripe escrow: stakes collected upfront via Cloud Functions, server-side payout distribution on session complete. Plaid bank linking for withdrawals.
 
 ## Phase 2: Beta Cohort
 
@@ -114,7 +99,7 @@ Honor-based with Venmo deep links. Stripe escrow deferred to Phase 2.
 - Group settlement dashboard
 - App Store review preparation
 
-See [Payments](./payments.md) and [Native Modules > Planned Shield UX](./native-modules.md#planned-shield-ux).
+See [Payments](./payments.md) and [Native Modules > Custom Shield UX](./native-modules.md#custom-shield-ux).
 
 ## Phase 3: Public Launch
 
@@ -129,11 +114,11 @@ See [Payments](./payments.md) and [Native Modules > Planned Shield UX](./native-
 
 ## Blockers
 
-| Blocker                                        | Impact                                                         | Resolution                                                  | Status       |
-| ---------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------- | ------------ |
-| ~~FamilyControls Development entitlement~~     | ~~Cannot test Screen Time on device~~                          | ~~Apply in Apple Developer portal~~                         | **Resolved** |
-| ~~FamilyControls Distribution (main app)~~     | ~~Cannot distribute via TestFlight/App Store~~                 | ~~Apple approved 2026-04-09~~                               | **Resolved** |
-| FamilyControls Distribution (3 extensions)     | Extensions may not work in TestFlight builds                   | Submit for `device-activity-monitor`, `shield-action`, `shield-config` | Submit Apr 10 |
-| Shield surrender desync bug                    | Shield unblocks apps but Niyah app still shows session active  | Fix shield to open app instead of unblocking directly       | Fix Apr 10   |
-| Screen Time statistics                         | `DeviceActivityReport` is a SwiftUI view API, not a data query | Deferred post-demo                                          | Cut for demo |
-| Firebase App Check                             | Anyone with project ID can call Cloud Functions                | Firebase Console setup + code changes                       | Post-demo    |
+| Blocker                                    | Impact                                                            | Resolution                                                             | Status        |
+| ------------------------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------- |
+| ~~FamilyControls Development entitlement~~ | ~~Cannot test Screen Time on device~~                             | ~~Apply in Apple Developer portal~~                                    | **Resolved**  |
+| ~~FamilyControls Distribution (main app)~~ | ~~Cannot distribute via TestFlight/App Store~~                    | ~~Apple approved 2026-04-09~~                                          | **Resolved**  |
+| FamilyControls Distribution (3 extensions) | Extensions may not work in TestFlight builds                      | Submit for `device-activity-monitor`, `shield-action`, `shield-config` | Submit Apr 10 |
+| ~~Shield surrender desync bug~~            | ~~Shield unblocks apps but Niyah app still shows session active~~ | ~~Fixed: shield sets flag + opens app, JS listener catches it~~        | **Resolved**  |
+| Screen Time statistics                     | `DeviceActivityReport` is a SwiftUI view API, not a data query    | Deferred post-demo                                                     | Cut for demo  |
+| Firebase App Check                         | Anyone with project ID can call Cloud Functions                   | Firebase Console setup + code changes                                  | Post-demo     |

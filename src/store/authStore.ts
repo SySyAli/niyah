@@ -142,6 +142,30 @@ const getReputationLevel = (score: number): UserReputation["level"] => {
   return "oak";
 };
 
+// Firestore stores dates as Timestamp objects (with .toDate()), but REST/JSON
+// paths can deliver numbers or ISO strings. Normalize all shapes to a Date.
+const toDateSafe = (value: unknown): Date | undefined => {
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "toDate" in value &&
+    typeof (value as { toDate: () => Date }).toDate === "function"
+  ) {
+    try {
+      return (value as { toDate: () => Date }).toDate();
+    } catch {
+      return undefined;
+    }
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? undefined : d;
+  }
+  return undefined;
+};
+
 const buildUser = (
   firebaseUser: FirebaseUser,
   firestoreData: Record<string, unknown> | null,
@@ -169,9 +193,7 @@ const buildUser = (
       totalSessions: stats.totalSessions || 0,
       completedSessions: stats.completedSessions || 0,
       totalEarnings: stats.totalEarnings || 0,
-      createdAt: firestoreData.createdAt
-        ? new Date(firestoreData.createdAt as string | number)
-        : new Date(),
+      createdAt: toDateSafe(firestoreData.createdAt) ?? new Date(),
       reputation: {
         score: rep.score ?? 50,
         level: rep.level || "sapling",
@@ -201,9 +223,10 @@ const buildUser = (
       legalAcceptanceVersion: firestoreData.legalAcceptanceVersion as
         | string
         | undefined,
-      legalAcceptedAt: firestoreData.legalAcceptedAt
-        ? new Date(firestoreData.legalAcceptedAt as string | number)
-        : undefined,
+      legalAcceptedAt: toDateSafe(firestoreData.legalAcceptedAt),
+      linkedBank: firestoreData.linkedBank as
+        | { institutionName: string; bankName: string; mask: string }
+        | undefined,
     };
   }
 
@@ -697,9 +720,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (!user) throw new Error("Not authenticated");
 
-    // Cloud Function call — skip in demo mode (no deployed functions)
     if (!DEMO_MODE) {
-      // Lazy import to avoid circular dependency
       const { acceptLegalTerms } = require("../config/functions") as {
         acceptLegalTerms: (version: string) => Promise<{ success: boolean }>;
       };
@@ -707,15 +728,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         await acceptLegalTerms(CURRENT_LEGAL_VERSION);
       } catch (error) {
-        logger.warn(
-          "acceptLegalTerms Cloud Function unavailable, falling back to Firestore:",
-          error,
-        );
-        await updateUserDoc(user.id, {
-          legalAcceptanceVersion: CURRENT_LEGAL_VERSION,
-          legalAcceptedAt: new Date(),
-        });
+        logger.warn("acceptLegalTerms Cloud Function failed:", error);
       }
+    }
+
+    // Always persist client-side too. Belt-and-suspenders: if the Cloud
+    // Function succeeds this is a redundant merge write; if it fails this
+    // is the only path that actually lands the field in Firestore.
+    try {
+      await updateUserDoc(user.id, {
+        legalAcceptanceVersion: CURRENT_LEGAL_VERSION,
+        legalAcceptedAt: new Date(),
+      });
+    } catch (error) {
+      logger.error("Failed to persist legal acceptance to Firestore:", error);
     }
 
     set({

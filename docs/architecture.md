@@ -49,7 +49,7 @@ niyah/
 │   │   ├── MoneyPlant.tsx        # Money plant visualization
 │   │   ├── PeachAvatar.tsx       # Peach blob avatar
 │   │   ├── profile/              # Profile sub-components
-│   │   └── onboarding/           # Onboarding scene components (10 scenes)
+│   │   └── onboarding/           # Onboarding scene components (8 scenes)
 │   ├── config/
 │   │   ├── firebase.ts           # Firebase helpers (auth, Firestore, social)
 │   │   ├── functions.ts          # Cloud Functions client (reads project ID from env)

@@ -35,11 +35,6 @@ export default {
     icon: "./assets/icon.png",
     userInterfaceStyle: "dark" as const,
     newArchEnabled: true,
-    splash: {
-      image: "./assets/splash-icon.png",
-      resizeMode: "contain" as const,
-      backgroundColor: "#1A1714",
-    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.niyah.app",
@@ -83,6 +78,15 @@ export default {
       bundler: "metro" as const,
     },
     plugins: [
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/splash-icon.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "#2D6A4F",
+        },
+      ],
       "expo-router",
       "react-native-bottom-tabs",
       "@react-native-firebase/app",

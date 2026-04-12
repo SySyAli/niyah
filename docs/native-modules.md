@@ -55,7 +55,7 @@ Custom Expo module bridging iOS Screen Time API to JavaScript.
 
 ### Status
 
-Swift code is production-quality. JS wrapper complete. Custom shield UI built and branded. Quick-block flow (`quick-block.tsx`) is wired to `startBlocking()`/`stopBlocking()`. Full session lifecycle wiring (calling blocking from `sessionStore.ts` on session start/end) is the remaining step.
+Swift code is production-quality. JS wrapper complete. Custom shield UI built and branded. Quick-block flow (`quick-block.tsx`) and group session flow (`active.tsx`) are wired to `startBlocking()`/`stopBlocking()`. Shield surrender desync fixed: shield sets `niyah_surrender_requested` flag + opens app via deep link, JS listener catches it and calls `stopBlocking()`. Scheduled blocking APIs (`startScheduledBlocking`/`stopScheduledBlocking`) exported but deferred post-demo.
 
 The extension embed phase in `withDeviceActivityMonitor.js` is intentionally disabled (caused `lstat` build failures). Will be re-enabled when Screen Time is fully wired into sessions. See [Roadmap](./roadmap.md).
 

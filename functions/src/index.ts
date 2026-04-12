@@ -74,10 +74,8 @@ function getStripe(): Stripe {
   });
 }
 
-// Plaid environment: "sandbox" for testing, "production" for real banks + SMS
-// Switch to "production" once Plaid approves your production access request.
 const PLAID_ENV = (process.env.PLAID_ENV ??
-  "sandbox") as keyof typeof PlaidEnvironments;
+  "production") as keyof typeof PlaidEnvironments;
 
 function getPlaid(): PlaidApi {
   const config = new Configuration({
@@ -658,13 +656,39 @@ export const createConnectAccount = onRequest(
         return;
       }
 
+      const validEmail =
+        typeof userData.email === "string" && userData.email.includes("@")
+          ? userData.email
+          : undefined;
+
+      // Pre-fill user info to reduce onboarding friction
+      const displayName =
+        typeof userData.displayName === "string"
+          ? userData.displayName.trim()
+          : "";
+      const nameParts = displayName.split(/\s+/);
+      const firstName = nameParts[0] || undefined;
+      const lastName =
+        nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
+      const phone =
+        typeof userData.phone === "string" && userData.phone
+          ? userData.phone
+          : undefined;
+
       const stripe = getStripe();
       const account = await stripe.accounts.create({
         type: "express",
         country: "US",
-        email: userData.email ?? undefined,
+        ...(validEmail ? { email: validEmail } : {}),
         capabilities: {
           transfers: { requested: true },
+        },
+        business_type: "individual",
+        individual: {
+          ...(firstName ? { first_name: firstName } : {}),
+          ...(lastName ? { last_name: lastName } : {}),
+          ...(phone ? { phone } : {}),
+          ...(validEmail ? { email: validEmail } : {}),
         },
         metadata: { firebaseUid: uid },
       });
@@ -734,11 +758,10 @@ export const createAccountLink = onRequest(
       }
 
       const stripe = getStripe();
-      const projectId = process.env.GCLOUD_PROJECT ?? process.env.GCP_PROJECT;
       const accountLink = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `https://${projectId}.firebaseapp.com/stripe-refresh?uid=${uid}`,
-        return_url: `https://${projectId}.firebaseapp.com/stripe-return?uid=${uid}`,
+        refresh_url: "https://niyah.live?stripe=refresh",
+        return_url: "https://niyah.live?stripe=complete",
         type: "account_onboarding",
       });
 
@@ -806,11 +829,43 @@ export const getConnectAccountStatus = onRequest(
         .doc(uid)
         .update({ stripeAccountStatus: status });
 
+      // Retrieve linked bank info from external accounts
+      let bankName: string | undefined;
+      let bankMask: string | undefined;
+      try {
+        const externals = await stripe.accounts.listExternalAccounts(
+          accountId,
+          { object: "bank_account", limit: 1 },
+        );
+        const bank = externals.data[0];
+        if (bank && bank.object === "bank_account") {
+          bankName = bank.bank_name ?? undefined;
+          bankMask = bank.last4 ?? undefined;
+        }
+      } catch {
+        // Non-critical — bank info is nice-to-have
+      }
+
+      // Sync status + bank info to Firestore
+      const update: Record<string, unknown> = {
+        stripeAccountStatus: status,
+      };
+      if (bankName && bankMask) {
+        update.linkedBank = {
+          institutionName: bankName,
+          bankName,
+          mask: bankMask,
+        };
+      }
+      await db.collection("users").doc(uid).update(update);
+
       res.json({
         status,
         chargesEnabled: account.charges_enabled,
         payoutsEnabled: account.payouts_enabled,
         detailsSubmitted: account.details_submitted,
+        bankName,
+        bankMask,
       });
     } catch (err) {
       console.error("getConnectAccountStatus error:", err);
@@ -1014,25 +1069,21 @@ export const linkBankAccount = onRequest(
         return;
       }
 
-      // 4. Create or get Stripe Custom connected account
+      // 4. Create or get Stripe Express connected account
       let stripeAccountId: string = userData.stripeAccountId ?? "";
       try {
         if (!stripeAccountId) {
+          const validEmail =
+            typeof userData.email === "string" && userData.email.includes("@")
+              ? userData.email
+              : undefined;
+
           const account = await stripe.accounts.create({
-            type: "custom",
+            type: "express",
             country: "US",
-            email: userData.email ?? undefined,
+            ...(validEmail ? { email: validEmail } : {}),
             capabilities: {
               transfers: { requested: true },
-            },
-            business_type: "individual",
-            tos_acceptance: {
-              service_agreement: "recipient",
-              date: Math.floor(Date.now() / 1000),
-              ip:
-                (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-                req.ip ||
-                "0.0.0.0",
             },
             metadata: { firebaseUid: uid },
           });
@@ -1040,7 +1091,14 @@ export const linkBankAccount = onRequest(
         }
       } catch (err) {
         console.error("linkBankAccount step 4 (Stripe account) failed:", err);
-        sendError(res, 500, "Failed to create Stripe connected account");
+        const stripeErr = err as { message?: string };
+        sendError(
+          res,
+          500,
+          stripeErr.message
+            ? `Failed to create Stripe connected account: ${stripeErr.message}`
+            : "Failed to create Stripe connected account",
+        );
         return;
       }
 
@@ -1061,8 +1119,21 @@ export const linkBankAccount = onRequest(
             "linkBankAccount step 5: bank already attached, continuing",
           );
         } else {
-          console.error("linkBankAccount step 5 (attach bank) failed:", err);
-          sendError(res, 500, "Failed to attach bank account to Stripe");
+          console.error(
+            "linkBankAccount step 5 (attach bank) failed:",
+            JSON.stringify({
+              code: stripeErr.code,
+              message: stripeErr.message,
+              accountId: stripeAccountId,
+            }),
+          );
+          sendError(
+            res,
+            500,
+            stripeErr.message
+              ? `Failed to attach bank account to Stripe: ${stripeErr.message}`
+              : "Failed to attach bank account to Stripe",
+          );
           return;
         }
       }
@@ -1574,7 +1645,14 @@ export const requestWithdrawal = onRequest(
           restoreErr,
         );
       }
-      sendError(res, 500, "Withdrawal failed — your balance has been restored");
+      const stripeErr = err as { message?: string; code?: string };
+      const detail = stripeErr.message || "Unknown error";
+      console.error("requestWithdrawal Stripe detail:", detail);
+      sendError(
+        res,
+        500,
+        `Withdrawal failed — your balance has been restored. (${detail})`,
+      );
     }
   },
 );

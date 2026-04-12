@@ -113,22 +113,22 @@ Completed:
 - One-tap quick-block screen
 - Contact-based friend discovery (enhanced)
 - Shield branding update (custom Niyah shield UI)
+- Shield surrender desync bug fixed (flag + deep link + JS listener pattern)
 - Group session Cloud Functions (create, invite, accept, start, complete, cancel, timeout)
+- FCM push notifications (9 types: group invite, accept, decline, ready, start, surrender, complete, violation, cancel)
 - Plaid bank linking + legal acceptance Cloud Functions
 - FamilyControls Distribution entitlement approved (main app)
 - Stripe live mode business account ready
 - Plaid production access approved
 - Niyah, Inc. incorporated with EIN
 - Landing page at niyah.live
+- Dead UI removed (legacy recurring sessions, schedule/calendar/report links)
 
 Key remaining work (5 days):
 
-- Fix shield surrender desync bug (shield unblocks but app still shows active)
 - Switch to live Stripe/Plaid keys + deploy Cloud Functions
-- Cut unfinished features from UI (schedule blocking, calendar, reports)
 - E2E test all demo flows with real money
 - Group session testing on multiple devices
-- FCM push notification wiring (group invites)
 - TestFlight build + team distribution
 - Submit FamilyControls Distribution for 3 extension App IDs
 

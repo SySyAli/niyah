@@ -152,12 +152,16 @@ export async function getConnectAccountStatus(): Promise<{
   chargesEnabled?: boolean;
   payoutsEnabled?: boolean;
   detailsSubmitted?: boolean;
+  bankName?: string;
+  bankMask?: string;
 }> {
   return callFunction<{
     status: "none" | "pending" | "active" | "restricted";
     chargesEnabled?: boolean;
     payoutsEnabled?: boolean;
     detailsSubmitted?: boolean;
+    bankName?: string;
+    bankMask?: string;
   }>("getConnectAccountStatus", {});
 }
 

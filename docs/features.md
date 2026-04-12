@@ -49,12 +49,14 @@ One-tap app blocking without money. User picks a duration (25 min / 1 hr / 2 hr 
 
 **Store**: `groupSessionStore.ts` | **Screen**: `app/session/propose.tsx`
 
-1. N participants each stake the same amount
-2. Payout algorithm distributes pool based on results
-3. Transfer tracking: pending -> payment_indicated -> settled
-4. Venmo deep links for settlement
+1. Proposer creates session, selects stake amount and invites friends
+2. Invitees accept (stake deducted) or decline
+3. All participants mark online in waiting room, proposer starts session
+4. Screen Time blocking activates on all devices, live leaderboard tracks progress
+5. On complete: server-side payout distribution splits losers' pool among completers
+6. 9 FCM push notification types for real-time group coordination
 
-**Status**: UI complete, backend wiring pending. See [Roadmap > Phase 1](./roadmap.md#phase-1-group-mode-mvp) for the Firebase backend plan.
+**Status**: Full stack complete — 7 Cloud Functions deployed, real-time Firestore listeners, Stripe escrow, custom shield blocking.
 
 ## Wallet & Transactions
 

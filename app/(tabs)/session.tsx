@@ -1,12 +1,5 @@
-import React, { useRef, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  Animated,
-} from "react-native";
+import React, { useMemo } from "react";
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, type RelativePathString } from "expo-router";
 import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
@@ -15,161 +8,7 @@ import * as Haptics from "expo-haptics";
 import { Card, Button } from "../../src/components";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
-import { useWalletStore } from "../../src/store/walletStore";
-import {
-  CADENCES,
-  SOLO_COMPLETION_MULTIPLIER,
-} from "../../src/constants/config";
 import { formatMoney } from "../../src/utils/format";
-
-interface CadenceCardProps {
-  config: (typeof CADENCES)[keyof typeof CADENCES];
-  canAfford: boolean;
-  onPress: () => void;
-}
-
-const CadenceCard: React.FC<CadenceCardProps> = ({
-  config,
-  canAfford,
-  onPress,
-}) => {
-  const Colors = useColors();
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
-  };
-
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
-  };
-
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        cadenceCard: {
-          padding: Spacing.lg,
-        },
-        cadenceCardDisabled: {
-          opacity: 0.6,
-        },
-        cadenceHeader: {
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: Spacing.lg,
-        },
-        cadenceName: {
-          fontSize: Typography.titleLarge,
-          ...Font.bold,
-          color: Colors.text,
-        },
-        cadenceStakeRow: {
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: Spacing.sm,
-        },
-        stakeLabel: {
-          fontSize: Typography.labelSmall,
-          color: Colors.textTertiary,
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-        },
-        stakeValue: {
-          fontSize: Typography.headlineSmall,
-          ...Font.bold,
-          color: Colors.text,
-        },
-        outcomeHint: {
-          fontSize: Typography.labelSmall,
-          color: Colors.textSecondary,
-          marginTop: Spacing.sm,
-          marginBottom: Spacing.md,
-          paddingTop: Spacing.sm,
-          borderTopWidth: 1,
-          borderTopColor: Colors.border,
-        },
-        cadenceMeta: {
-          borderTopWidth: 1,
-          borderTopColor: Colors.border,
-          paddingTop: Spacing.sm,
-        },
-        metaText: {
-          fontSize: Typography.labelSmall,
-          color: Colors.textMuted,
-        },
-        insufficientBanner: {
-          backgroundColor: Colors.lossLight,
-          marginTop: Spacing.sm,
-          marginHorizontal: -Spacing.lg,
-          marginBottom: -Spacing.lg,
-          padding: Spacing.sm,
-          borderBottomLeftRadius: Radius.lg,
-          borderBottomRightRadius: Radius.lg,
-        },
-        insufficientText: {
-          color: Colors.loss,
-          fontSize: Typography.labelSmall,
-          textAlign: "center",
-          ...Font.medium,
-        },
-      }),
-    [Colors],
-  );
-
-  return (
-    <Pressable
-      onPress={canAfford ? handlePress : undefined}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-    >
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <Card
-          style={[styles.cadenceCard, !canAfford && styles.cadenceCardDisabled]}
-          animate={false}
-        >
-          <View style={styles.cadenceHeader}>
-            <Text style={styles.cadenceName}>{config.name}</Text>
-          </View>
-
-          <View style={styles.cadenceStakeRow}>
-            <Text style={styles.stakeLabel}>Stake</Text>
-            <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
-          </View>
-
-          <Text style={styles.outcomeHint}>
-            Complete = earn{" "}
-            {formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)} · Surrender
-            = lose {formatMoney(config.stake)}
-          </Text>
-
-          <View style={styles.cadenceMeta}>
-            <Text style={styles.metaText}>
-              {config.demoDuration / 1000}s session (demo)
-            </Text>
-          </View>
-
-          {!canAfford && (
-            <View style={styles.insufficientBanner}>
-              <Text style={styles.insufficientText}>
-                Insufficient balance - need {formatMoney(config.stake)}
-              </Text>
-            </View>
-          )}
-        </Card>
-      </Animated.View>
-    </Pressable>
-  );
-};
 
 export default function SessionTabScreen() {
   const Colors = useColors();
@@ -181,8 +20,6 @@ export default function SessionTabScreen() {
     subscribeToSession,
   } = useGroupSessionStore();
   const userId = useAuthStore((state) => state.user?.id);
-  const balance = useWalletStore((state) => state.balance);
-
   const activePartner = activeGroupSession?.participants.find(
     (p) => p.userId !== userId,
   );
@@ -215,10 +52,6 @@ export default function SessionTabScreen() {
           color: Colors.textSecondary,
           marginTop: Spacing.xs,
           marginBottom: Spacing.lg,
-        },
-        cadenceList: {
-          gap: Spacing.md,
-          marginBottom: Spacing.xl,
         },
         challengeCard: {
           backgroundColor: Colors.primaryDark,
@@ -538,20 +371,6 @@ export default function SessionTabScreen() {
             </View>
           </View>
         </Pressable>
-
-        {/* Recurring Sessions */}
-        <Text style={styles.sectionLabel}>Recurring Sessions</Text>
-
-        <View style={styles.cadenceList}>
-          {Object.entries(CADENCES).map(([key, config]) => (
-            <CadenceCard
-              key={key}
-              config={config}
-              canAfford={balance >= config.stake}
-              onPress={() => router.push(`/session/select?cadence=${key}`)}
-            />
-          ))}
-        </View>
 
         <View style={styles.howItWorks}>
           <Text style={styles.howTitle}>How it works</Text>

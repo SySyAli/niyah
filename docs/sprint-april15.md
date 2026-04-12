@@ -24,6 +24,7 @@ Remove any UI buttons/cards that link to these unbuilt features.
 ### Day 1 — April 10: Entitlements + Bug Fix + Live Keys
 
 **FIRST (15 min)**: Submit FamilyControls Distribution for 3 extension App IDs:
+
 - `com.niyah.app.device-activity-monitor`
 - `com.niyah.app.shield-action`
 - `com.niyah.app.shield-config`
@@ -35,6 +36,7 @@ Apple Developer portal → Certificates, Identifiers & Profiles → each extensi
 The bug: Shield's Surrender button clears `ManagedSettingsStore` immediately (unblocks apps), but the Niyah app still shows the session as active because the JS event listener isn't ready when the app cold-starts from the deep link.
 
 Files and changes:
+
 1. `modules/niyah-screentime/ios/NiyahShieldAction/ShieldActionExtension.swift` (~line 86): **Remove** `ManagedSettingsStore(named: .niyahSession).clearAllSettings()` from the surrender handler. Shield should only set the flag + open the app, NOT unblock.
 2. `app/_layout.tsx` (~line 85-127): **Add** `niyah://surrender` to the deep link handler. When received, navigate to the surrender confirmation screen.
 3. `app/session/active.tsx`: **Add** a foreground check — on app resume, check the `niyah_surrender_requested` UserDefaults flag as a backup (in case the event listener missed it).
@@ -43,10 +45,12 @@ Files and changes:
 After fix: Shield Surrender → opens Niyah app → type QUIT → app calls `stopBlocking()` → session ends. If user cancels, blocking stays active.
 
 **Cut dead UI (~1 hour)**:
+
 - Audit `(tabs)/index.tsx`, `(tabs)/session.tsx`, session screens for buttons linking to schedule/calendar/reports
 - Remove those UI elements (keep code, just hide entry points)
 
 **Switch to live payment keys (~1-2 hours)**:
+
 1. `.env`: Update `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` to live key
 2. Firebase Secret Manager: `firebase functions:secrets:set STRIPE_SECRET_KEY` (live key)
 3. Firebase Secret Manager: `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET` (live webhook secret)
@@ -123,14 +127,14 @@ After fix: Shield Surrender → opens Niyah app → type QUIT → app calls `sto
 
 ## Previous Sprint Progress (as of Apr 4, 2026)
 
-| Phase | Item                                                              | Status      |
-| ----- | ----------------------------------------------------------------- | ----------- |
-| 0A    | ManagedSettingsStore.Name fix + custom shield branding            | Done        |
-| 0B    | linkBankAccount error handling + idempotency                      | Done        |
-| 0C    | Withdraw text fix                                                 | Done        |
-| 0D    | findContactsOnNiyah rate limit + socialStore caching              | Done        |
-| 0E    | Quick flow fixes (profile, propose, sessionStore)                 | Partial     |
-| 1     | One-tap quick block (`quick-block.tsx`)                           | Done        |
+| Phase | Item                                                              | Status          |
+| ----- | ----------------------------------------------------------------- | --------------- |
+| 0A    | ManagedSettingsStore.Name fix + custom shield branding            | Done            |
+| 0B    | linkBankAccount error handling + idempotency                      | Done            |
+| 0C    | Withdraw text fix                                                 | Done            |
+| 0D    | findContactsOnNiyah rate limit + socialStore caching              | Done            |
+| 0E    | Quick flow fixes (profile, propose, sessionStore)                 | Partial         |
+| 1     | One-tap quick block (`quick-block.tsx`)                           | Done            |
 | 1     | DeviceActivitySchedule integration (scheduled blocking)           | Cut (post-demo) |
 | 1     | `scheduleStore.ts`                                                | Cut (post-demo) |
 | 2     | Calendar integration (`schedule-builder.tsx`, `calendarUtils.ts`) | Cut (post-demo) |

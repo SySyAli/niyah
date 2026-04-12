@@ -16,7 +16,7 @@
 
 | Library                        | Version | Status                                       |
 | ------------------------------ | ------- | -------------------------------------------- |
-| `react-native-reanimated`      | 4.1.6   | Installed, used in some onboarding scenes    |
+| `react-native-reanimated`      | 4.1.7   | Installed, used in some onboarding scenes    |
 | `react-native-gesture-handler` | 2.28.0  | Installed, used internally by expo-router    |
 | `expo-linear-gradient`         | 15.0.8  | Installed, not used in any component         |
 | `react-native-svg`             | 15.15.3 | In use (Timer, onboarding SVG blobs)         |
@@ -37,13 +37,12 @@ These should be migrated to Reanimated for better performance:
 
 ### Current State
 
-10 scene components in `src/components/onboarding/`:
+8 scene components in `src/components/onboarding/`:
 
 - `BlobsScene.tsx` -- SVG blob characters
 - `ContinuousScene.tsx`, `GardenScene.tsx`, `GrowthScene.tsx`
 - `Onboarding2Scene.tsx`, `Onboarding3Scene.tsx`
 - `ShieldScene.tsx`, `StakeScene.tsx`
-- `DebugLayoutEditor.tsx` -- development tool
 
 ### Architecture Goal
 

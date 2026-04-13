@@ -1,16 +1,20 @@
-# Niyah: Technical Spec + Implementation Plan (v2)
+# Niyah: Demo Day Sprint (Updated April 12, 2026)
 
-## FINAL 5-DAY SPRINT: April 10-15, 2026 (Demo Day)
+## DEMO DAY: April 15, 2026
 
-**Format**: Live phone demo in front of an audience.
-**Goal**: Polished E2E product with real money flowing via live Stripe.
+**Format**: Live phone demo in front of class.
+**Final Presentation**: April 16, 2026 (Immersion Showcase — poster + live demo at station).
+**Goal**: Zero crashes, real money flowing, polished E2E demo.
 
-### Demo Flows (all four required)
+### Demo Script (5-7 min)
 
-1. **Solo session + Screen Time blocking** — deposit → stake → timer → apps blocked → complete → earn
-2. **Group challenge** — invite friends → everyone stakes → group session → payouts
-3. **Quick block (no money)** — one-tap → apps blocked → done
-4. **Real deposit + withdraw** — Stripe card payment → balance update → Plaid bank link → withdraw to bank
+1. Open app → clean dashboard, real balance visible
+2. Quick Block → one tap → show apps blocked → custom Niyah shield → end
+3. Deposit $5 via live Stripe → balance updates in real time
+4. Group Challenge → invite teammate → both join waiting room → session starts
+5. Open Instagram → custom Niyah shield appears → "Stay Focused" button
+6. Timer completes → confetti → payout breakdown
+7. Show withdrawal screen → initiate withdrawal (or explain 1-2 day bank processing)
 
 ### What Was Cut for Demo
 
@@ -18,518 +22,158 @@
 - Calendar integration — post-demo
 - DeviceActivityReport chart — post-demo
 - Threshold nudges — post-demo
+- Solo staked sessions — building post-demo (April 16-18) for campus launch
+- Firebase App Check — post-demo (requires native rebuild, too risky before demo)
 
-Remove any UI buttons/cards that link to these unbuilt features.
+---
 
-### Day 1 — April 10: Entitlements + Bug Fix + Live Keys
+## PHASE 0: DEMO STABILIZATION (April 12-14)
 
-**FIRST (15 min)**: Submit FamilyControls Distribution for 3 extension App IDs:
+### Priority 1: Deploy Cloud Functions with Live Keys
+- [ ] Verify `.env` has live `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- [ ] Firebase Secret Manager: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` set to live keys
+- [ ] Plaid credentials set to production
+- [ ] `firebase deploy --only functions`
+- [ ] Stripe Dashboard: production webhook endpoint configured
 
-- `com.niyah.app.device-activity-monitor`
-- `com.niyah.app.shield-action`
-- `com.niyah.app.shield-config`
+### Priority 2: E2E Test Demo Flow on Device
+- [ ] Fresh sign-up → profile setup → Screen Time setup
+- [ ] Deposit real money ($5) via Stripe
+- [ ] Quick block: one-tap → blocking → custom shield → end
+- [ ] Group session on 2 phones: create → invite → accept → start → complete → payouts
+- [ ] Withdrawal: show UI, initiate if bank verified
+- [ ] Fix all bugs found during testing
 
-Apple Developer portal → Certificates, Identifiers & Profiles → each extension → request FamilyControls (Distribution). Demo runs on dev build regardless, but start the clock on approval for TestFlight.
+### Priority 3: Demo Prep
+- [ ] Pre-load demo account with balance
+- [ ] Have backup accounts ready
+- [ ] Rehearse demo script 3x on actual device
+- [ ] Prepare slides as crash backup
 
-**Fix shield surrender desync bug (~2-3 hours)**:
+### DO NOT TOUCH
+- No new features
+- No UI changes
+- No refactoring
+- No plant/blob work
 
-The bug: Shield's Surrender button clears `ManagedSettingsStore` immediately (unblocks apps), but the Niyah app still shows the session as active because the JS event listener isn't ready when the app cold-starts from the deep link.
+---
 
-Files and changes:
+## PHASE 1: SOLO SESSIONS (April 16-18) — ~7.5 Hours
 
-1. `modules/niyah-screentime/ios/NiyahShieldAction/ShieldActionExtension.swift` (~line 86): **Remove** `ManagedSettingsStore(named: .niyahSession).clearAllSettings()` from the surrender handler. Shield should only set the flag + open the app, NOT unblock.
-2. `app/_layout.tsx` (~line 85-127): **Add** `niyah://surrender` to the deep link handler. When received, navigate to the surrender confirmation screen.
-3. `app/session/active.tsx`: **Add** a foreground check — on app resume, check the `niyah_surrender_requested` UserDefaults flag as a backup (in case the event listener missed it).
-4. Optional: `src/config/screentime.ts` — add `checkSurrenderFlag()` callable from JS.
+**Goal**: Any user can stake money on solo focus sessions. No friends needed.
 
-After fix: Shield Surrender → opens Niyah app → type QUIT → app calls `stopBlocking()` → session ends. If user cancels, blocking stays active.
+**Key insight**: Backend 100% built. `sessionStore.ts` has complete `startSession`/`completeSession`/`surrenderSession`. Cloud Functions `handleSessionComplete`/`handleSessionForfeit` exist. **Zero backend changes.** Pure UI wiring.
 
-**Cut dead UI (~1 hour)**:
+### Steps
 
-- Audit `(tabs)/index.tsx`, `(tabs)/session.tsx`, session screens for buttons linking to schedule/calendar/reports
-- Remove those UI elements (keep code, just hide entry points)
+1. **Session tab entry point** (1h) — `app/(tabs)/session.tsx`: Add "Solo Focus" card
+2. **Wire confirm screen** (1.5h) — `app/session/confirm.tsx`: Call `sessionStore.startSession()` for solo mode
+3. **Wire active screen** (2h) — `app/session/active.tsx`: Add `solo_staked` mode, read from `sessionStore`
+4. **Wire complete screen** (30min) — `app/session/complete.tsx`: Fallback to `sessionStore.sessionHistory`
+5. **Wire surrender screen** (30min) — `app/session/surrender.tsx`: Solo surrender path
+6. **Tab recovery** (30min) — Show active solo session on app restart
+7. **Testing** (1.5h) — Full E2E: start → block → complete/surrender → payout/forfeit
 
-**Switch to live payment keys (~1-2 hours)**:
+### Files to Modify
+- `app/(tabs)/session.tsx`
+- `app/session/select.tsx` (pass `mode=solo` param)
+- `app/session/confirm.tsx`
+- `app/session/active.tsx`
+- `app/session/complete.tsx`
+- `app/session/surrender.tsx`
 
-1. `.env`: Update `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` to live key
-2. Firebase Secret Manager: `firebase functions:secrets:set STRIPE_SECRET_KEY` (live key)
-3. Firebase Secret Manager: `firebase functions:secrets:set STRIPE_WEBHOOK_SECRET` (live webhook secret)
-4. Update Plaid credentials to production
-5. `firebase deploy --only functions`
-6. Stripe Dashboard: Create webhook endpoint → production Cloud Function URL
-7. Test: deposit $1 real money, verify it credits
+---
 
-### Day 2 — April 11: E2E Testing Solo + Payments
+## PHASE 2: CAMPUS LAUNCH (April 19 - May 5)
 
-- Fresh sign-up → profile setup → Screen Time setup
-- Deposit real money ($5) via Stripe
-- Solo session: stake → timer → blocked apps → complete → payout
-- Solo session: stake → surrender via app (type QUIT) → forfeit
-- Solo session: stake → surrender via shield → verify new fix works
-- Quick block: one-tap → blocking → end
-- Withdraw to bank: Plaid link → Stripe payout
-- Fix all bugs found
+**"Lock In For Finals"** — Posters, flyers, QR codes on campus.
 
-### Day 3 — April 12: Group Sessions + Push + TestFlight
+**Hard blocker**: Apple extension entitlements (submitted April 10, pending).
 
-- Group session E2E on 2-3 test devices:
-  - Device A creates challenge, invites B and C
-  - B and C accept
-  - All mark online → session auto-starts
-  - Screen Time blocks on all devices
-  - One surrenders, others complete → payouts verified
-  - Host cancels before start → refunds verified
-- Wire FCM push notifications (at minimum: group invite, session starting)
-- First TestFlight build: `DEMO_MODE=false`, EAS production build, upload, distribute to team
+### Marketing
+- Posters: "Lock In For Finals" / "Compete with friends on screen time"
+- QR code → TestFlight link
+- Promo: "Complete 5 sessions with friends → earn $5 free" ($100 pool from 4 teammates)
+- Short demo video for Instagram/TikTok
 
-### Day 4 — April 13: Polish + Team Testing
+### Technical
+- [ ] Firebase App Check implementation (safe to do post-demo with new build)
+- [ ] TestFlight build + distribution
+- [ ] Crash monitoring (Sentry or Expo crash reports)
+- [ ] Onboarding copy: explain why blocking is unbypassable (FamilyControls)
+- [ ] Analytics events: DAU, session starts/completions, deposits, withdrawals
+- [ ] Promo bonus Cloud Function (~2h)
 
-- UI polish (Fardeen's personal pass — animations, gradients, spacing)
-- Bug fixes from TestFlight feedback
-- Verify niyah.live deep links work
+### Metrics to Collect
+- Daily Active Users (DAU)
+- Session completion rate (% complete vs surrender)
+- Average stake amount
+- Retention (Day 1, Day 7)
+- Deposit → withdrawal conversion
 
-### Day 5 — April 14: Demo Prep
+---
 
-- Final TestFlight build with all fixes
-- Demo flow rehearsal on stage device
-- Pre-load demo account with balance
-- Have backup accounts ready
-- Emergency fixes only — no new features
+## PHASE 3: POST-GRADUATION (May 8+)
 
-### Suggested Demo Script (3-5 min)
+1. Schedule-based blocking (DeviceActivitySchedule API)
+2. DeviceActivityReport analytics screen
+3. Custom in-app KYC (replace Stripe Express onboarding)
+4. Plant social credit system
+5. Interactive blob maker
+6. Subscription tier ($3-5/mo for analytics + schedules)
+7. Android investigation
 
-1. Open app → clean dashboard, real balance visible
-2. Quick Block → one tap → show apps blocked → end
-3. Deposit → $10 via Stripe → balance updates live
-4. Solo Session → stake $5 → timer starts → open Instagram → custom Niyah shield → "Stay Focused" → go back → session completes → $5 earned
-5. Group Challenge → invite teammate in audience → they accept on phone → stakes locked → session starts → multi-device blocking
-6. Withdraw → show earnings → initiate bank withdrawal → "real money, real consequences"
+---
 
-### Verification Checklist
+## Completed (Previous Sprint)
 
-- [ ] Extension entitlements submitted to Apple
-- [ ] Shield surrender → app opens → type QUIT → session ends (both directions)
+| Item | Status |
+|------|--------|
+| Shield surrender desync bug fix | ✅ Done |
+| Custom Niyah-branded shield | ✅ Done |
+| ManagedSettingsStore.Name fix in extensions | ✅ Done |
+| linkBankAccount errors (Express accounts) | ✅ Done |
+| Withdraw screen rewrite + polish | ✅ Done |
+| findContactsOnNiyah rate limit + caching | ✅ Done |
+| Dead UI removed (schedule/calendar/report links) | ✅ Done |
+| Phone SMS OTP auth | ✅ Done |
+| Screen Time onboarding flow | ✅ Done |
+| Contact-based friend discovery (enhanced) | ✅ Done |
+| Group session Cloud Functions (7 functions) | ✅ Done |
+| FCM push notifications (9 types) | ✅ Done |
+| Plaid bank linking + legal acceptance CFs | ✅ Done |
+| FamilyControls Distribution approved (main app) | ✅ Done |
+| Stripe live mode business account | ✅ Done |
+| Plaid production access | ✅ Done |
+| Niyah, Inc. incorporated with EIN | ✅ Done |
+| Landing page at niyah.live | ✅ Done |
+| App icon + splash screen updated | ✅ Done |
+| Stripe Connect Express onboarding flow | ✅ Done |
+
+---
+
+## Immersion Showcase (April 16)
+
+### Poster (36 x 48 inches)
+- Product-focused, not research-style
+- Sections: Problem → Solution → Architecture → Screenshots → Competitive Position → Future
+- QR code to niyah.live (promotion opportunity)
+- Author Contribution Statement required
+
+### Presentation Setup
+- Phone mirrored to monitor/mini-TV via adapter
+- Live demo at station (same script as April 15, adapted for walk-up audience)
+- Slides as backup on laptop
+
+---
+
+## Verification Checklist
+
 - [ ] Real Stripe deposit processes and credits balance
-- [ ] Real Stripe withdrawal initiates to linked bank
-- [ ] Plaid bank linking works in production
-- [ ] Solo session: start → block → complete → payout
-- [ ] Solo session: start → block → surrender → forfeit
-- [ ] Quick block: start → blocks → end
+- [ ] Real Stripe withdrawal initiates (or UI shown with processing explanation)
+- [ ] Quick block: start → shield appears → end
 - [ ] Group session: create → invite → accept → start → complete → payouts
-- [ ] Group session: cancel → refund
 - [ ] Push notifications fire for group events
 - [ ] No dead-end buttons in UI
-- [ ] `DEMO_MODE=false` in production build
-- [ ] TestFlight installs and runs on team devices
 - [ ] Demo account pre-loaded with balance
-
----
-
-## Previous Sprint Progress (as of Apr 4, 2026)
-
-| Phase | Item                                                              | Status          |
-| ----- | ----------------------------------------------------------------- | --------------- |
-| 0A    | ManagedSettingsStore.Name fix + custom shield branding            | Done            |
-| 0B    | linkBankAccount error handling + idempotency                      | Done            |
-| 0C    | Withdraw text fix                                                 | Done            |
-| 0D    | findContactsOnNiyah rate limit + socialStore caching              | Done            |
-| 0E    | Quick flow fixes (profile, propose, sessionStore)                 | Partial         |
-| 1     | One-tap quick block (`quick-block.tsx`)                           | Done            |
-| 1     | DeviceActivitySchedule integration (scheduled blocking)           | Cut (post-demo) |
-| 1     | `scheduleStore.ts`                                                | Cut (post-demo) |
-| 2     | Calendar integration (`schedule-builder.tsx`, `calendarUtils.ts`) | Cut (post-demo) |
-| 3     | DeviceActivityReport chart (`niyah-report/`, `usage-report.tsx`)  | Cut (post-demo) |
-| 4     | Threshold nudges                                                  | Cut (post-demo) |
-| 5     | Group session `scheduledStartAt` wiring                           | Cut (post-demo) |
-
-Also completed (not in original sprint scope):
-
-- Phone SMS OTP auth (`phone-entry.tsx`, `verify-phone.tsx`)
-- Screen Time onboarding flow (`screentime-setup.tsx`)
-- Contact invite list (enhanced `friends.tsx`)
-- Group session Cloud Functions (7 new functions)
-- Custom Niyah shield with branding
-- FamilyControls Distribution approved (main app)
-- Stripe live mode business account ready
-- Plaid production access approved
-- Landing page at niyah.live
-- Niyah, Inc. incorporated with EIN
-
----
-
-## Context
-
-Fardeen tested the app on 2026-03-27 and surfaced bugs + a strategic rearchitecture before the April 15 demo (18 days). Core shift: from "money-staked cadence sessions" → "schedule-based app blocker with calendar intelligence (solo) + money-staked group challenges." Everything below is decided and ready to implement.
-
-**Confirmed decisions:**
-
-- Fix shield first, then build on top
-- Solo mode: remove money, add scheduling, no money staking
-- Usage data: both DeviceActivityReport chart (display-only) + threshold nudge tracking
-- Calendar: full daily schedule generator (read Apple/Google/Outlook, show events + gaps, user confirms focus blocks)
-- One-tap quick block as the fast alternative path
-- Bank connection: keep at withdrawal (no change)
-- Referral links: deferred post-April 15
-
----
-
-## HARD REALITY CHECK
-
-You want ~30+ days of work in 18 days, solo. The plan below is sequenced so the most critical demo pieces land first. If you fall behind, the cut list is at the bottom — follow it.
-
----
-
-## Phase 0: Bug Fixes + Shield Verification (Days 1-3)
-
-**Gate: Do not start Phase 1 until shield works on device.**
-
-### 0A. Fix `ManagedSettingsStore.Name` in Extension Targets
-
-**Root cause:** `DeviceActivityMonitorExtension.swift` uses `.niyahSession` (the named store), but that extension on `ManagedSettingsStore.Name` is only declared in the main app's `NiyahScreenTimeModule.swift`, NOT in the extension target. This causes silent failure or crash — the shield renders as a generic system block instead of the custom UI.
-
-**Fix:**
-
-- `modules/niyah-screentime/ios/NiyahDeviceActivityMonitor/DeviceActivityMonitorExtension.swift`: Add declaration at top:
-  ```swift
-  extension ManagedSettingsStore.Name {
-    static let niyahSession = Self("niyah.session")
-  }
-  ```
-- Check `NiyahShieldAction/ShieldActionExtension.swift` and `NiyahShieldConfiguration/ShieldConfigurationExtension.swift` — add same declaration if they reference `.niyahSession`
-- `npx expo prebuild --clean --platform ios && pnpm build:local`
-- **Verify**: Start a session, open a blocked app → confirm custom shield UI ("Stay Focused" / "Surrender Session" buttons) appears
-
-### 0B. `linkBankAccount` 500/400 Error
-
-**Root cause:** Plaid-Stripe integration likely not enabled in Plaid dashboard. Also, on retry the processor token (single-use) has already been consumed.
-
-**Fix:**
-
-- `functions/src/index.ts`: Wrap each API call in its own try/catch with specific error logging (which step failed: token exchange, account details, processor token, Stripe account, external account attach)
-- Add idempotency guard: if user already has `stripeAccountId` + `linkedBank` in Firestore, return existing data without re-calling Plaid/Stripe
-- Add `tos_acceptance.date` and `tos_acceptance.ip` to Stripe Custom account creation
-- **Operational step**: Enable Stripe integration in Plaid dashboard → Settings > Integrations > Stripe
-
-### 0C. Withdraw "Instant bank deposit" Text + Alert Bug
-
-**Fixes:**
-
-- `app/session/withdraw.tsx:326`: Change "Instant bank deposit" → "Instant bank transfer"
-- After Plaid link success, the success alert text was showing wrong amount. Change alert to: `"${result.bankName} ending in ${result.bankMask} linked. Tap 'Withdraw' to continue."`
-
-### 0D. `findContactsOnNiyah` 429 Rate Limit
-
-**Fix:**
-
-- `functions/src/index.ts`: Change `{ maxCalls: 5, windowMs: 600_000 }` → `{ maxCalls: 10, windowMs: 3_600_000 }` (10/hour)
-- `app/(tabs)/friends.tsx`: Move `contactMatches` and `lastContactSyncAt` into `socialStore.ts`. Skip re-fetch if < 5 minutes since last sync.
-
-### 0E. Quick Flow Fixes
-
-- `app/(tabs)/profile.tsx`: Remove `<PaymentHandlesCard>` (Venmo/Zelle). Add a `<LinkedBankCard>` showing institution name + mask from `user?.linkedBank` with "Change Bank" button.
-- `src/components/profile/index.ts`: Remove `PaymentHandlesCard` export.
-- `app/session/propose.tsx`: Add `useEffect` that calls `loadMyFollows(user.id)` on mount + loads profiles for followed users. This fixes the empty friend list in group proposal.
-- `src/store/sessionStore.ts`: In `startSession()`, subscribe to `onShieldViolation` events → increment `violationCount` in store state + fire-and-forget Firestore write. `app/session/active.tsx`: Read from store instead of local useState.
-
----
-
-## Phase 1: Solo Mode Rearchitecture (Days 4-8)
-
-### One-Tap Quick Block (Fast Path)
-
-Replace money-staked cadence sessions with a simple "block now for X minutes" flow:
-
-**New screen: `app/session/quick-block.tsx`**
-
-- Time picker chips: 25 min (Pomodoro), 1 hr, 2 hrs, 4 hrs, Until tonight
-- "Block Apps" button → calls existing `startBlocking()` with a countdown timer
-- No money, no cadence, no stake
-- Reuses existing `app/session/active.tsx` for the active blocking view (with a mode prop to hide money UI)
-- On end: `stopBlocking()`, show summary ("Blocked for 2 hours")
-
-**Files to modify:**
-
-- `app/session/_layout.tsx`: Add `quick-block` route
-- `app/(tabs)/index.tsx`: Replace "Start Session" CTA with "Block Apps Now" → routes to `quick-block`
-- `app/session/active.tsx`: Add `mode` param (`"solo_quick" | "solo_scheduled" | "group"`) to conditionally render money UI
-- `src/constants/config.ts`: Add `SOLO_MODE_V2 = true` flag
-
-### DeviceActivitySchedule Integration (Timed Blocking)
-
-New Swift methods in `modules/niyah-screentime/ios/NiyahScreenTimeModule.swift`:
-
-```swift
-AsyncFunction("startScheduledBlocking") { (startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, activityName: String) in
-  let center = DeviceActivityCenter()
-  let schedule = DeviceActivitySchedule(
-    intervalStart: DateComponents(hour: startHour, minute: startMinute),
-    intervalEnd: DateComponents(hour: endHour, minute: endMinute),
-    repeats: true
-  )
-  try center.startMonitoring(DeviceActivityName(activityName), during: schedule)
-}
-
-AsyncFunction("stopScheduledBlocking") { (activityName: String) in
-  DeviceActivityCenter().stopMonitoring([DeviceActivityName(activityName)])
-}
-
-AsyncFunction("stopAllScheduledBlocking") { in
-  DeviceActivityCenter().stopMonitoring()
-}
-```
-
-**Update `DeviceActivityMonitorExtension.swift` `intervalDidStart`** (currently a no-op) to apply shields:
-
-```swift
-override func intervalDidStart(for activity: DeviceActivityName) {
-  let store = ManagedSettingsStore(named: .niyahSession)
-  let defaults = UserDefaults(suiteName: "group.com.niyah.app")
-  guard let data = defaults?.data(forKey: "niyah_app_selection"),
-        let selection = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: data)
-  else { return }
-  if !selection.applicationTokens.isEmpty {
-    store.shield.applications = selection.applicationTokens
-  }
-  if !selection.categoryTokens.isEmpty {
-    store.shield.applicationCategories = .specific(selection.categoryTokens)
-  }
-}
-
-override func intervalDidEnd(for activity: DeviceActivityName) {
-  ManagedSettingsStore(named: .niyahSession).clearAllSettings()
-}
-```
-
-**New TS wrapper** in `src/config/screentime.ts`: Export `startScheduledBlocking`, `stopScheduledBlocking`, `stopAllScheduledBlocking`.
-
-**New Zustand store**: `src/store/scheduleStore.ts`
-
-- `schedules: BlockSchedule[]` (see types below)
-- `createSchedule()`, `deleteSchedule()`, `toggleSchedule()`
-- Persists to AsyncStorage
-- On create: calls `startScheduledBlocking()` for each time range in the schedule
-
-**New types in `src/types/index.ts`:**
-
-```typescript
-interface TimeRange {
-  startHour: number;
-  startMinute: number;
-  endHour: number;
-  endMinute: number;
-}
-interface BlockSchedule {
-  id: string;
-  name: string;
-  appSelectionId: string;
-  timeRanges: TimeRange[];
-  dateStart: Date;
-  dateEnd: Date;
-  isActive: boolean;
-  createdAt: Date;
-  source: "manual" | "calendar";
-}
-```
-
----
-
-## Phase 2: Calendar Integration (Days 9-12)
-
-### expo-calendar Integration
-
-**New screen: `app/session/schedule-builder.tsx`** — the "Smart Schedule Maker"
-
-**Flow:**
-
-1. Request calendar permission (`expo-calendar` — already available in Expo SDK 54)
-2. Read today's events (and optionally this week's)
-3. Compute free gaps > 20 minutes between events
-4. Request Screen Time auth if not granted
-5. Show the full daily schedule view (see UX below)
-6. User confirms → create `BlockSchedule` entries via `scheduleStore`
-
-**Calendar UX: "Generate a daily schedule"**
-
-Show an interactive timeline for the day:
-
-```
-6 AM ─────────────────────────────
-     [CALENDAR EVENT: CS3251 9-10:30am] (greyed)
-     ████ FOCUS BLOCK 10:30-12:00 ████ (green, suggested)
-     [CALENDAR EVENT: Lunch 12-1pm] (greyed)
-     ████ FOCUS BLOCK 1:00-3:00 ████ (green, suggested)
-     [CALENDAR EVENT: Study group 3-4pm] (greyed)
-     ████ FOCUS BLOCK 4:00-7:00 ████ (green, suggested)
-10 PM ────────────────────────────
-```
-
-- User can tap any green block to remove it or adjust times
-- "Confirm Schedule" → creates `BlockSchedule` for each green block
-- "Make this a daily routine" checkbox → sets `repeats: true` for weekday schedules
-
-**Files:**
-
-- `app/session/schedule-builder.tsx` (new)
-- `src/utils/calendarUtils.ts` (new) — gap computation, event parsing
-- `app/(tabs)/index.tsx` — add "Build Smart Schedule" button alongside "Block Apps Now"
-- `app/session/_layout.tsx` — add `schedule-builder` route
-
-**Calendar sources:** `expo-calendar` on iOS reads all calendars synced to the device (iCloud, Google, Outlook) without separate per-service auth. Just one `requestCalendarPermissionsAsync()` call.
-
----
-
-## Phase 3: DeviceActivityReport Chart (Days 9-11, parallel with calendar)
-
-### New Extension Target
-
-Add a fourth app extension: `NiyahDeviceActivityReport` — conforms to `DeviceActivityReportExtension`.
-
-**Implementation in Swift:**
-
-```swift
-struct NiyahActivityReportExtension: DeviceActivityReportExtension {
-  var body: some DeviceActivityReportScene {
-    DeviceActivityReport(.init("top-apps")) { data in
-      TopAppsView(activityData: data)
-    }
-  }
-}
-```
-
-`TopAppsView` renders a SwiftUI list of apps sorted by `totalActivityDuration` with bar charts.
-
-**Bridge to React Native:**
-
-- New Expo native module: `NiyahUsageReportModule.swift`
-- Wraps `DeviceActivityReport` SwiftUI view in a `UIHostingController`
-- Exposes as a native view component: `<UsageReportView filter={filter} />`
-- Use `DeviceActivityFilter` to scope to last 7 days
-
-**New screen: `app/session/usage-report.tsx`**
-
-- Renders `<UsageReportView>` (display-only — data stays in extension sandbox)
-- Header: "Your Screen Time" with day/week toggle
-- Footer: "Block your top apps →" button → opens `FamilyActivityPicker`
-
-**Config plugin update**: Add the report extension to `withShieldExtensions.js` or a new `withReportExtension.js`.
-
----
-
-## Phase 4: Threshold Nudges (Days 13-15)
-
-### Expand DeviceActivityMonitor with Time Thresholds
-
-For each monitored app category (Entertainment, Social, Games), set threshold events at 30min, 1hr, 2hr intervals.
-
-**In `DeviceActivityMonitorExtension.swift` `eventDidReachThreshold`:**
-
-```swift
-override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name, activity: DeviceActivityName) {
-  // Parse time from event name: "entertainment.30min", "social.1hr" etc.
-  let parts = event.rawValue.split(separator: ".")
-  guard parts.count == 2 else { return }
-  let category = String(parts[0])
-  let duration = String(parts[1])
-
-  var record = defaults?.dictionary(forKey: "niyah_usage_thresholds") ?? [:]
-  let key = "\(category)_\(duration)_\(dateKey())"
-  record[key] = Date().timeIntervalSince1970
-  defaults?.set(record, forKey: "niyah_usage_thresholds")
-}
-```
-
-**Main app reads threshold data** in `scheduleStore` to infer approximate usage:
-
-- "entertainment_1hr" key present for today → user spent 1+ hour on entertainment
-- Nudge: "You've used 1h+ of Entertainment apps today. Block them for your next focus block?"
-
-**New notification type**: Local push notification sent when threshold fires during a free slot in the user's calendar schedule.
-
----
-
-## Phase 5: Group Session + Polish (Days 10-14, parallel)
-
-### Wire `scheduledStartAt` in Group Sessions
-
-- `app/session/propose.tsx`: Compute actual `scheduledStartAt` Date from selected Day + Time chips
-- `functions/src/index.ts` `createGroupSession`: Accept and store `scheduledStartAt`
-- `app/session/waiting-room.tsx`: If `scheduledStartAt` > now, show countdown; gate "I'm Ready" button until that time
-
-### Fix Group Friend List
-
-Already covered in Phase 0 (0E) — `loadMyFollows` called on mount in `propose.tsx`.
-
----
-
-## Cut List (in order — cut from bottom when behind)
-
-1. **First cut**: Threshold nudges (Phase 4) — most risk, least visible in demo
-2. **Second cut**: DeviceActivityReport chart (Phase 3) — display-only, no functional impact
-3. **Third cut**: Calendar smart schedule (Phase 2, full UX) → simplify to gap list with checkboxes instead of full timeline
-4. **Fourth cut**: DeviceActivitySchedule recurring blocks → fall back to one-tap quick blocks only
-5. **NEVER cut**: Shield fix, bug fixes, one-tap blocking, group sessions E2E, deposit/withdraw
-
----
-
-## File Change Summary
-
-| File                                                                                           | Change                                                                                                               | Phase     |
-| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------- |
-| `modules/niyah-screentime/ios/NiyahDeviceActivityMonitor/DeviceActivityMonitorExtension.swift` | Add `ManagedSettingsStore.Name.niyahSession`, implement `intervalDidStart`/`intervalDidEnd`, add threshold recording | 0A, 1, 4  |
-| `modules/niyah-screentime/ios/NiyahScreenTimeModule.swift`                                     | Add `startScheduledBlocking`, `stopScheduledBlocking`, `stopAllScheduledBlocking`                                    | 1         |
-| `modules/niyah-screentime/src/NiyahScreenTimeModule.ts`                                        | Add TS declarations for new methods                                                                                  | 1         |
-| `src/config/screentime.ts`                                                                     | Export new scheduling functions                                                                                      | 1         |
-| `src/store/scheduleStore.ts`                                                                   | NEW — schedule state management                                                                                      | 1         |
-| `src/types/index.ts`                                                                           | Add `BlockSchedule`, `TimeRange`                                                                                     | 1         |
-| `app/session/quick-block.tsx`                                                                  | NEW — one-tap blocking screen                                                                                        | 1         |
-| `app/session/active.tsx`                                                                       | Add `mode` prop to hide money UI for solo                                                                            | 1         |
-| `app/(tabs)/index.tsx`                                                                         | Update CTAs for scheduling                                                                                           | 1, 2      |
-| `app/session/schedule-builder.tsx`                                                             | NEW — smart schedule maker with calendar                                                                             | 2         |
-| `src/utils/calendarUtils.ts`                                                                   | NEW — gap computation from calendar events                                                                           | 2         |
-| `modules/niyah-report/`                                                                        | NEW extension target for DeviceActivityReport                                                                        | 3         |
-| `app/session/usage-report.tsx`                                                                 | NEW — usage chart screen                                                                                             | 3         |
-| `functions/src/index.ts`                                                                       | linkBankAccount idempotency, rate limit fix, scheduledStartAt in createGroupSession                                  | 0B, 0D, 5 |
-| `app/session/withdraw.tsx`                                                                     | Fix "deposit" text, fix success alert                                                                                | 0C        |
-| `app/(tabs)/friends.tsx`                                                                       | Cache contact matches in socialStore                                                                                 | 0D        |
-| `src/store/socialStore.ts`                                                                     | Add contactMatches, lastContactSyncAt                                                                                | 0D        |
-| `app/(tabs)/profile.tsx`                                                                       | Remove PaymentHandlesCard, add LinkedBankCard                                                                        | 0E        |
-| `app/session/propose.tsx`                                                                      | Load follows on mount, wire scheduledStartAt                                                                         | 0E, 5     |
-| `src/store/sessionStore.ts`                                                                    | Subscribe to onShieldViolation                                                                                       | 0E        |
-| `src/constants/config.ts`                                                                      | Add SOLO_MODE_V2 flag                                                                                                | 1         |
-
----
-
-## Verification Gates
-
-**After Phase 0 (Day 3):**
-
-- `pnpm run ci` passes
-- `firebase deploy --only functions` succeeds
-- `npx expo prebuild --clean --platform ios && pnpm build:local`
-- Shield UI appears on device when opening blocked app
-- Group session E2E works on 2 phones
-
-**After Phase 1 (Day 8):**
-
-- One-tap quick block → apps blocked → custom shield appears → surrender/end works
-- DeviceActivitySchedule: set a schedule for 5 minutes from now → apps auto-block at that time (even with app killed)
-
-**After Phase 2 (Day 12):**
-
-- Calendar events visible in schedule builder
-- Focus blocks generated correctly in gaps
-- Confirming schedule creates blocking schedules
-
-**After Phase 3 (Day 11):**
-
-- Usage report chart renders inside app
-- No crash from extension memory limit
-
-**Full demo run (Day 17):**
-
-1. Open app → show usage chart (top apps, time-of-day)
-2. Build smart schedule from calendar (shows events + suggested focus blocks)
-3. Confirm → schedule created, blocking activates at the right time
-4. Open blocked app → custom Niyah shield appears
-5. Group session: invite friend, both accept, both go active, timer counts, complete + payout
-6. Deposit via Apple Pay, withdraw to bank
+- [ ] Demo rehearsed 3x on actual device

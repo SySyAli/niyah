@@ -16,7 +16,9 @@ import { renderHook } from "@testing-library/react-native";
 import * as ScreenCapture from "expo-screen-capture";
 import { useScreenProtection } from "../../../hooks/useScreenProtection";
 
-describe("useScreenProtection", () => {
+// Screen protection is demo-disabled via SCREEN_PROTECTION_ENABLED = false.
+// Skip until flag flipped back on post-demo.
+describe.skip("useScreenProtection", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });

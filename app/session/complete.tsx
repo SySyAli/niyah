@@ -14,6 +14,7 @@ import {
   Button,
   Confetti,
   SessionScreenScaffold,
+  withErrorBoundary,
 } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
@@ -329,7 +330,7 @@ function FirestoreResultsCard({
   );
 }
 
-export default function CompleteScreen() {
+function CompleteScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -675,3 +676,6 @@ export default function CompleteScreen() {
     </>
   );
 }
+
+const CompleteScreen = withErrorBoundary(CompleteScreenInner, "complete");
+export default CompleteScreen;

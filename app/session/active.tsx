@@ -14,6 +14,7 @@ import {
   Button,
   Timer,
   SessionScreenScaffold,
+  withErrorBoundary,
 } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
@@ -30,10 +31,11 @@ import {
   isScreenTimeAvailable,
 } from "../../src/config/screentime";
 import { reportShieldViolation as reportShieldViolationCF } from "../../src/config/functions";
+import { logger } from "../../src/utils/logger";
 
 type SessionMode = "solo_quick" | "solo_scheduled" | "group";
 
-export default function ActiveSessionScreen() {
+function ActiveSessionScreenInner() {
   const Colors = useColors();
   const params = useLocalSearchParams<{ mode?: SessionMode }>();
   const mode: SessionMode = params.mode ?? "group";
@@ -335,7 +337,7 @@ export default function ActiveSessionScreen() {
             await reportCompletion(firestoreSession.id);
           } catch (err) {
             // Fallback to legacy local completion
-            console.warn("Server report failed, using local completion:", err);
+            logger.warn("Server report failed, using local completion:", err);
             if (session) {
               completeGroupSession(
                 session.participants.map((p) => ({
@@ -393,7 +395,7 @@ export default function ActiveSessionScreen() {
       const sid = firestoreSessionIdRef.current;
       if (sid) {
         reportShieldViolationCF(sid).catch((err) => {
-          console.warn("reportShieldViolation failed:", err);
+          logger.warn("reportShieldViolation failed:", err);
         });
       }
     });
@@ -452,7 +454,7 @@ export default function ActiveSessionScreen() {
       try {
         await reportSurrender(effectiveFirestoreSession.id);
       } catch (err) {
-        console.warn("Server surrender report failed:", err);
+        logger.warn("Server surrender report failed:", err);
       }
       router.replace("/session/complete");
     } else {
@@ -652,3 +654,9 @@ export default function ActiveSessionScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const ActiveSessionScreen = withErrorBoundary(
+  ActiveSessionScreenInner,
+  "active",
+);
+export default ActiveSessionScreen;

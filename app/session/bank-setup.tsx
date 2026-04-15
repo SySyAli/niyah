@@ -4,7 +4,13 @@
  * No browser redirect — Plaid Link SDK provides a native UI.
  */
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from "react";
 import { View, Text, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -22,7 +28,12 @@ import {
 import { useColors } from "../../src/hooks/useColors";
 import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import * as Haptics from "expo-haptics";
-import { Button, Card, SessionScreenScaffold } from "../../src/components";
+import {
+  Button,
+  Card,
+  SessionScreenScaffold,
+  withErrorBoundary,
+} from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import {
   createPlaidLinkToken,
@@ -31,7 +42,7 @@ import {
 import { logger } from "../../src/utils/logger";
 import { getFunctionErrorMessage } from "../../src/utils/errors";
 
-export default function BankSetupScreen() {
+function BankSetupScreenInner() {
   useScreenProtection("bank-setup");
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -40,6 +51,26 @@ export default function BankSetupScreen() {
 
   const [isConnecting, setIsConnecting] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
+
+  const isMountedRef = useRef(true);
+  const hasNavigatedBackRef = useRef(false);
+  useEffect(() => {
+    isMountedRef.current = true;
+    hasNavigatedBackRef.current = false;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const safeBack = useCallback(() => {
+    if (hasNavigatedBackRef.current) return;
+    hasNavigatedBackRef.current = true;
+    try {
+      router.back();
+    } catch (err) {
+      logger.warn("router.back failed:", err);
+    }
+  }, [router]);
 
   // Check if bank is already connected
   const linkedBank = user?.linkedBank as
@@ -61,6 +92,7 @@ export default function BankSetupScreen() {
       // 3. Open Plaid Link native UI
       open({
         onSuccess: async (success: LinkSuccess) => {
+          if (!isMountedRef.current) return;
           setIsConnecting(false);
           setIsLinking(true);
 
@@ -92,7 +124,7 @@ export default function BankSetupScreen() {
             Alert.alert(
               "Bank Connected",
               `${result.bankName} ending in ${result.bankMask} is now linked for withdrawals.`,
-              [{ text: "Done", onPress: () => router.back() }],
+              [{ text: "Done", onPress: safeBack }],
             );
           } catch (err) {
             logger.error("linkBankAccount error:", err);
@@ -104,10 +136,11 @@ export default function BankSetupScreen() {
               ),
             );
           } finally {
-            setIsLinking(false);
+            if (isMountedRef.current) setIsLinking(false);
           }
         },
         onExit: (exit: LinkExit) => {
+          if (!isMountedRef.current) return;
           setIsConnecting(false);
           if (exit.error) {
             logger.error("Plaid Link error:", exit.error);
@@ -125,7 +158,7 @@ export default function BankSetupScreen() {
         "Setup Error",
         "Could not start bank connection. Check your internet and try again.",
       );
-      setIsConnecting(false);
+      if (isMountedRef.current) setIsConnecting(false);
     }
   }, [updateUser, router]);
 
@@ -157,7 +190,7 @@ export default function BankSetupScreen() {
           </Text>
           <Button
             title="Done"
-            onPress={() => router.back()}
+            onPress={safeBack}
             size="large"
             style={styles.actionButton}
           />
@@ -240,6 +273,9 @@ export default function BankSetupScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const BankSetupScreen = withErrorBoundary(BankSetupScreenInner, "bank-setup");
+export default BankSetupScreen;
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({

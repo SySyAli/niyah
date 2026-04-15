@@ -25,6 +25,7 @@ import {
   LegalContentView,
 } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
+import { PHONE_AUTH_DISABLED } from "../../src/constants/config";
 import { generateNonce, sha256 } from "../../src/config/firebase";
 import { logger } from "../../src/utils/logger";
 import {
@@ -190,36 +191,40 @@ export default function AuthEntryScreen() {
         </View>
       ) : null}
 
-      {/* Phone number — primary sign-in */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.phoneButton,
-          pressed && styles.socialButtonPressed,
-          anyLoading && styles.socialButtonDisabled,
-        ]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.push("/(auth)/phone-entry");
-        }}
-        disabled={anyLoading}
-      >
-        <Text style={styles.phoneButtonPrefix}>+1</Text>
-        <Text style={styles.phoneButtonPlaceholder}>Phone Number</Text>
-      </Pressable>
+      {/* Phone number — primary sign-in. Hidden when APNs not yet registered. */}
+      {!PHONE_AUTH_DISABLED && (
+        <>
+          <Pressable
+            style={({ pressed }) => [
+              styles.phoneButton,
+              pressed && styles.socialButtonPressed,
+              anyLoading && styles.socialButtonDisabled,
+            ]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/(auth)/phone-entry");
+            }}
+            disabled={anyLoading}
+          >
+            <Text style={styles.phoneButtonPrefix}>+1</Text>
+            <Text style={styles.phoneButtonPlaceholder}>Phone Number</Text>
+          </Pressable>
 
-      <Button
-        title="Next"
-        onPress={() => router.push("/(auth)/phone-entry")}
-        disabled={anyLoading}
-        size="large"
-      />
+          <Button
+            title="Next"
+            onPress={() => router.push("/(auth)/phone-entry")}
+            disabled={anyLoading}
+            size="large"
+          />
 
-      {/* OR divider */}
-      <View style={styles.orDivider}>
-        <View style={styles.orLine} />
-        <Text style={styles.orText}>or</Text>
-        <View style={styles.orLine} />
-      </View>
+          {/* OR divider */}
+          <View style={styles.orDivider}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>or</Text>
+            <View style={styles.orLine} />
+          </View>
+        </>
+      )}
 
       {/* Apple + Google */}
       <View style={styles.socialSection}>

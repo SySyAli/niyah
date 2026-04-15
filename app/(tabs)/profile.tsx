@@ -27,6 +27,7 @@ import {
   Balance,
   LegalContentView,
   InviteCTA,
+  withErrorBoundary,
 } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -41,7 +42,7 @@ import {
 } from "../../src/components/profile";
 import { logger } from "../../src/utils/logger";
 
-export default function ProfileScreen() {
+function ProfileScreenInner() {
   useScreenProtection("profile");
   const Colors = useColors();
   const { theme, toggleTheme } = useThemeStore();
@@ -241,6 +242,9 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
+
+const ProfileScreen = withErrorBoundary(ProfileScreenInner, "profile");
+export default ProfileScreen;
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({

@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { View, Text, StyleSheet, Alert, Share } from "react-native";
+import { View, Text, StyleSheet, Alert, Share, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -16,7 +16,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button } from "../../src/components";
+import { Card, Button, withErrorBoundary } from "../../src/components";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -43,7 +43,10 @@ const makeStyles = (Colors: ThemeColors) =>
     },
     content: {
       flex: 1,
+    },
+    scrollContent: {
       padding: Spacing.lg,
+      paddingBottom: Spacing.xl,
     },
     header: {
       alignItems: "center",
@@ -199,6 +202,7 @@ const makeStyles = (Colors: ThemeColors) =>
       gap: Spacing.md,
       borderTopWidth: 1,
       borderTopColor: Colors.border,
+      backgroundColor: Colors.background,
     },
     cancelRow: {
       flexDirection: "row",
@@ -225,7 +229,7 @@ const makeStyles = (Colors: ThemeColors) =>
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function WaitingRoomScreen() {
+function WaitingRoomScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -314,6 +318,16 @@ export default function WaitingRoomScreen() {
     ? Object.entries(activeSession.participants)
     : [];
   const totalCount = participants.length;
+
+  // Count name occurrences so duplicates can be disambiguated with a UID suffix
+  const nameCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const [, p] of participants) {
+      counts[p.name] = (counts[p.name] ?? 0) + 1;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [participants.length, activeSession?.id]);
 
   const acceptedCount = participants.filter(([, p]) => p.accepted).length;
 
@@ -415,8 +429,12 @@ export default function WaitingRoomScreen() {
   const progressPercent = totalCount > 0 ? (onlineCount / totalCount) * 100 : 0;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Waiting Room</Text>
@@ -450,11 +468,16 @@ export default function WaitingRoomScreen() {
             <View key={participantId} style={styles.participantRow}>
               <View style={styles.participantAvatar}>
                 <Text style={styles.participantInitial}>
-                  {participant.name.charAt(0).toUpperCase()}
+                  {(participant.name ?? "?").charAt(0).toUpperCase()}
                 </Text>
               </View>
               <View style={styles.participantDetails}>
-                <Text style={styles.participantName}>{participant.name}</Text>
+                <Text style={styles.participantName}>
+                  {participant.name}
+                  {nameCounts[participant.name] > 1
+                    ? ` · ${participantId.slice(0, 4)}`
+                    : ""}
+                </Text>
                 {getStatusBadge(participantId, participant)}
               </View>
             </View>
@@ -486,7 +509,7 @@ export default function WaitingRoomScreen() {
             </Text>
           </Card>
         )}
-      </View>
+      </ScrollView>
 
       {/* Footer Actions */}
       <View style={styles.footer}>
@@ -517,3 +540,9 @@ export default function WaitingRoomScreen() {
     </SafeAreaView>
   );
 }
+
+const WaitingRoomScreen = withErrorBoundary(
+  WaitingRoomScreenInner,
+  "waiting-room",
+);
+export default WaitingRoomScreen;

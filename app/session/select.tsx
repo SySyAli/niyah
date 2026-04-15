@@ -9,7 +9,12 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button, SessionScreenScaffold } from "../../src/components";
+import {
+  Card,
+  Button,
+  SessionScreenScaffold,
+  withErrorBoundary,
+} from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useWalletStore } from "../../src/store/walletStore";
 import {
@@ -264,7 +269,7 @@ const CadenceOption: React.FC<CadenceOptionProps> = ({
   );
 };
 
-export default function SelectCadenceScreen() {
+function SelectCadenceScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -360,3 +365,9 @@ export default function SelectCadenceScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const SelectCadenceScreen = withErrorBoundary(
+  SelectCadenceScreenInner,
+  "select",
+);
+export default SelectCadenceScreen;

@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -25,6 +31,7 @@ import {
   NumPad,
   AmountDisplay,
   SessionScreenScaffold,
+  withErrorBoundary,
 } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
 import { useAuthStore } from "../../src/store/authStore";
@@ -44,7 +51,7 @@ function calcInstantFee(amountCents: number): number {
   return Math.max(50, Math.round(amountCents * 0.015));
 }
 
-export default function WithdrawScreen() {
+function WithdrawScreenInner() {
   useScreenProtection("withdraw");
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -60,6 +67,28 @@ export default function WithdrawScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+
+  // Guard against setState after unmount + double navigation, which crashes
+  // "every other time" when Stripe modal dismiss races with React unmount.
+  const isMountedRef = useRef(true);
+  const hasNavigatedBackRef = useRef(false);
+  useEffect(() => {
+    isMountedRef.current = true;
+    hasNavigatedBackRef.current = false;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const safeBack = useCallback(() => {
+    if (hasNavigatedBackRef.current) return;
+    hasNavigatedBackRef.current = true;
+    try {
+      router.back();
+    } catch (err) {
+      logger.warn("router.back failed:", err);
+    }
+  }, [router]);
 
   const stripeStatus = user?.stripeAccountStatus ?? "none";
   const hasActiveStripe = stripeStatus === "active";
@@ -85,24 +114,12 @@ export default function WithdrawScreen() {
     amountInCents <= 1_000_000;
   const instantFee = calcInstantFee(amountInCents);
 
-  // When user returns from Stripe onboarding in browser, recheck status
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (nextState) => {
-      if (
-        nextState === "active" &&
-        (stripeStatus === "none" || stripeStatus === "pending")
-      ) {
-        checkStripeStatus();
-      }
-    });
-    return () => sub.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stripeStatus]);
-
   const checkStripeStatus = useCallback(async () => {
+    if (!isMountedRef.current) return;
     setIsCheckingStatus(true);
     try {
       const result = await getConnectAccountStatus();
+      if (!isMountedRef.current) return;
       updateUser({
         stripeAccountStatus:
           result.status === "none" ? undefined : result.status,
@@ -122,9 +139,28 @@ export default function WithdrawScreen() {
     } catch (err) {
       logger.error("checkStripeStatus error:", err);
     } finally {
-      setIsCheckingStatus(false);
+      if (isMountedRef.current) setIsCheckingStatus(false);
     }
   }, [updateUser]);
+
+  // Read stripeStatus via ref so the AppState listener doesn't re-subscribe on
+  // every status change (which previously caused listener stacking + crashes
+  // when a background→foreground happened mid-Stripe-dismiss).
+  const stripeStatusRef = useRef(stripeStatus);
+  stripeStatusRef.current = stripeStatus;
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (!isMountedRef.current) return;
+      const status = stripeStatusRef.current;
+      if (
+        nextState === "active" &&
+        (status === "none" || status === "pending")
+      ) {
+        checkStripeStatus();
+      }
+    });
+    return () => sub.remove();
+  }, [checkStripeStatus]);
 
   const handleSetupStripe = useCallback(async () => {
     setIsSettingUp(true);
@@ -146,7 +182,7 @@ export default function WithdrawScreen() {
         ),
       );
     } finally {
-      setIsSettingUp(false);
+      if (isMountedRef.current) setIsSettingUp(false);
     }
   }, [stripeStatus, updateUser]);
 
@@ -200,7 +236,7 @@ export default function WithdrawScreen() {
       Alert.alert(
         "Withdrawal Sent",
         `${formatMoney(amountInCents)} is on its way to your bank — arrives ${methodLabel}.`,
-        [{ text: "Done", onPress: () => router.back() }],
+        [{ text: "Done", onPress: safeBack }],
       );
       void result;
     } catch (err: unknown) {
@@ -216,7 +252,7 @@ export default function WithdrawScreen() {
           .catch(() => {});
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) setIsLoading(false);
     }
   };
 
@@ -454,6 +490,9 @@ export default function WithdrawScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const WithdrawScreen = withErrorBoundary(WithdrawScreenInner, "withdraw");
+export default WithdrawScreen;
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({

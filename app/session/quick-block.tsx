@@ -9,7 +9,12 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button, SessionScreenScaffold } from "../../src/components";
+import {
+  Card,
+  Button,
+  SessionScreenScaffold,
+  withErrorBoundary,
+} from "../../src/components";
 import * as Haptics from "expo-haptics";
 import {
   isScreenTimeAvailable,
@@ -30,6 +35,7 @@ interface DurationOption {
 }
 
 const DURATION_OPTIONS: DurationOption[] = [
+  { label: "30 sec (demo)", durationMs: 30 * 1000 },
   { label: "25 min", durationMs: 25 * 60 * 1000 },
   { label: "1 hour", durationMs: 60 * 60 * 1000 },
   { label: "2 hours", durationMs: 2 * 60 * 60 * 1000 },
@@ -70,6 +76,13 @@ const makeStyles = (Colors: ThemeColors) =>
       alignItems: "center",
       justifyContent: "space-between",
       marginBottom: Spacing.sm,
+      gap: Spacing.sm,
+      flexWrap: "wrap",
+    },
+    setupStatusWrap: {
+      flexShrink: 1,
+      flexGrow: 1,
+      minWidth: 0,
     },
     setupStatus: {
       fontSize: Typography.bodySmall,
@@ -158,7 +171,7 @@ const makeStyles = (Colors: ThemeColors) =>
     },
   });
 
-export default function QuickBlockScreen() {
+function QuickBlockScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -315,14 +328,18 @@ export default function QuickBlockScreen() {
 
           {!isAuthorized && (
             <View style={styles.setupRow}>
-              <Text
-                style={[
-                  styles.setupStatus,
-                  isAuthorized ? styles.setupDone : styles.setupPending,
-                ]}
-              >
-                Screen Time: {isAuthorized ? "Authorized" : "Not authorized"}
-              </Text>
+              <View style={styles.setupStatusWrap}>
+                <Text
+                  style={[
+                    styles.setupStatus,
+                    isAuthorized ? styles.setupDone : styles.setupPending,
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  Screen Time: {isAuthorized ? "Authorized" : "Not authorized"}
+                </Text>
+              </View>
               <Button
                 title="Authorize"
                 onPress={handleAuthorize}
@@ -333,9 +350,15 @@ export default function QuickBlockScreen() {
 
           {isAuthorized && !hasApps && (
             <View style={styles.setupRow}>
-              <Text style={[styles.setupStatus, styles.setupPending]}>
-                No apps selected
-              </Text>
+              <View style={styles.setupStatusWrap}>
+                <Text
+                  style={[styles.setupStatus, styles.setupPending]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  No apps selected
+                </Text>
+              </View>
               <Button
                 title="Select Apps"
                 onPress={handleSelectApps}
@@ -403,3 +426,9 @@ export default function QuickBlockScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const QuickBlockScreen = withErrorBoundary(
+  QuickBlockScreenInner,
+  "quick-block",
+);
+export default QuickBlockScreen;

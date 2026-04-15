@@ -9,7 +9,12 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button, SessionScreenScaffold } from "../../src/components";
+import {
+  Card,
+  Button,
+  SessionScreenScaffold,
+  withErrorBoundary,
+} from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
@@ -237,7 +242,7 @@ const makeStyles = (Colors: ThemeColors) =>
     },
   });
 
-export default function ConfirmSessionScreen() {
+function ConfirmSessionScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -467,3 +472,9 @@ export default function ConfirmSessionScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const ConfirmSessionScreen = withErrorBoundary(
+  ConfirmSessionScreenInner,
+  "confirm",
+);
+export default ConfirmSessionScreen;

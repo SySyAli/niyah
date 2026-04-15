@@ -4,16 +4,22 @@ import { StatusBar } from "expo-status-bar";
 import { Text, TextInput, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { BaseFontFamily } from "../src/constants/colors";
 import { useColors } from "../src/hooks/useColors";
 import { useThemeStore } from "../src/store/themeStore";
 import { useAuthStore } from "../src/store/authStore";
+import { ErrorBoundary } from "../src/components";
 import { isEmailSignInLink } from "../src/config/firebase";
 import { DEMO_MODE, PENDING_REFERRAL_KEY } from "../src/constants/config";
 import { logger } from "../src/utils/logger";
 import { initializeSslPinning } from "../src/config/sslPinning";
-import { setupBackgroundHandler } from "../src/config/notifications";
+import {
+  setupBackgroundHandler,
+  registerFCMToken,
+} from "../src/config/notifications";
+import { ensureAppCheckInitialized } from "../src/config/appCheck";
+import { AppState } from "react-native";
 
 // Firebase requires the background message handler to be registered at the
 // module level (outside any component) before the app renders.
@@ -80,6 +86,19 @@ export default function RootLayout() {
   // Initialize SSL certificate pinning (no-op in __DEV__ mode)
   useEffect(() => {
     initializeSslPinning();
+    ensureAppCheckInitialized();
+  }, []);
+
+  // Re-register FCM token on every foreground. First-launch registration
+  // often misses because APNs hasn't delivered the token yet — re-running on
+  // resume ensures every signed-in device lands a token in Firestore.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        registerFCMToken().catch(() => {});
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   // Handle deep links for email magic link sign-in, surrender, and referral invites
@@ -114,7 +133,7 @@ export default function RootLayout() {
         typeof referrerUid === "string" &&
         /^[a-zA-Z0-9]{1,128}$/.test(referrerUid)
       ) {
-        await AsyncStorage.setItem(PENDING_REFERRAL_KEY, referrerUid);
+        await SecureStore.setItemAsync(PENDING_REFERRAL_KEY, referrerUid);
       }
     };
 
@@ -137,48 +156,50 @@ export default function RootLayout() {
   }, [completeEmailLink]);
 
   return (
-    <StripeWrapper
-      publishableKey={STRIPE_PK}
-      merchantIdentifier="merchant.com.niyah.app"
-      urlScheme="niyah"
-    >
-      <GestureHandlerRootView
-        style={{ flex: 1, backgroundColor: Colors.background }}
+    <ErrorBoundary>
+      <StripeWrapper
+        publishableKey={STRIPE_PK}
+        merchantIdentifier="merchant.com.niyah.app"
+        urlScheme="niyah"
       >
-        <StatusBar style={theme === "dark" ? "light" : "dark"} />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: Colors.background },
-            animation: "slide_from_right",
-          }}
+        <GestureHandlerRootView
+          style={{ flex: 1, backgroundColor: Colors.background }}
         >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="session"
-            options={{
+          <StatusBar style={theme === "dark" ? "light" : "dark"} />
+          <Stack
+            screenOptions={{
               headerShown: false,
-              presentation: "fullScreenModal",
-            }}
-          />
-          <Stack.Screen
-            name="invite"
-            options={{
-              headerShown: false,
-              animation: "slide_from_bottom",
-            }}
-          />
-          <Stack.Screen
-            name="user/[uid]"
-            options={{
-              headerShown: false,
+              contentStyle: { backgroundColor: Colors.background },
               animation: "slide_from_right",
             }}
-          />
-        </Stack>
-      </GestureHandlerRootView>
-    </StripeWrapper>
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="session"
+              options={{
+                headerShown: false,
+                presentation: "fullScreenModal",
+              }}
+            />
+            <Stack.Screen
+              name="invite"
+              options={{
+                headerShown: false,
+                animation: "slide_from_bottom",
+              }}
+            />
+            <Stack.Screen
+              name="user/[uid]"
+              options={{
+                headerShown: false,
+                animation: "slide_from_right",
+              }}
+            />
+          </Stack>
+        </GestureHandlerRootView>
+      </StripeWrapper>
+    </ErrorBoundary>
   );
 }

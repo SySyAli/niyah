@@ -17,7 +17,12 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button, SessionScreenScaffold } from "../../src/components";
+import {
+  Card,
+  Button,
+  SessionScreenScaffold,
+  withErrorBoundary,
+} from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
@@ -26,11 +31,22 @@ import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
 import { getFunctionErrorMessage } from "../../src/utils/errors";
+import {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  limit as qLimit,
+  getDocs,
+} from "@react-native-firebase/firestore";
+import type { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
+import { logger } from "../../src/utils/logger";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function parseDurationToMs(durationLabel: string): number {
   const durationMap: Record<string, number> = {
+    "30 sec": 30 * 1000,
     "30 min": 30 * 60 * 1000,
     "1 hr": 60 * 60 * 1000,
     "2 hrs": 2 * 60 * 60 * 1000,
@@ -45,6 +61,7 @@ function parseDurationToMs(durationLabel: string): number {
 const QUICK_STAKES = [500, 1000, 2500, 5000]; // cents
 
 const DURATIONS = [
+  { label: "30 sec", value: "30sec" },
   { label: "30 min", value: "30min" },
   { label: "1 hr", value: "1hr" },
   { label: "2 hrs", value: "2hr" },
@@ -288,7 +305,7 @@ const makeStyles = (Colors: ThemeColors) =>
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function ProposeSessionScreen() {
+function ProposeSessionScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -333,11 +350,51 @@ export default function ProposeSessionScreen() {
   const [customTime, setCustomTime] = useState("");
   const [timeFocused, setTimeFocused] = useState(false);
 
+  // Start-now vs schedule toggle. Default to "now" — most demo/first-time
+  // flows start immediately, and hiding day/time cuts the form in half.
+  const [startNow, setStartNow] = useState(true);
+
   const [selectedPeople, setSelectedPeople] = useState<string[]>([]);
   const [proposed, _setProposed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [discoverList, setDiscoverList] = useState<
+    { id: string; name: string; tag: string }[]
+  >([]);
 
-  // Build inviteable people list: partners + following (deduped)
+  // Discover fallback: when partners + following are empty (fresh installs),
+  // pull a small list of recent Niyah users so the proposer isn't blocked.
+  // TODO post-demo: replace with proper username search or contacts match.
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      try {
+        const db = getFirestore();
+        const q = query(
+          collection(db, "users"),
+          orderBy("createdAt", "desc"),
+          qLimit(25),
+        );
+        const snap = await getDocs(q);
+        const out: { id: string; name: string; tag: string }[] = [];
+        snap.forEach(
+          (docSnap: FirebaseFirestoreTypes.QueryDocumentSnapshot) => {
+            const d = docSnap.data() as { name?: string; firstName?: string };
+            if (docSnap.id === user.id) return;
+            out.push({
+              id: docSnap.id,
+              name: d.name ?? d.firstName ?? "Niyah user",
+              tag: "On Niyah",
+            });
+          },
+        );
+        setDiscoverList(out);
+      } catch (err) {
+        logger.warn("discover users failed", err);
+      }
+    })();
+  }, [user?.id]);
+
+  // Build inviteable people list: partners + following + discover (deduped)
   const people = useMemo(() => {
     const seen = new Set<string>();
     const list: { id: string; name: string; tag: string }[] = [];
@@ -354,8 +411,23 @@ export default function ProposeSessionScreen() {
         list.push({ id: uid, name: profile?.name ?? uid, tag: "Following" });
       }
     }
-    return list;
-  }, [partners, following, profiles, user?.id]);
+    for (const u of discoverList) {
+      if (!seen.has(u.id)) {
+        seen.add(u.id);
+        list.push(u);
+      }
+    }
+    // Disambiguate duplicate names with uid suffix so proposer can tell them apart
+    const nameCounts = list.reduce<Record<string, number>>((acc, p) => {
+      acc[p.name] = (acc[p.name] ?? 0) + 1;
+      return acc;
+    }, {});
+    return list.map((p) =>
+      nameCounts[p.name] > 1
+        ? { ...p, name: `${p.name} · ${p.id.slice(0, 4)}` }
+        : p,
+    );
+  }, [partners, following, profiles, user?.id, discoverList]);
 
   const effectiveStake =
     stake ?? (customStake ? parseInt(customStake) * 100 : null);
@@ -374,8 +446,7 @@ export default function ProposeSessionScreen() {
     effectiveStake > 0 &&
     effectiveDuration !== null &&
     selectedPeople.length > 0 &&
-    effectiveDay !== null &&
-    effectiveTime !== null;
+    (startNow || (effectiveDay !== null && effectiveTime !== null));
 
   const togglePerson = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -464,7 +535,7 @@ export default function ProposeSessionScreen() {
       headerVariant="back"
       backLabel="Cancel"
       title="Group Challenge"
-      subtitle="Set a stake, invite your friends, and schedule a time."
+      subtitle="Stake, pick friends, go."
       centerTitle={false}
       footer={
         <>
@@ -477,7 +548,9 @@ export default function ProposeSessionScreen() {
           />
           {!canPropose && (
             <Text style={styles.footerHint}>
-              Set a stake, duration, at least one friend, and a time
+              {startNow
+                ? "Set a stake, duration, and at least one friend"
+                : "Set a stake, duration, friend, day, and time"}
             </Text>
           )}
         </>
@@ -566,7 +639,7 @@ export default function ProposeSessionScreen() {
       <Card>
         {people.length === 0 ? (
           <Text style={styles.emptyText}>
-            Follow people or add partners to invite them.
+            No one on Niyah yet. Invite a friend from the Friends tab.
           </Text>
         ) : (
           people.map((person, i) => {
@@ -608,98 +681,132 @@ export default function ProposeSessionScreen() {
         )}
       </Card>
 
-      {/* ── Day ──────────────────────────────────────────────────────────── */}
-      <Text style={styles.sectionLabel}>Day</Text>
+      {/* ── Start now / schedule toggle ────────────────────────────────── */}
+      <Text style={styles.sectionLabel}>When</Text>
       <View style={styles.chipsRow}>
-        {DAYS.map((d) => (
-          <Pressable
-            key={d.value}
-            style={[
-              styles.chip,
-              selectedDay === d.value && !customDay && styles.chipSelected,
-            ]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setSelectedDay(d.value);
-              setCustomDay("");
-            }}
-          >
-            <Text
-              style={[
-                styles.chipText,
-                selectedDay === d.value &&
-                  !customDay &&
-                  styles.chipTextSelected,
-              ]}
-            >
-              {d.label}
-            </Text>
-          </Pressable>
-        ))}
+        <Pressable
+          style={[styles.chip, startNow && styles.chipSelected]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setStartNow(true);
+          }}
+        >
+          <Text style={[styles.chipText, startNow && styles.chipTextSelected]}>
+            Start now
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[styles.chip, !startNow && styles.chipSelected]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setStartNow(false);
+          }}
+        >
+          <Text style={[styles.chipText, !startNow && styles.chipTextSelected]}>
+            Schedule later
+          </Text>
+        </Pressable>
       </View>
-      <TextInput
-        style={[styles.customInput, dayFocused && styles.customInputActive]}
-        placeholder="Custom date (e.g. March 3rd)"
-        placeholderTextColor={Colors.textMuted}
-        value={customDay}
-        onChangeText={(v) => {
-          setCustomDay(v);
-          setSelectedDay(null);
-        }}
-        onFocus={() => setDayFocused(true)}
-        onBlur={() => setDayFocused(false)}
-      />
 
-      {/* ── Time ─────────────────────────────────────────────────────────── */}
-      <Text style={styles.sectionLabel}>Start Time</Text>
-      <View style={styles.scheduleGrid}>
-        {TIMES.map((t) => {
-          const selected = selectedTime === t.value && !customTime;
-          return (
-            <Pressable
-              key={t.value}
-              style={[
-                styles.scheduleChip,
-                selected && styles.scheduleChipSelected,
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setSelectedTime(t.value);
-                setCustomTime("");
-              }}
-            >
-              <Text
+      {!startNow && (
+        <>
+          {/* ── Day ──────────────────────────────────────────────────────────── */}
+          <Text style={styles.sectionLabel}>Day</Text>
+          <View style={styles.chipsRow}>
+            {DAYS.map((d) => (
+              <Pressable
+                key={d.value}
                 style={[
-                  styles.scheduleChipLabel,
-                  selected && styles.scheduleChipLabelSelected,
+                  styles.chip,
+                  selectedDay === d.value && !customDay && styles.chipSelected,
                 ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSelectedDay(d.value);
+                  setCustomDay("");
+                }}
               >
-                {t.label}
-              </Text>
-              <Text
-                style={[
-                  styles.scheduleChipSub,
-                  selected && styles.scheduleChipSubSelected,
-                ]}
-              >
-                {t.sub}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      <TextInput
-        style={[styles.customInput, timeFocused && styles.customInputActive]}
-        placeholder="Custom time (e.g. 3:30 pm)"
-        placeholderTextColor={Colors.textMuted}
-        value={customTime}
-        onChangeText={(v) => {
-          setCustomTime(v);
-          setSelectedTime(null);
-        }}
-        onFocus={() => setTimeFocused(true)}
-        onBlur={() => setTimeFocused(false)}
-      />
+                <Text
+                  style={[
+                    styles.chipText,
+                    selectedDay === d.value &&
+                      !customDay &&
+                      styles.chipTextSelected,
+                  ]}
+                >
+                  {d.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextInput
+            style={[styles.customInput, dayFocused && styles.customInputActive]}
+            placeholder="Custom date (e.g. March 3rd)"
+            placeholderTextColor={Colors.textMuted}
+            value={customDay}
+            onChangeText={(v) => {
+              setCustomDay(v);
+              setSelectedDay(null);
+            }}
+            onFocus={() => setDayFocused(true)}
+            onBlur={() => setDayFocused(false)}
+          />
+
+          {/* ── Time ─────────────────────────────────────────────────────────── */}
+          <Text style={styles.sectionLabel}>Start Time</Text>
+          <View style={styles.scheduleGrid}>
+            {TIMES.map((t) => {
+              const selected = selectedTime === t.value && !customTime;
+              return (
+                <Pressable
+                  key={t.value}
+                  style={[
+                    styles.scheduleChip,
+                    selected && styles.scheduleChipSelected,
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedTime(t.value);
+                    setCustomTime("");
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.scheduleChipLabel,
+                      selected && styles.scheduleChipLabelSelected,
+                    ]}
+                  >
+                    {t.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.scheduleChipSub,
+                      selected && styles.scheduleChipSubSelected,
+                    ]}
+                  >
+                    {t.sub}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <TextInput
+            style={[
+              styles.customInput,
+              timeFocused && styles.customInputActive,
+            ]}
+            placeholder="Custom time (e.g. 3:30 pm)"
+            placeholderTextColor={Colors.textMuted}
+            value={customTime}
+            onChangeText={(v) => {
+              setCustomTime(v);
+              setSelectedTime(null);
+            }}
+            onFocus={() => setTimeFocused(true)}
+            onBlur={() => setTimeFocused(false)}
+          />
+        </>
+      )}
 
       {/* ── Summary ──────────────────────────────────────────────────────── */}
       {canPropose && (
@@ -733,3 +840,9 @@ export default function ProposeSessionScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const ProposeSessionScreen = withErrorBoundary(
+  ProposeSessionScreenInner,
+  "propose",
+);
+export default ProposeSessionScreen;

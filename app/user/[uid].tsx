@@ -16,6 +16,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
+import { withErrorBoundary } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
@@ -40,7 +41,7 @@ const repColor = (level: string, Colors: ThemeColors): string => {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function PublicProfileScreen() {
+function PublicProfileScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { uid } = useLocalSearchParams<{ uid: string }>();
@@ -257,6 +258,12 @@ export default function PublicProfileScreen() {
     </SafeAreaView>
   );
 }
+
+const PublicProfileScreen = withErrorBoundary(
+  PublicProfileScreenInner,
+  "user-profile",
+);
+export default PublicProfileScreen;
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

@@ -5,12 +5,12 @@ import { useRouter, type RelativePathString } from "expo-router";
 import { Typography, Spacing, Radius, Font } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
-import { Card, Button } from "../../src/components";
+import { Card, Button, withErrorBoundary } from "../../src/components";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { formatMoney } from "../../src/utils/format";
 
-export default function SessionTabScreen() {
+function SessionTabScreenInner() {
   const Colors = useColors();
   const router = useRouter();
   const {
@@ -395,3 +395,9 @@ export default function SessionTabScreen() {
     </SafeAreaView>
   );
 }
+
+const SessionTabScreen = withErrorBoundary(
+  SessionTabScreenInner,
+  "session-tab",
+);
+export default SessionTabScreen;

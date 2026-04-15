@@ -1,4 +1,5 @@
 import { getAuth, getIdToken } from "@react-native-firebase/auth";
+import { getAppCheckToken } from "./appCheck";
 
 const FUNCTIONS_BASE = (
   process.env.EXPO_PUBLIC_FUNCTIONS_URL ||
@@ -52,11 +53,16 @@ async function callFunction<T>(
     // unauthenticated — server will reject if auth is required
   }
 
+  // App Check token attests this call came from the genuine Niyah binary.
+  // Null is acceptable during soft-enforcement rollout.
+  const appCheckToken = await getAppCheckToken();
+
   const response = await fetch(`${FUNCTIONS_BASE}/${name}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+      ...(appCheckToken ? { "X-Firebase-AppCheck": appCheckToken } : {}),
     },
     body: JSON.stringify(body),
   });

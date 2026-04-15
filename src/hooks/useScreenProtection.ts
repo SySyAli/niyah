@@ -28,9 +28,14 @@ try {
 /**
  * @param key Unique key to prevent conflicts between multiple protected screens.
  */
+// Demo override: screen protection blanks the screen during AirPlay/
+// screen-mirroring, which breaks live demos. Flip this to re-enable post-demo.
+const SCREEN_PROTECTION_ENABLED = false;
+
 export function useScreenProtection(key: string) {
   // Block screenshots + screen recording while this component is mounted
   useEffect(() => {
+    if (!SCREEN_PROTECTION_ENABLED) return;
     if (!ScreenCapture) return;
 
     let cancelled = false;

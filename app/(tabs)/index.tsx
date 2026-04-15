@@ -20,6 +20,7 @@ import {
   Button,
   MoneyPlant,
   BlobAvatar,
+  withErrorBoundary,
 } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -151,7 +152,7 @@ const StatCard: React.FC<StatCardProps> = ({ value, label, color }) => {
   );
 };
 
-export default function DashboardScreen() {
+function DashboardScreenInner() {
   const Colors = useColors();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -724,3 +725,6 @@ export default function DashboardScreen() {
     </View>
   );
 }
+
+const DashboardScreen = withErrorBoundary(DashboardScreenInner, "dashboard");
+export default DashboardScreen;

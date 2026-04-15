@@ -83,7 +83,7 @@ function withDeviceActivityMonitor(config) {
 \t<key>NSExtension</key>
 \t<dict>
 \t\t<key>NSExtensionPointIdentifier</key>
-\t\t<string>com.apple.deviceactivitymonitor</string>
+\t\t<string>com.apple.deviceactivity.monitor-extension</string>
 \t\t<key>NSExtensionPrincipalClass</key>
 \t\t<string>$(PRODUCT_MODULE_NAME).NiyahDeviceActivityMonitorExtension</string>
 \t</dict>

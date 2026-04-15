@@ -30,6 +30,7 @@
 ## PHASE 0: DEMO STABILIZATION (April 12-14)
 
 ### Priority 1: Deploy Cloud Functions with Live Keys
+
 - [ ] Verify `.env` has live `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - [ ] Firebase Secret Manager: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` set to live keys
 - [ ] Plaid credentials set to production
@@ -37,6 +38,7 @@
 - [ ] Stripe Dashboard: production webhook endpoint configured
 
 ### Priority 2: E2E Test Demo Flow on Device
+
 - [ ] Fresh sign-up → profile setup → Screen Time setup
 - [ ] Deposit real money ($5) via Stripe
 - [ ] Quick block: one-tap → blocking → custom shield → end
@@ -45,12 +47,14 @@
 - [ ] Fix all bugs found during testing
 
 ### Priority 3: Demo Prep
+
 - [ ] Pre-load demo account with balance
 - [ ] Have backup accounts ready
 - [ ] Rehearse demo script 3x on actual device
 - [ ] Prepare slides as crash backup
 
 ### DO NOT TOUCH
+
 - No new features
 - No UI changes
 - No refactoring
@@ -75,6 +79,7 @@
 7. **Testing** (1.5h) — Full E2E: start → block → complete/surrender → payout/forfeit
 
 ### Files to Modify
+
 - `app/(tabs)/session.tsx`
 - `app/session/select.tsx` (pass `mode=solo` param)
 - `app/session/confirm.tsx`
@@ -91,12 +96,14 @@
 **Hard blocker**: Apple extension entitlements (submitted April 10, pending).
 
 ### Marketing
+
 - Posters: "Lock In For Finals" / "Compete with friends on screen time"
 - QR code → TestFlight link
 - Promo: "Complete 5 sessions with friends → earn $5 free" ($100 pool from 4 teammates)
 - Short demo video for Instagram/TikTok
 
 ### Technical
+
 - [ ] Firebase App Check implementation (safe to do post-demo with new build)
 - [ ] TestFlight build + distribution
 - [ ] Crash monitoring (Sentry or Expo crash reports)
@@ -105,6 +112,7 @@
 - [ ] Promo bonus Cloud Function (~2h)
 
 ### Metrics to Collect
+
 - Daily Active Users (DAU)
 - Session completion rate (% complete vs surrender)
 - Average stake amount
@@ -127,40 +135,42 @@
 
 ## Completed (Previous Sprint)
 
-| Item | Status |
-|------|--------|
-| Shield surrender desync bug fix | ✅ Done |
-| Custom Niyah-branded shield | ✅ Done |
-| ManagedSettingsStore.Name fix in extensions | ✅ Done |
-| linkBankAccount errors (Express accounts) | ✅ Done |
-| Withdraw screen rewrite + polish | ✅ Done |
-| findContactsOnNiyah rate limit + caching | ✅ Done |
+| Item                                             | Status  |
+| ------------------------------------------------ | ------- |
+| Shield surrender desync bug fix                  | ✅ Done |
+| Custom Niyah-branded shield                      | ✅ Done |
+| ManagedSettingsStore.Name fix in extensions      | ✅ Done |
+| linkBankAccount errors (Express accounts)        | ✅ Done |
+| Withdraw screen rewrite + polish                 | ✅ Done |
+| findContactsOnNiyah rate limit + caching         | ✅ Done |
 | Dead UI removed (schedule/calendar/report links) | ✅ Done |
-| Phone SMS OTP auth | ✅ Done |
-| Screen Time onboarding flow | ✅ Done |
-| Contact-based friend discovery (enhanced) | ✅ Done |
-| Group session Cloud Functions (7 functions) | ✅ Done |
-| FCM push notifications (9 types) | ✅ Done |
-| Plaid bank linking + legal acceptance CFs | ✅ Done |
-| FamilyControls Distribution approved (main app) | ✅ Done |
-| Stripe live mode business account | ✅ Done |
-| Plaid production access | ✅ Done |
-| Niyah, Inc. incorporated with EIN | ✅ Done |
-| Landing page at niyah.live | ✅ Done |
-| App icon + splash screen updated | ✅ Done |
-| Stripe Connect Express onboarding flow | ✅ Done |
+| Phone SMS OTP auth                               | ✅ Done |
+| Screen Time onboarding flow                      | ✅ Done |
+| Contact-based friend discovery (enhanced)        | ✅ Done |
+| Group session Cloud Functions (7 functions)      | ✅ Done |
+| FCM push notifications (9 types)                 | ✅ Done |
+| Plaid bank linking + legal acceptance CFs        | ✅ Done |
+| FamilyControls Distribution approved (main app)  | ✅ Done |
+| Stripe live mode business account                | ✅ Done |
+| Plaid production access                          | ✅ Done |
+| Niyah, Inc. incorporated with EIN                | ✅ Done |
+| Landing page at niyah.live                       | ✅ Done |
+| App icon + splash screen updated                 | ✅ Done |
+| Stripe Connect Express onboarding flow           | ✅ Done |
 
 ---
 
 ## Immersion Showcase (April 16)
 
 ### Poster (36 x 48 inches)
+
 - Product-focused, not research-style
 - Sections: Problem → Solution → Architecture → Screenshots → Competitive Position → Future
 - QR code to niyah.live (promotion opportunity)
 - Author Contribution Statement required
 
 ### Presentation Setup
+
 - Phone mirrored to monitor/mini-TV via adapter
 - Live demo at station (same script as April 15, adapted for walk-up audience)
 - Slides as backup on laptop

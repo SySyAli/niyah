@@ -10,12 +10,17 @@ import {
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
 import * as Haptics from "expo-haptics";
-import { Card, Button, SessionScreenScaffold } from "../../src/components";
+import {
+  Card,
+  Button,
+  SessionScreenScaffold,
+  withErrorBoundary,
+} from "../../src/components";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { REPUTATION_LEVELS } from "../../src/constants/config";
 import { Partner } from "../../src/types";
 
-export default function PartnerSelectionScreen() {
+function PartnerSelectionScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -214,6 +219,12 @@ export default function PartnerSelectionScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const PartnerSelectionScreen = withErrorBoundary(
+  PartnerSelectionScreenInner,
+  "partner",
+);
+export default PartnerSelectionScreen;
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({

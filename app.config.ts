@@ -38,6 +38,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.niyah.app",
+      buildNumber: "11",
       googleServicesFile:
         process.env.GOOGLE_SERVICE_INFO_PLIST ||
         "./firebase/GoogleService-Info.plist",
@@ -45,8 +46,23 @@ export default {
       associatedDomains: [`applinks:${firebaseProjectId}.firebaseapp.com`],
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        // Required so iOS delivers Firebase Auth's silent APNs push for phone
+        // verification. Without this, Firebase falls back to reCAPTCHA web flow.
+        UIBackgroundModes: ["remote-notification", "fetch"],
         NSContactsUsageDescription:
           "Niyah uses your contacts to invite friends to focus sessions.",
+        NSCameraUsageDescription:
+          "Niyah may use the camera to scan payment cards during deposit or verify identity for payouts.",
+        NSPhotoLibraryUsageDescription:
+          "Niyah may access your photo library to select a profile picture.",
+        NSMicrophoneUsageDescription:
+          "Niyah does not record audio. This permission is required by included payment SDKs.",
+        NSFaceIDUsageDescription:
+          "Niyah may use Face ID to confirm sensitive transactions.",
+        NSUserTrackingUsageDescription:
+          "Niyah does not track you across other apps.",
+        NSLocationWhenInUseUsageDescription:
+          "Niyah does not collect location. This permission is referenced by included SDKs.",
       },
     },
     android: {

@@ -98,3 +98,9 @@ export const CURRENT_LEGAL_VERSION = "1.0.0";
 // e.g. a brand-new user (score 50) who joins via referral starts at 60.
 export const REFERRAL_REPUTATION_BOOST = 10; // points added to score per referral (max 100)
 export const PENDING_REFERRAL_KEY = "@niyah/pending_referral"; // AsyncStorage key
+
+// Hide phone auth button. Set EXPO_PUBLIC_DISABLE_PHONE_AUTH=true to disable
+// phone sign-in when APNs Auth Key isn't yet registered in Firebase Console
+// (otherwise phone auth falls back to reCAPTCHA web flow, which is brittle).
+export const PHONE_AUTH_DISABLED =
+  process.env.EXPO_PUBLIC_DISABLE_PHONE_AUTH === "true";

@@ -84,7 +84,10 @@ export async function registerFCMToken(): Promise<void> {
     if (!user) return;
 
     const token = await getCurrentFCMToken();
-    if (!token) return;
+    if (!token) {
+      logger.warn("FCM token unavailable — will retry on next foreground");
+      return;
+    }
 
     // Store token in user doc (array of tokens for multi-device support)
     await setDoc(

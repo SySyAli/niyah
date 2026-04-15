@@ -23,6 +23,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
+import { withErrorBoundary } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useSocialStore } from "../../src/store/socialStore";
@@ -479,7 +480,7 @@ type ListItem = FollowingItem | PartnerItem;
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
-export default function FriendsScreen() {
+function FriendsScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -822,7 +823,7 @@ export default function FriendsScreen() {
     (contact: { name: string; phone?: string }) => {
       if (!contact.phone) return;
       const body = encodeURIComponent(
-        `Hey ${contact.name.split(" ")[0]}! Join me on Niyah\n\nIt blocks distracting apps & you can compete against friends with real money.\n\nDownload it here: https://niyah.live`,
+        `Hey ${contact.name.split(" ")[0]}! Join me on Niyah — we stake real money on focus sessions and pocket the split when we win.\n\niOS (TestFlight beta): https://testflight.apple.com/join/YOUR_CODE\nWeb: https://niyah.live`,
       );
       // iOS sms: URL scheme opens iMessage with pre-filled body
       Linking.openURL(`sms:${contact.phone}&body=${body}`);
@@ -1044,3 +1045,6 @@ export default function FriendsScreen() {
     </SafeAreaView>
   );
 }
+
+const FriendsScreen = withErrorBoundary(FriendsScreenInner, "friends");
+export default FriendsScreen;

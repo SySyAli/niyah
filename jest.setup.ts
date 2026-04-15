@@ -312,6 +312,41 @@ jest.mock("@react-native-firebase/firestore", () => ({
   ),
 }));
 
+// Mock @react-native-firebase/app-check
+jest.mock("@react-native-firebase/app-check", () => {
+  const mockInstance = {
+    initializeAppCheck: jest.fn(() => Promise.resolve()),
+    getToken: jest.fn(() => Promise.resolve({ token: "mock-app-check-token" })),
+    newReactNativeFirebaseAppCheckProvider: jest.fn(() => ({
+      configure: jest.fn(),
+      getToken: jest.fn(() =>
+        Promise.resolve({ token: "mock-app-check-token" }),
+      ),
+    })),
+    setTokenAutoRefreshEnabled: jest.fn(),
+  };
+  const mockAppCheck: any = jest.fn(() => mockInstance);
+  return {
+    __esModule: true,
+    default: mockAppCheck,
+    initializeAppCheck: jest.fn(() => Promise.resolve(mockInstance)),
+    getToken: jest.fn(() => Promise.resolve({ token: "mock-app-check-token" })),
+    getLimitedUseToken: jest.fn(() =>
+      Promise.resolve({ token: "mock-app-check-token" }),
+    ),
+    setTokenAutoRefreshEnabled: jest.fn(),
+  };
+});
+
+// Mock @react-native-firebase/app (needed for app-check's getApp())
+jest.mock("@react-native-firebase/app", () => ({
+  __esModule: true,
+  getApp: jest.fn(() => ({ name: "[DEFAULT]", appCheck: jest.fn() })),
+  getApps: jest.fn(() => []),
+  initializeApp: jest.fn(),
+  default: jest.fn(() => ({ name: "[DEFAULT]" })),
+}));
+
 // Mock @react-native-firebase/messaging
 jest.mock("@react-native-firebase/messaging", () => {
   const AuthorizationStatus = {

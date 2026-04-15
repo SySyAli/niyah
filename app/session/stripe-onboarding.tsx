@@ -4,7 +4,13 @@
  * Stripe Express handles the KYC flow via a browser redirect.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { View, Text, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -17,7 +23,12 @@ import {
 import { useColors } from "../../src/hooks/useColors";
 import { useScreenProtection } from "../../src/hooks/useScreenProtection";
 import * as Haptics from "expo-haptics";
-import { Button, Card, SessionScreenScaffold } from "../../src/components";
+import {
+  Button,
+  Card,
+  SessionScreenScaffold,
+  withErrorBoundary,
+} from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import {
   createConnectAccount,
@@ -28,7 +39,7 @@ import { logger } from "../../src/utils/logger";
 
 type AccountStatus = "none" | "pending" | "active" | "restricted";
 
-export default function StripeOnboardingScreen() {
+function StripeOnboardingScreenInner() {
   useScreenProtection("stripe-onboarding");
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -39,15 +50,37 @@ export default function StripeOnboardingScreen() {
   const [isStarting, setIsStarting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
+  const hasNavigatedBackRef = useRef(false);
+  useEffect(() => {
+    isMountedRef.current = true;
+    hasNavigatedBackRef.current = false;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const safeBack = useCallback(() => {
+    if (hasNavigatedBackRef.current) return;
+    hasNavigatedBackRef.current = true;
+    try {
+      router.back();
+    } catch (err) {
+      logger.warn("router.back failed:", err);
+    }
+  }, [router]);
+
   const checkStatus = useCallback(async () => {
+    if (!isMountedRef.current) return;
     setIsLoading(true);
     setLoadError(null);
     try {
       if (!user?.stripeAccountId) {
-        setStatus("none");
+        if (isMountedRef.current) setStatus("none");
         return;
       }
       const result = await getConnectAccountStatus();
+      if (!isMountedRef.current) return;
       setStatus(result.status);
       if (
         result.status !== "none" &&
@@ -57,7 +90,7 @@ export default function StripeOnboardingScreen() {
       }
     } catch (err) {
       logger.error("Failed to check Stripe status:", err);
-      // If we have a cached status, use it; otherwise show error
+      if (!isMountedRef.current) return;
       if (user?.stripeAccountStatus) {
         setStatus(user.stripeAccountStatus as AccountStatus);
       } else {
@@ -66,7 +99,7 @@ export default function StripeOnboardingScreen() {
         );
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) setIsLoading(false);
     }
   }, [user?.stripeAccountId, user?.stripeAccountStatus, updateUser]);
 
@@ -110,7 +143,7 @@ export default function StripeOnboardingScreen() {
         "Could not start payout setup. Please try again.",
       );
     } finally {
-      setIsStarting(false);
+      if (isMountedRef.current) setIsStarting(false);
     }
   };
 
@@ -138,7 +171,7 @@ export default function StripeOnboardingScreen() {
           />
           <Button
             title="Go Back"
-            onPress={() => router.back()}
+            onPress={safeBack}
             size="large"
             variant="secondary"
             style={styles.actionButton}
@@ -158,7 +191,7 @@ export default function StripeOnboardingScreen() {
           </Text>
           <Button
             title="Done"
-            onPress={() => router.back()}
+            onPress={safeBack}
             size="large"
             style={styles.actionButton}
           />
@@ -262,6 +295,12 @@ export default function StripeOnboardingScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const StripeOnboardingScreen = withErrorBoundary(
+  StripeOnboardingScreenInner,
+  "stripe-onboarding",
+);
+export default StripeOnboardingScreen;
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({

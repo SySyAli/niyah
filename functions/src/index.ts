@@ -322,10 +322,23 @@ interface RateLimitConfig {
  * collection). Stores an array of call timestamps, pruning expired entries
  * on each check.
  *
- * Fail-open: if the rate limit check itself fails (e.g., Firestore error),
- * the request is ALLOWED — denying legitimate financial operations due to
- * infrastructure failure is worse than allowing a few extra calls.
+ * Fail-closed for financial operations: money-moving endpoints BLOCK on
+ * rate-limit check failure (prefer denying legitimate user over letting
+ * unlimited calls through during a Firestore outage). Non-financial
+ * (social, hot-path) endpoints fail open to protect UX.
  */
+const FAIL_CLOSED_FUNCTIONS = new Set<string>([
+  "createPaymentIntent",
+  "verifyAndCreditDeposit",
+  "requestWithdrawal",
+  "handleSessionComplete",
+  "handleSessionForfeit",
+  "distributeGroupPayouts",
+  "linkBankAccount",
+  "createConnectAccount",
+  "createAccountLink",
+]);
+
 async function checkRateLimit(
   uid: string,
   functionName: string,
@@ -355,9 +368,12 @@ async function checkRateLimit(
       return false; // ALLOWED
     });
   } catch (err) {
-    // Fail-open: allow the request if rate limit check fails
-    console.error("Rate limit check failed (allowing request):", err);
-    return false;
+    const failClosed = FAIL_CLOSED_FUNCTIONS.has(functionName);
+    console.error(
+      `Rate limit check failed (${failClosed ? "BLOCKING" : "allowing"} ${functionName}):`,
+      err,
+    );
+    return failClosed;
   }
 }
 
@@ -384,7 +400,7 @@ const RATE_LIMITS = {
   cancelGroupSession: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
   createPlaidLinkToken: { maxCalls: 10, windowMs: 600_000 }, // 10/10min
   linkBankAccount: { maxCalls: 5, windowMs: 3_600_000 }, // 5/hr
-  findContactsOnNiyah: { maxCalls: 10, windowMs: 3_600_000 }, // 10/hr
+  findContactsOnNiyah: { maxCalls: 3, windowMs: 86_400_000 }, // 3/day — prevent phone enumeration
 } as const;
 
 // ─── createPaymentIntent ────────────────────────────────────────────────────
@@ -1241,7 +1257,7 @@ export const handleSessionComplete = onRequest(
         const endsAt = sessionData.endsAt?.toDate?.()
           ? sessionData.endsAt.toDate()
           : new Date(sessionData.endsAt);
-        const gracePeriodMs = 30_000; // 30 seconds
+        const gracePeriodMs = 10_000; // 10 seconds
         if (endsAt.getTime() - gracePeriodMs > Date.now()) {
           throw new Error("Session has not ended yet");
         }
@@ -1592,6 +1608,37 @@ export const requestWithdrawal = onRequest(
       }
 
       const stripe = getStripe();
+
+      // Re-verify live account status immediately before transfer. Cached
+      // stripeAccountStatus in Firestore may be stale if Stripe restricted
+      // the account since the last getConnectAccountStatus call.
+      try {
+        const liveAccount = await stripe.accounts.retrieve(connectedAccountId);
+        if (!liveAccount.payouts_enabled || !liveAccount.charges_enabled) {
+          await db.runTransaction(async (txn) => {
+            const snap = await txn.get(walletRef);
+            const current: number = snap.data()?.balance ?? 0;
+            txn.update(walletRef, { balance: current + amount });
+          });
+          await txnRef.delete();
+          sendError(
+            res,
+            400,
+            "Payout account status changed — re-verify identity in settings",
+          );
+          return;
+        }
+      } catch (err) {
+        console.error("Stripe account retrieve failed:", err);
+        await db.runTransaction(async (txn) => {
+          const snap = await txn.get(walletRef);
+          const current: number = snap.data()?.balance ?? 0;
+          txn.update(walletRef, { balance: current + amount });
+        });
+        await txnRef.delete();
+        sendError(res, 502, "Could not verify payout account with Stripe");
+        return;
+      }
 
       // Transfer from Niyah's platform account → user's connected account
       const transfer = await stripe.transfers.create({
@@ -2508,8 +2555,8 @@ export const createGroupSession = onRequest(
       sendPushToUsers(
         inviteeIds,
         {
-          title: "Group Session Invite",
-          body: `${proposerName} invited you to a focus session!`,
+          title: `${proposerName} wants you to lock in 🔒`,
+          body: `Stake $${(stakePerParticipant / 100).toFixed(0)} · winner takes the pool. Tap to join.`,
         },
         { type: "group_invite", sessionId },
       );
@@ -2666,8 +2713,8 @@ export const respondToGroupInvite = onRequest(
               (pid: string) => pid !== uid,
             ),
             {
-              title: "Everyone Accepted!",
-              body: "All participants accepted. Head to the waiting room!",
+              title: "Everyone's in 💪",
+              body: "Head to the waiting room — session starts soon.",
             },
             {
               type: "session_ready",
@@ -2679,8 +2726,8 @@ export const respondToGroupInvite = onRequest(
           sendPushToUser(
             inviteData.fromUserId,
             {
-              title: "Invite Accepted",
-              body: "A participant accepted your group session invite.",
+              title: "Someone's in 🎯",
+              body: "A friend accepted your session invite.",
             },
             {
               type: "invite_response",
@@ -2763,8 +2810,8 @@ export const respondToGroupInvite = onRequest(
           sendPushToUser(
             inviteData.fromUserId,
             {
-              title: "Invite Declined",
-              body: "A participant declined your group session invite.",
+              title: "Invite declined",
+              body: "One friend passed — session still on with the rest.",
             },
             {
               type: "invite_response",
@@ -2968,8 +3015,8 @@ export const startGroupSession = onRequest(
       sendPushToUsers(
         sessionData.participantIds.filter((pid: string) => pid !== uid),
         {
-          title: "Session Started!",
-          body: "Your group focus session has begun. Stay focused!",
+          title: "Timer's running ⏱️",
+          body: "Session just started. Stay focused — your stake is live.",
         },
         { type: "session_started", sessionId },
       );
@@ -3092,7 +3139,7 @@ export const reportSessionStatus = onRequest(
           const endsAt = sessionData.endsAt?.toDate?.()
             ? sessionData.endsAt.toDate()
             : new Date(sessionData.endsAt);
-          const gracePeriodMs = 60_000;
+          const gracePeriodMs = 15_000;
 
           if (endsAt.getTime() - gracePeriodMs > Date.now()) {
             throw new Error("Session has not ended yet");
@@ -3171,8 +3218,8 @@ export const reportSessionStatus = onRequest(
           sendPushToUsers(
             outcome.participantIds.filter((pid: string) => pid !== uid),
             {
-              title: `${outcome.actorName} surrendered`,
-              body: "Stay strong — the pool just grew for everyone still in.",
+              title: `${outcome.actorName} tapped out 💸`,
+              body: "Their stake just got split between everyone still locked in.",
             },
             { type: "session_surrender", sessionId },
           );
@@ -3202,8 +3249,8 @@ export const reportSessionStatus = onRequest(
         sendPushToUsers(
           outcome.participantIds.filter((pid: string) => pid !== uid),
           {
-            title: "Session Complete",
-            body: "Your group session has ended. Check your results!",
+            title: "You made it 🏆",
+            body: "Session done. Tap to see your payout.",
           },
           { type: "session_complete", sessionId },
         );
@@ -3322,8 +3369,8 @@ export const reportShieldViolation = onRequest(
       sendPushToUsers(
         result.participantIds.filter((pid: string) => pid !== uid),
         {
-          title: `${result.actorName} slipped`,
-          body: "They just opened a blocked app.",
+          title: `${result.actorName} caved 👀`,
+          body: "They tried opening a blocked app. You're still in.",
         },
         { type: "shield_violation", sessionId },
       );
@@ -3476,8 +3523,8 @@ export const cancelGroupSession = onRequest(
       sendPushToUsers(
         sessionData.participantIds.filter((pid: string) => pid !== uid),
         {
-          title: "Session Cancelled",
-          body: "A group session you were in has been cancelled. Your stake has been refunded.",
+          title: "Session called off",
+          body: "Stake refunded to your balance.",
         },
         { type: "session_cancelled", sessionId },
       );

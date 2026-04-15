@@ -18,7 +18,7 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button } from "../../src/components";
+import { Card, Button, withErrorBoundary } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useWalletStore } from "../../src/store/walletStore";
@@ -44,7 +44,7 @@ const formatCadenceLabel = (cadence: string): string =>
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function GroupInvitesScreen() {
+function GroupInvitesScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -115,7 +115,7 @@ export default function GroupInvitesScreen() {
           ) : (
             <View style={styles.avatarFallback}>
               <Text style={styles.avatarInitial}>
-                {invite.fromUserName.charAt(0).toUpperCase()}
+                {(invite.fromUserName ?? "?").charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
@@ -211,6 +211,12 @@ export default function GroupInvitesScreen() {
   );
 }
 
+const GroupInvitesScreen = withErrorBoundary(
+  GroupInvitesScreenInner,
+  "invites",
+);
+export default GroupInvitesScreen;
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const makeStyles = (Colors: ThemeColors) =>
@@ -227,6 +233,7 @@ const makeStyles = (Colors: ThemeColors) =>
       paddingBottom: Spacing.xl,
     },
     header: {
+      marginTop: Spacing.sm,
       marginBottom: Spacing.md,
     },
     backText: {

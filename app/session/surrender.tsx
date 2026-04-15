@@ -19,12 +19,18 @@ import {
   type ThemeColors,
 } from "../../src/constants/colors";
 import { useColors } from "../../src/hooks/useColors";
-import { Card, Button, SessionScreenScaffold } from "../../src/components";
+import {
+  Card,
+  Button,
+  SessionScreenScaffold,
+  withErrorBoundary,
+} from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { GroupSession } from "../../src/types";
 import { formatMoney } from "../../src/utils/format";
+import { logger } from "../../src/utils/logger";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -186,7 +192,7 @@ const makeStyles = (Colors: ThemeColors) =>
     },
   });
 
-export default function SurrenderScreen() {
+function SurrenderScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -232,7 +238,7 @@ export default function SurrenderScreen() {
         return;
       } catch (err) {
         // Fallback to legacy local surrender
-        console.warn("Server surrender failed, using local:", err);
+        logger.warn("Server surrender failed, using local:", err);
       }
     }
 
@@ -472,3 +478,6 @@ export default function SurrenderScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+const SurrenderScreen = withErrorBoundary(SurrenderScreenInner, "surrender");
+export default SurrenderScreen;

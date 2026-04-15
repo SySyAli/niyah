@@ -60,6 +60,13 @@ export interface User {
   // Legal acceptance
   legalAcceptanceVersion?: string;
   legalAcceptedAt?: Date;
+  // Onboarding intake (quality/UX data collected once during signup)
+  intake?: {
+    focusGoalHoursPerDay?: number; // 1, 2, 3, 4, 6+
+    distractionReasons?: string[]; // multi-select
+    triedApps?: string[]; // multi-select (opal, brick, present, screentime, delete, none)
+    completedAt?: Date;
+  };
 }
 
 // Social credit system - tracks payment reliability

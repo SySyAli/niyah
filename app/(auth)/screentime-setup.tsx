@@ -83,18 +83,28 @@ export default function ScreenTimeSetupScreen() {
   };
 
   const title = hasSelection
-    ? "All Set!"
+    ? "You're all set"
     : isAuthorized
-      ? "Pick Apps to Block"
-      : "Connect Niyah to\nScreen Time, Securely.";
+      ? 'Tap "All Apps & Categories"'
+      : "Connect Niyah to\nScreen Time";
   const subtitle = hasSelection
     ? "Niyah will block your selected apps during focus sessions."
     : isAuthorized
-      ? "Choose the apps and categories you want to block during focus sessions. You can change these later in your profile."
-      : "To block distracting apps on this iPhone, Niyah will need your permission.";
+      ? "Select everything. You can exclude specific apps later — picking All gives you the most control."
+      : "To block distracting apps, Niyah needs Screen Time access. Apple keeps this private to your device.";
 
   return (
     <AuthScreenScaffold showBack={false} title={title} subtitle={subtitle}>
+      {/* Onboarding progress bar */}
+      <View style={styles.progressBar}>
+        <View
+          style={[
+            styles.progressFill,
+            { width: hasSelection ? "100%" : isAuthorized ? "66%" : "33%" },
+          ]}
+        />
+      </View>
+
       <View style={styles.content}>
         {/* Visual indicator */}
         <View style={styles.iconContainer}>
@@ -121,14 +131,29 @@ export default function ScreenTimeSetupScreen() {
             </View>
             <View style={styles.explanationItem}>
               <Text style={styles.bulletText}>
-                Show a custom Niyah screen when you try to open a blocked app
+                Show a custom Niyah shield when you try to open a blocked app
               </Text>
             </View>
             <View style={styles.explanationItem}>
               <Text style={styles.bulletText}>
-                Track focus streaks (no personal data is collected)
+                Track focus streaks — never read personal data
               </Text>
             </View>
+          </View>
+        )}
+
+        {/* When authorized but no selection: mock "All Apps & Categories" row
+            so user knows exactly what to tap inside Apple's picker sheet. */}
+        {isAuthorized && !hasSelection && (
+          <View style={styles.mockCard}>
+            <View style={styles.mockRow}>
+              <View style={styles.mockRadio} />
+              <View style={styles.mockIcon}>
+                <Text style={styles.mockIconText}>📚</Text>
+              </View>
+              <Text style={styles.mockLabel}>All Apps & Categories</Text>
+            </View>
+            <Text style={styles.mockHint}>↑ Choose this one</Text>
           </View>
         )}
 
@@ -187,9 +212,63 @@ export default function ScreenTimeSetupScreen() {
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({
+    progressBar: {
+      height: 4,
+      backgroundColor: Colors.backgroundTertiary,
+      borderRadius: Radius.full,
+      marginBottom: Spacing.lg,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      backgroundColor: Colors.primary,
+      borderRadius: Radius.full,
+    },
     content: {
       alignItems: "center",
       gap: Spacing.xl,
+    },
+    mockCard: {
+      width: "100%",
+      gap: Spacing.sm,
+    },
+    mockRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: Spacing.md,
+      backgroundColor: Colors.backgroundCard,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      gap: Spacing.md,
+    },
+    mockRadio: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: Colors.textMuted,
+    },
+    mockIcon: {
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    mockIconText: {
+      fontSize: 20,
+    },
+    mockLabel: {
+      flex: 1,
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.text,
+    },
+    mockHint: {
+      fontSize: Typography.bodySmall,
+      ...Font.semibold,
+      color: Colors.primary,
+      textAlign: "center",
     },
     iconContainer: {
       marginVertical: Spacing.lg,

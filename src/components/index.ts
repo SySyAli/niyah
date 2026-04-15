@@ -12,3 +12,4 @@ export { SessionScreenScaffold } from "./SessionScreenScaffold";
 export { LegalContentView } from "./LegalContentView";
 export { LegalAcceptanceOverlay } from "./LegalAcceptanceOverlay";
 export { InviteCTA } from "./InviteCTA";
+export { ErrorBoundary, withErrorBoundary } from "./ErrorBoundary";

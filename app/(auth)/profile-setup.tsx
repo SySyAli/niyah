@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import {
   Typography,
   Spacing,
@@ -76,16 +76,16 @@ export default function ProfileSetupScreen() {
       });
 
       // Apply referral bonus if this user was invited via a deep link
-      const referrerUid = await AsyncStorage.getItem(PENDING_REFERRAL_KEY);
+      const referrerUid = await SecureStore.getItemAsync(PENDING_REFERRAL_KEY);
       if (referrerUid) {
         await applyReferralBonus(referrerUid);
-        await AsyncStorage.removeItem(PENDING_REFERRAL_KEY);
+        await SecureStore.deleteItemAsync(PENDING_REFERRAL_KEY);
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Route to Screen Time setup before main app
-      router.replace("/(auth)/screentime-setup");
+      // Route to intake (goal questions) before Screen Time setup
+      router.replace("/(auth)/intake" as never);
     } catch (e: unknown) {
       const err = e as { message?: string };
       logger.error("Profile setup error:", e);

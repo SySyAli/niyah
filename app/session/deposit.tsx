@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+  useEffect,
+} from "react";
 import { getAuth } from "@react-native-firebase/auth";
 import {
   View,
@@ -26,6 +32,7 @@ import {
   NumPad,
   AmountDisplay,
   SessionScreenScaffold,
+  withErrorBoundary,
 } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
@@ -176,7 +183,7 @@ const QuickAmountButton: React.FC<QuickAmountButtonProps> = ({
   );
 };
 
-export default function DepositScreen() {
+function DepositScreenInner() {
   useScreenProtection("deposit");
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -199,6 +206,28 @@ export default function DepositScreen() {
   // Store paymentIntentId for retry if verify fails after payment succeeds
   const [pendingVerifyId, setPendingVerifyId] = useState<string | null>(null);
   const [pendingVerifyAmount, setPendingVerifyAmount] = useState<number>(0);
+
+  // Guard against setState after unmount + double router.back() crashes when
+  // Stripe sheet dismisses mid-navigation ("every other time" black screen).
+  const isMountedRef = useRef(true);
+  const hasNavigatedBackRef = useRef(false);
+  useEffect(() => {
+    isMountedRef.current = true;
+    hasNavigatedBackRef.current = false;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const safeBack = useCallback(() => {
+    if (hasNavigatedBackRef.current) return;
+    hasNavigatedBackRef.current = true;
+    try {
+      router.back();
+    } catch (err) {
+      logger.warn("router.back failed:", err);
+    }
+  }, [router]);
 
   const paymentsUnavailable = !DEMO_MODE && !isStripePaymentsAvailable;
 
@@ -255,7 +284,7 @@ export default function DepositScreen() {
           text: "Confirm",
           onPress: () => {
             deposit(finalAmount);
-            router.back();
+            safeBack();
           },
         },
       ],
@@ -354,7 +383,7 @@ export default function DepositScreen() {
         Alert.alert(
           "Bank Transfer Initiated",
           `Your $${(finalAmount / 100).toFixed(2)} bank transfer is being processed.\n\nFunds will appear in your Niyah balance in ${result.estimatedArrival}. You'll be able to stake once the transfer clears.`,
-          [{ text: "Got it", onPress: () => router.back() }],
+          [{ text: "Got it", onPress: safeBack }],
         );
       } else {
         deposit(finalAmount, result.newBalance);
@@ -362,7 +391,7 @@ export default function DepositScreen() {
         Alert.alert(
           "Funds Added",
           `${formatMoney(finalAmount)} added to your Niyah balance.`,
-          [{ text: "Done", onPress: () => router.back() }],
+          [{ text: "Done", onPress: safeBack }],
         );
       }
     } catch (err) {
@@ -389,7 +418,7 @@ export default function DepositScreen() {
           .catch(() => {});
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) setIsLoading(false);
     }
   };
 
@@ -405,7 +434,7 @@ export default function DepositScreen() {
         Alert.alert(
           "Bank Transfer Initiated",
           `Your bank transfer is being processed. Funds will appear soon.`,
-          [{ text: "Got it", onPress: () => router.back() }],
+          [{ text: "Got it", onPress: safeBack }],
         );
       } else {
         deposit(pendingVerifyAmount, result.newBalance);
@@ -413,7 +442,7 @@ export default function DepositScreen() {
         Alert.alert(
           "Funds Added",
           `${formatMoney(pendingVerifyAmount)} added to your Niyah balance.`,
-          [{ text: "Done", onPress: () => router.back() }],
+          [{ text: "Done", onPress: safeBack }],
         );
       }
     } catch (err) {
@@ -430,7 +459,7 @@ export default function DepositScreen() {
           .catch(() => {});
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) setIsLoading(false);
     }
   };
 
@@ -514,6 +543,9 @@ export default function DepositScreen() {
     </SessionScreenScaffold>
   );
 }
+
+const DepositScreen = withErrorBoundary(DepositScreenInner, "deposit");
+export default DepositScreen;
 
 const makeStyles = (Colors: ThemeColors) =>
   StyleSheet.create({

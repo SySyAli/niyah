@@ -17,6 +17,7 @@ import {
   type ThemeColors,
 } from "../src/constants/colors";
 import { useColors } from "../src/hooks/useColors";
+import { withErrorBoundary } from "../src/components";
 import { useAuthStore } from "../src/store/authStore";
 
 // ─── Back button ──────────────────────────────────────────────────────────────
@@ -102,7 +103,7 @@ const PerkRow: React.FC<{ emoji: string; text: string }> = ({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function InviteScreen() {
+function InviteScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
@@ -188,6 +189,9 @@ export default function InviteScreen() {
     </SafeAreaView>
   );
 }
+
+const InviteScreen = withErrorBoundary(InviteScreenInner, "invite");
+export default InviteScreen;
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 

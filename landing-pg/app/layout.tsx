@@ -7,18 +7,8 @@ export const metadata: Metadata = {
     "Focus sessions with real financial stakes. You and your friends stake money, lock distracting apps, and the people who stay focused earn more back.",
   icons: {
     icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
+      { url: "/favicon.png", type: "image/png", sizes: "48x48" },
+      { url: "/icon-light-32x32.png", sizes: "32x32" },
     ],
     apple: "/apple-icon.png",
   },

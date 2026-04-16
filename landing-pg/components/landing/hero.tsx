@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
-const GOOGLE_FORM_URL = "https://forms.gle/xC4qzpmwWwDD7Z5VA";
+const GOOGLE_FORM_URL = "https://forms.gle/qCWMrbPuzEQRR4xC6";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const screenshots = [
@@ -48,12 +48,44 @@ export function Hero() {
               stay focused earn more back.
             </p>
 
-            <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer">
-              <Button size="lg" className="gap-2">
-                Join the Waitlist
-                <ArrowRight className="h-5 w-5" />
-              </Button>
-            </a>
+            <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+              <a
+                href={GOOGLE_FORM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button size="lg" className="gap-2">
+                  Join the Waitlist
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </a>
+              <div className="flex items-center gap-3">
+                <a
+                  href={GOOGLE_FORM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Scan QR to open Niyah waitlist form"
+                >
+                  <img
+                    src={`${BASE_PATH}/waitlist-qr.png`}
+                    alt="Niyah waitlist QR code"
+                    className="h-44 w-44 rounded-xl border border-border bg-white p-3 sm:h-52 sm:w-52"
+                  />
+                </a>
+                <p className="max-w-[7rem] text-xs font-medium leading-snug text-muted-foreground">
+                  Or scan to join on your phone.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-5 md:p-6">
+              <p className="text-2xl font-bold leading-tight text-primary md:text-3xl lg:text-4xl">
+                Deposit $5, we&apos;ll match $5.
+              </p>
+              <p className="mt-2 text-sm font-medium text-muted-foreground md:text-base">
+                First 100 signups get a $5 match on their first session
+                with friends.
+              </p>
+            </div>
           </div>
 
           {/* Right - 3D tilted phone with carousel */}

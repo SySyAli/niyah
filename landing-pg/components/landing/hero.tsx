@@ -82,8 +82,8 @@ export function Hero() {
                 Deposit $5, we&apos;ll match $5.
               </p>
               <p className="mt-2 text-sm font-medium text-muted-foreground md:text-base">
-                First 100 signups get a $5 match on their first session
-                with friends.
+                First 100 signups get a $5 match on their first session with
+                friends.
               </p>
             </div>
           </div>

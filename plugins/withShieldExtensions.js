@@ -248,6 +248,7 @@ function withShieldExtensions(config) {
             SWIFT_VERSION: "5.9",
             CODE_SIGN_ENTITLEMENTS: `${ext.name}/${ext.name}.entitlements`,
             CODE_SIGN_STYLE: "Automatic",
+            DEVELOPMENT_TEAM: "4R55F73KCP",
             TARGETED_DEVICE_FAMILY: '"1"',
             GENERATE_INFOPLIST_FILE: "NO",
             INFOPLIST_FILE: `${ext.name}/Info.plist`,

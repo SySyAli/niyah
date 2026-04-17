@@ -195,6 +195,7 @@ function withDeviceActivityMonitor(config) {
           SWIFT_VERSION: "5.9",
           CODE_SIGN_ENTITLEMENTS: `${EXTENSION_NAME}/${EXTENSION_NAME}.entitlements`,
           CODE_SIGN_STYLE: "Automatic",
+          DEVELOPMENT_TEAM: "4R55F73KCP",
           TARGETED_DEVICE_FAMILY: '"1,2"',
           GENERATE_INFOPLIST_FILE: "NO",
           INFOPLIST_FILE: `${EXTENSION_NAME}/Info.plist`,

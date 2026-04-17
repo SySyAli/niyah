@@ -7,19 +7,29 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "node": "20.19.4",
       "ios": {
         "simulator": true
       }
     },
     "development-device": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "node": "20.19.4"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "node": "20.19.4",
+      "ios": {
+        "image": "macos-sequoia-15.4-xcode-16.3"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "node": "20.19.4",
+      "ios": {
+        "image": "macos-sequoia-15.4-xcode-16.3"
+      }
     }
   },
   "submit": {

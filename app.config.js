@@ -6,7 +6,7 @@
  * See .env.example for required environment variables.
  */
 
-function env(name: string, fallback?: string): string {
+function env(name, fallback) {
   const value = process.env[name];
   if (value) return value;
   if (fallback !== undefined) return fallback;
@@ -17,23 +17,21 @@ function env(name: string, fallback?: string): string {
 
 const firebaseProjectId = env("EXPO_PUBLIC_FIREBASE_PROJECT_ID");
 const googleIosClientId = env("EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID");
-// iosUrlScheme needs just the numeric ID (e.g. "714...-42pm..."), not the full
-// "714...-42pm....apps.googleusercontent.com" form stored in the env var.
 const googleIosShortId = googleIosClientId.replace(
   /\.apps\.googleusercontent\.com$/,
   "",
 );
 
-export default {
+module.exports = {
   expo: {
     name: "Niyah",
     slug: "niyah",
     owner: "niyah-app",
     version: "1.0.0",
     scheme: "niyah",
-    orientation: "portrait" as const,
+    orientation: "portrait",
     icon: "./assets/icon.png",
-    userInterfaceStyle: "dark" as const,
+    userInterfaceStyle: "dark",
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
@@ -46,8 +44,6 @@ export default {
       associatedDomains: [`applinks:${firebaseProjectId}.firebaseapp.com`],
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
-        // Required so iOS delivers Firebase Auth's silent APNs push for phone
-        // verification. Without this, Firebase falls back to reCAPTCHA web flow.
         UIBackgroundModes: ["remote-notification", "fetch"],
         NSContactsUsageDescription:
           "Niyah uses your contacts to invite friends to focus sessions.",
@@ -91,7 +87,7 @@ export default {
     },
     web: {
       favicon: "./assets/favicon.png",
-      bundler: "metro" as const,
+      bundler: "metro",
     },
     plugins: [
       [
@@ -130,6 +126,7 @@ export default {
       "./plugins/withScreenTimeEntitlement",
       "./plugins/withDeviceActivityMonitor",
       "./plugins/withShieldExtensions",
+      "./plugins/withResourceBundleSigning",
     ],
     experiments: {
       typedRoutes: true,

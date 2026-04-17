@@ -205,7 +205,7 @@ function SurrenderScreenInner() {
     markTransferPaid,
   } = useGroupSessionStore();
   const userId = useAuthStore((state) => state.user?.id);
-  const [_surrendering, setSurrendering] = useState(false);
+  const [surrendering, setSurrendering] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [showPayment, setShowPayment] = useState(false);
   const [completedSession, setCompletedSession] = useState<GroupSession | null>(
@@ -226,9 +226,9 @@ function SurrenderScreenInner() {
     outboundTransfer?.amount ?? completedSession?.stakePerParticipant ?? 0;
 
   const handleSurrender = async () => {
-    if (!canSurrender) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    if (!canSurrender || surrendering) return;
     setSurrendering(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
     // If Firestore-backed session, report surrender to server
     if (activeSession) {
@@ -463,7 +463,7 @@ function SurrenderScreenInner() {
           <Button
             title={isSoloSession ? "Surrender" : "Surrender and Pay Partner"}
             onPress={handleSurrender}
-            disabled={!canSurrender}
+            disabled={!canSurrender || surrendering}
             variant="danger"
             size="large"
           />

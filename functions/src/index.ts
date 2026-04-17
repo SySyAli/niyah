@@ -3242,18 +3242,20 @@ export const reportSessionStatus = onRequest(
 
       if (outcome.shouldSettle) {
         await settleGroupSessionPayouts(sessionId, payoutList, uid);
-      }
 
-      // Notify all participants that the session is complete
-      if (outcome.participantIds) {
-        sendPushToUsers(
-          outcome.participantIds.filter((pid: string) => pid !== uid),
-          {
-            title: "You made it 🏆",
-            body: "Session done. Tap to see your payout.",
-          },
-          { type: "session_complete", sessionId },
-        );
+        // Completion push only fires on the call that actually settled.
+        // Idempotent retries from other reporters see payoutsSettledAt and skip
+        // both settlement and the push, preventing duplicate notifications.
+        if (outcome.participantIds) {
+          sendPushToUsers(
+            outcome.participantIds.filter((pid: string) => pid !== uid),
+            {
+              title: "You made it 🏆",
+              body: "Session done. Tap to see your payout.",
+            },
+            { type: "session_complete", sessionId },
+          );
+        }
       }
 
       console.log(
@@ -3358,22 +3360,33 @@ export const reportShieldViolation = onRequest(
         const participant = data.participants?.[uid];
         const newCount = (participant?.violationCount ?? 0) + 1;
         const actorName = participant?.name || "Someone";
-        txn.update(sessionRef, {
+        const lastPushAt = participant?.lastViolationPushAt?.toDate?.()
+          ? participant.lastViolationPushAt.toDate().getTime()
+          : 0;
+        const shouldPush = Date.now() - lastPushAt > 30_000;
+        const updateFields: Record<string, unknown> = {
           [`participants.${uid}.violationCount`]: newCount,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        return { newCount, actorName, participantIds };
+        };
+        if (shouldPush) {
+          updateFields[`participants.${uid}.lastViolationPushAt`] =
+            admin.firestore.FieldValue.serverTimestamp();
+        }
+        txn.update(sessionRef, updateFields);
+        return { newCount, actorName, participantIds, shouldPush };
       });
 
-      // Notify other participants — fire and forget
-      sendPushToUsers(
-        result.participantIds.filter((pid: string) => pid !== uid),
-        {
-          title: `${result.actorName} caved 👀`,
-          body: "They tried opening a blocked app. You're still in.",
-        },
-        { type: "shield_violation", sessionId },
-      );
+      // Notify other participants — 30s cooldown per user prevents spam
+      if (result.shouldPush) {
+        sendPushToUsers(
+          result.participantIds.filter((pid: string) => pid !== uid),
+          {
+            title: `${result.actorName} caved 👀`,
+            body: "They tried opening a blocked app. You're still in.",
+          },
+          { type: "shield_violation", sessionId },
+        );
+      }
 
       console.log(
         `reportShieldViolation: session=${sessionId}, user=${uid}, count=${result.newCount}`,

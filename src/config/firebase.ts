@@ -463,6 +463,28 @@ export const getWalletDoc = async (
   };
 };
 
+/**
+ * Subscribe to wallet document changes. Fires callback on every update.
+ * Returns unsubscribe function.
+ */
+export const subscribeToWallet = (
+  uid: string,
+  callback: (data: { balance: number; pendingBalance: number } | null) => void,
+): (() => void) => {
+  const docRef = doc(db, COLLECTIONS.WALLETS, uid);
+  return onSnapshot(docRef, (snap) => {
+    if (!snap.exists) {
+      callback(null);
+      return;
+    }
+    const data = snap.data() ?? {};
+    callback({
+      balance: (data.balance as number) ?? 0,
+      pendingBalance: (data.pendingBalance as number) ?? 0,
+    });
+  });
+};
+
 // ---------------------------------------------------------------------------
 // Session persistence — write/read solo session documents
 // ---------------------------------------------------------------------------

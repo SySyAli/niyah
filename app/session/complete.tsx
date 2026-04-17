@@ -19,7 +19,6 @@ import {
 import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
-import { useWalletStore } from "../../src/store/walletStore";
 import { formatMoney } from "../../src/utils/format";
 import type { GroupSessionDoc, SessionTransfer } from "../../src/types";
 
@@ -335,7 +334,6 @@ function CompleteScreenInner() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const hydrateWallet = useWalletStore((state) => state.hydrate);
   const {
     groupSessionHistory,
     activeSession: firestoreSession,
@@ -402,14 +400,22 @@ function CompleteScreenInner() {
     }
   }, [didComplete]);
 
-  // Re-sync wallet balance once the CF has finalized the session and credited payouts.
-  // The CF writes status="completed" and debits/credits wallets atomically, so this
-  // is the correct trigger point. walletStore is local-only and doesn't auto-update.
-  useEffect(() => {
-    if (firestoreSession?.status === "completed" && user?.id) {
-      hydrateWallet(user.id);
-    }
-  }, [firestoreSession?.status, user?.id, hydrateWallet]);
+  // Wallet balance now auto-syncs via onSnapshot listener in walletStore.
+  // No manual hydrate needed on session completion.
+
+  // Track transfer actions already in-flight so rapid taps don't double-fire
+  // markTransferPaid / markTransferConfirmed (each would write a duplicate
+  // settlement record).
+  const [pendingTransferIds, setPendingTransferIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const isPending = (id: string) => pendingTransferIds.has(id);
+  const lockTransfer = (id: string) =>
+    setPendingTransferIds((s) => {
+      const next = new Set(s);
+      next.add(id);
+      return next;
+    });
 
   const handleDone = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -417,13 +423,15 @@ function CompleteScreenInner() {
   };
 
   const handleMarkReceived = (transferId: string) => {
-    if (lastSession) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      markTransferConfirmed(lastSession.id, transferId);
-    }
+    if (!lastSession || isPending(transferId)) return;
+    lockTransfer(transferId);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    markTransferConfirmed(lastSession.id, transferId);
   };
 
   const handlePayVenmo = async (transfer: SessionTransfer) => {
+    if (isPending(transfer.id)) return;
+    lockTransfer(transfer.id);
     const recipient = lastSession?.participants.find(
       (p) => p.userId === transfer.toUserId,
     );
@@ -551,11 +559,20 @@ function CompleteScreenInner() {
         <View style={styles.paymentsSection}>
           <Text style={styles.sectionTitle}>Payments</Text>
 
-          {activeTransfers.length === 0 ? (
+          {activeTransfers.length === 0 && !firestoreSession?.payouts ? (
             <Card style={styles.noPaymentsCard}>
               <Text style={styles.noPaymentsText}>No payments needed</Text>
               <Text style={styles.noPaymentsSubtext}>
                 Everyone's stake has been settled automatically.
+              </Text>
+            </Card>
+          ) : activeTransfers.length === 0 && firestoreSession?.payouts ? (
+            <Card style={styles.noPaymentsCard}>
+              <Text style={styles.noPaymentsText}>Settled via Stripe</Text>
+              <Text style={styles.noPaymentsSubtext}>
+                {firestoreSession.payouts[user?.id ?? ""]
+                  ? `${formatMoney(firestoreSession.payouts[user?.id ?? ""] ?? 0)} credited to your balance.`
+                  : "Your stake was forfeited."}
               </Text>
             </Card>
           ) : (
@@ -614,6 +631,7 @@ function CompleteScreenInner() {
                               : "Pay via Venmo"
                           }
                           onPress={() => handlePayVenmo(transfer)}
+                          disabled={isPending(transfer.id)}
                           variant={
                             transfer.status === "overdue" ? "danger" : "primary"
                           }
@@ -631,6 +649,7 @@ function CompleteScreenInner() {
                         <Button
                           title="Mark as Received"
                           onPress={() => handleMarkReceived(transfer.id)}
+                          disabled={isPending(transfer.id)}
                           variant="secondary"
                           size="small"
                         />

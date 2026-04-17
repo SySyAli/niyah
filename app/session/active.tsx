@@ -436,7 +436,12 @@ function ActiveSessionScreenInner() {
   // Shared surrender handler — called from the in-app Surrender button (after
   // user confirms via Alert) and from the shield screen's "Surrender Session"
   // button (no extra confirmation since the user already tapped on the shield).
+  // Guarded by surrenderingRef: shield + in-app Alert can both fire in quick
+  // succession and we only want one server report per session.
+  const surrenderingRef = useRef(false);
   const performSurrender = useCallback(async () => {
+    if (surrenderingRef.current) return;
+    surrenderingRef.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     isNavigatingAwayRef.current = true;
     if (isScreenTimeAvailable) {

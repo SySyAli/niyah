@@ -17,6 +17,7 @@ jest.mock("../../../constants/config", () => ({
 
 jest.mock("../../../config/firebase", () => ({
   getWalletDoc: jest.fn(() => Promise.resolve(null)),
+  subscribeToWallet: jest.fn(() => jest.fn()),
   // Auth-related — required by authStore transitive import
   onAuthStateChanged: jest.fn(() => jest.fn()),
   signOut: jest.fn(),

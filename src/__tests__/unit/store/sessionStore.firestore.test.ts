@@ -33,6 +33,7 @@ jest.mock("../../../config/firebase", () => ({
   fetchUserProfile: jest.fn(),
   awardReferralToUser: jest.fn(),
   getWalletDoc: jest.fn(() => Promise.resolve(null)),
+  subscribeToWallet: jest.fn(() => jest.fn()),
 }));
 
 jest.mock("../../../config/functions", () => ({

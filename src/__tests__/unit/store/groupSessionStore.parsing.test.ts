@@ -109,6 +109,7 @@ jest.mock("../../../config/firebase", () => ({
   fetchUserProfile: jest.fn(),
   awardReferralToUser: jest.fn(),
   getWalletDoc: jest.fn(() => Promise.resolve(null)),
+  subscribeToWallet: jest.fn(() => jest.fn()),
   writeSession: jest.fn(() => Promise.resolve()),
   updateSession: jest.fn(() => Promise.resolve()),
   getActiveSession: jest.fn(() => Promise.resolve(null)),

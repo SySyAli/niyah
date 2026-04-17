@@ -132,8 +132,11 @@ function parseGroupInvite(data: Record<string, unknown>): GroupInvite {
 // ─── Unsubscribe tracking (outside Zustand to avoid serialization issues) ───
 
 let _unsubSession: (() => void) | null = null;
+let _subscribedSessionId: string | null = null;
 let _unsubInvites: (() => void) | null = null;
+let _subscribedInvitesUid: string | null = null;
 let _unsubActiveSessions: (() => void) | null = null;
+let _subscribedActiveSessionsUid: string | null = null;
 
 // ─── Store interface ────────────────────────────────────────────────────────
 
@@ -216,12 +219,14 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
   // ─── Subscription management ──────────────────────────────────────────────
 
   subscribeToSession: (sessionId: string) => {
-    // Tear down existing subscription
+    // Idempotent: same id, reuse existing subscription. Prevents teardown /
+    // recreate churn on every component re-render.
+    if (_subscribedSessionId === sessionId && _unsubSession) return;
     if (_unsubSession) {
       _unsubSession();
       _unsubSession = null;
     }
-
+    _subscribedSessionId = sessionId;
     _unsubSession = subscribeToGroupSession(sessionId, (data) => {
       if (data) {
         set({ activeSession: parseGroupSessionDoc(data) });
@@ -232,11 +237,12 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
   },
 
   subscribeToInvites: (userId: string) => {
+    if (_subscribedInvitesUid === userId && _unsubInvites) return;
     if (_unsubInvites) {
       _unsubInvites();
       _unsubInvites = null;
     }
-
+    _subscribedInvitesUid = userId;
     _unsubInvites = subscribeToGroupInvites(userId, (rawInvites) => {
       const invites = rawInvites.map(parseGroupInvite);
       set({ pendingInvites: invites });
@@ -244,11 +250,12 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
   },
 
   subscribeToActiveSessions: (userId: string) => {
+    if (_subscribedActiveSessionsUid === userId && _unsubActiveSessions) return;
     if (_unsubActiveSessions) {
       _unsubActiveSessions();
       _unsubActiveSessions = null;
     }
-
+    _subscribedActiveSessionsUid = userId;
     _unsubActiveSessions = subscribeToActiveGroupSessions(
       userId,
       (rawSessions) => {
@@ -263,14 +270,17 @@ export const useGroupSessionStore = create<GroupSessionState>((set, get) => ({
       _unsubSession();
       _unsubSession = null;
     }
+    _subscribedSessionId = null;
     if (_unsubInvites) {
       _unsubInvites();
       _unsubInvites = null;
     }
+    _subscribedInvitesUid = null;
     if (_unsubActiveSessions) {
       _unsubActiveSessions();
       _unsubActiveSessions = null;
     }
+    _subscribedActiveSessionsUid = null;
     set({
       activeSession: null,
       pendingInvites: [],

@@ -26,7 +26,9 @@ jest.mock("../../../config/firebase", () => ({
   awardReferralToUser: jest.fn(),
   updateUserDoc: jest.fn(() => Promise.resolve()),
   signOut: jest.fn(),
-  onAuthStateChanged: jest.fn(() => jest.fn()), // returns unsubscribe
+  onAuthStateChanged: jest.fn(() => jest.fn()),
+  getWalletDoc: jest.fn(() => Promise.resolve(null)),
+  subscribeToWallet: jest.fn(() => jest.fn()),
 }));
 
 // Mock notifications module — authStore lazy-requires this.
@@ -36,6 +38,7 @@ const mockRemoveFCMToken = jest.fn((_uid?: string) => Promise.resolve());
 jest.mock("../../../config/notifications", () => ({
   initializeNotifications: mockInitializeNotifications,
   removeFCMToken: mockRemoveFCMToken,
+  resetNotifications: jest.fn(),
 }));
 
 // Mock groupSessionStore — authStore lazy-requires this for recovery and logout.

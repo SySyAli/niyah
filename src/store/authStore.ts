@@ -57,9 +57,12 @@ const initNotifications = () => {
 
 // Lazy import for notification cleanup on logout
 const cleanupNotifications = (uid: string) => {
-  const { removeFCMToken } = require("../config/notifications") as {
-    removeFCMToken: (uid: string) => Promise<void>;
-  };
+  const { removeFCMToken, resetNotifications } =
+    require("../config/notifications") as {
+      removeFCMToken: (uid: string) => Promise<void>;
+      resetNotifications: () => void;
+    };
+  resetNotifications();
   return removeFCMToken(uid);
 };
 
@@ -354,15 +357,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       });
 
-      // Hydrate wallet and recover session (non-blocking)
+      // Hydrate wallet and recover session (non-blocking).
+      // Notifications + group session subscriptions are set up by `initialize()`
+      // when onAuthStateChanged fires — avoid stacking listeners here.
       hydrateWallet(firebaseUser.uid);
       recoverSession(firebaseUser.uid);
-
-      // Initialize FCM notifications and subscribe to group session data
-      initNotifications().catch((err) =>
-        logger.error("Failed to init notifications:", err),
-      );
-      recoverGroupSessions(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -399,15 +398,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       });
 
-      // Hydrate wallet and recover session (non-blocking)
       hydrateWallet(firebaseUser.uid);
       recoverSession(firebaseUser.uid);
-
-      // Initialize FCM notifications and subscribe to group session data
-      initNotifications().catch((err) =>
-        logger.error("Failed to init notifications:", err),
-      );
-      recoverGroupSessions(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -462,15 +454,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       });
 
-      // Hydrate wallet and recover session (non-blocking)
       hydrateWallet(firebaseUser.uid);
       recoverSession(firebaseUser.uid);
-
-      // Initialize FCM notifications and subscribe to group session data
-      initNotifications().catch((err) =>
-        logger.error("Failed to init notifications:", err),
-      );
-      recoverGroupSessions(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -519,15 +504,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         phoneConfirmation: null,
       });
 
-      // Hydrate wallet and recover session (non-blocking)
       hydrateWallet(firebaseUser.uid);
       recoverSession(firebaseUser.uid);
-
-      // Initialize FCM notifications and subscribe to group session data
-      initNotifications().catch((err) =>
-        logger.error("Failed to init notifications:", err),
-      );
-      recoverGroupSessions(firebaseUser.uid);
     } catch (error) {
       set({ isLoading: false });
       throw error;

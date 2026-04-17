@@ -28,6 +28,7 @@ jest.mock("../../../config/functions", () => ({
 jest.mock("../../../config/notifications", () => ({
   initializeNotifications: jest.fn(() => Promise.resolve(() => {})),
   removeFCMToken: jest.fn(() => Promise.resolve()),
+  resetNotifications: jest.fn(),
 }));
 
 import { useGroupSessionStore } from "../../../store/groupSessionStore";

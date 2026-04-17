@@ -2,9 +2,12 @@ import { create } from "zustand";
 import { Transaction } from "../types";
 import { DEMO_MODE, INITIAL_BALANCE } from "../constants/config";
 import { useAuthStore } from "./authStore";
-import { getWalletDoc } from "../config/firebase";
+import { getWalletDoc, subscribeToWallet } from "../config/firebase";
 import { generateId } from "../utils/id";
 import { logger } from "../utils/logger";
+
+let _unsubWallet: (() => void) | null = null;
+let _subscribedWalletUid: string | null = null;
 
 interface WalletState {
   balance: number;
@@ -14,6 +17,10 @@ interface WalletState {
 
   /** Hydrate balance from Firestore. Call after login. */
   hydrate: (uid: string) => Promise<void>;
+  /** Subscribe to real-time wallet updates from Firestore. */
+  subscribeToWalletUpdates: (uid: string) => void;
+  /** Tear down wallet listener. Call on logout. */
+  unsubscribeWallet: () => void;
   // syncedBalance: when provided (from server after real Stripe payment), use as authoritative balance
   deposit: (amount: number, syncedBalance?: number) => void;
   withdraw: (amount: number) => void;
@@ -57,14 +64,43 @@ export const useWalletStore = create<WalletState>((set, get) => ({
           isHydrated: true,
         });
       } else {
-        // No wallet doc yet (new user); balance is 0
         set({ balance: 0, isHydrated: true });
       }
     } catch (error) {
       logger.error("Failed to hydrate wallet from Firestore:", error);
-      // Still mark as hydrated so UI isn't stuck in loading state
       set({ isHydrated: true });
     }
+
+    // After initial hydrate, start real-time listener so balance updates
+    // automatically when Cloud Functions settle payouts.
+    get().subscribeToWalletUpdates(uid);
+  },
+
+  subscribeToWalletUpdates: (uid: string) => {
+    if (DEMO_MODE) return;
+    if (_subscribedWalletUid === uid && _unsubWallet) return;
+    if (_unsubWallet) {
+      _unsubWallet();
+      _unsubWallet = null;
+    }
+    _subscribedWalletUid = uid;
+    _unsubWallet = subscribeToWallet(uid, (data) => {
+      if (data) {
+        set({
+          balance: data.balance,
+          pendingWithdrawal: data.pendingBalance,
+          isHydrated: true,
+        });
+      }
+    });
+  },
+
+  unsubscribeWallet: () => {
+    if (_unsubWallet) {
+      _unsubWallet();
+      _unsubWallet = null;
+    }
+    _subscribedWalletUid = null;
   },
 
   deposit: (amount: number, syncedBalance?: number) => {
@@ -200,6 +236,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   reset: () => {
+    get().unsubscribeWallet();
     set({
       balance: DEMO_MODE ? INITIAL_BALANCE : 0,
       transactions: DEMO_MODE

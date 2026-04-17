@@ -235,25 +235,44 @@ export function setupNotificationOpenHandler(): () => void {
 
 // ─── Initialize ─────────────────────────────────────────────────────────────
 
+let initPromise: Promise<() => void> | null = null;
+let activeCleanup: (() => void) | null = null;
+
 /**
- * Initialize all notification handling. Call once after auth is confirmed.
- * Returns cleanup function for all listeners.
+ * Initialize all notification handling. Safe to call repeatedly — subsequent
+ * calls return the in-flight or already-resolved init. Prevents listener
+ * stacking when multiple auth paths race to initialize.
  */
 export async function initializeNotifications(): Promise<() => void> {
-  const hasPermission = await requestNotificationPermission();
-  if (!hasPermission) return () => {};
+  if (initPromise) return initPromise;
 
-  const unsubTokenRefresh = onTokenRefresh();
-  await registerFCMToken();
-  const unsubForeground = setupForegroundHandler();
-  const unsubOpen = setupNotificationOpenHandler();
+  initPromise = (async () => {
+    const hasPermission = await requestNotificationPermission();
+    if (!hasPermission) return () => {};
 
-  // Check if app was opened from a quit-state notification
-  await checkInitialNotification();
+    const unsubTokenRefresh = onTokenRefresh();
+    await registerFCMToken();
+    const unsubForeground = setupForegroundHandler();
+    const unsubOpen = setupNotificationOpenHandler();
 
-  return () => {
-    unsubTokenRefresh();
-    unsubForeground();
-    unsubOpen();
-  };
+    await checkInitialNotification();
+
+    activeCleanup = () => {
+      unsubTokenRefresh();
+      unsubForeground();
+      unsubOpen();
+    };
+    return activeCleanup;
+  })();
+
+  return initPromise;
+}
+
+/** Tear down active listeners and clear the init guard so re-login re-inits. */
+export function resetNotifications(): void {
+  if (activeCleanup) {
+    activeCleanup();
+    activeCleanup = null;
+  }
+  initPromise = null;
 }

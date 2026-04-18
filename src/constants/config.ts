@@ -70,6 +70,12 @@ export const USE_SHORT_TIMERS =
   DEMO_MODE || process.env.EXPO_PUBLIC_SHORT_TIMERS === "true";
 export const INITIAL_BALANCE = 5000; // $50.00 in cents
 
+// Per-user daily stake cap (in cents). Mirrored server-side in Cloud Functions
+// (DAILY_STAKE_CAP_CENTS in functions/src/index.ts). Limits total money a user
+// can have at risk across solo + group sessions within a UTC day. Defaults to
+// $25/day for campus launch. Raise after 3 clean days of real-money operation.
+export const DAILY_STAKE_CAP_CENTS = 2500;
+
 // Reputation thresholds
 export const REPUTATION_LEVELS = {
   seed: { min: 0, max: 20, label: "Seed", description: "New to Niyah" },

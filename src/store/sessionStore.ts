@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { Session, CadenceType } from "../types";
-import { CADENCES, DEMO_MODE, USE_SHORT_TIMERS } from "../constants/config";
+import {
+  CADENCES,
+  DEMO_MODE,
+  USE_SHORT_TIMERS,
+  DAILY_STAKE_CAP_CENTS,
+} from "../constants/config";
 import { useAuthStore } from "./authStore";
 import { useWalletStore } from "./walletStore";
 import {
@@ -48,7 +53,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   violationCount: 0,
 
   startSession: (cadence: CadenceType) => {
-    const { currentSession } = get();
+    const { currentSession, sessionHistory } = get();
     if (currentSession || _isRecovering) {
       throw new Error(
         "A session is already active. Complete or surrender it first.",
@@ -57,6 +62,23 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     const config = CADENCES[cadence];
     const duration = USE_SHORT_TIMERS ? config.demoDuration : config.duration;
+
+    // Daily stake cap (mirrored in Cloud Functions). Sums stakes from solo
+    // sessions started today in local history; group session stakes enforced
+    // server-side by createGroupSession / respondToGroupInvite CFs.
+    if (!DEMO_MODE) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const stakedToday = sessionHistory
+        .filter((s) => s.startedAt.getTime() >= startOfDay.getTime())
+        .reduce((sum, s) => sum + s.stakeAmount, 0);
+      if (stakedToday + config.stake > DAILY_STAKE_CAP_CENTS) {
+        const remaining = Math.max(0, DAILY_STAKE_CAP_CENTS - stakedToday);
+        throw new Error(
+          `Daily stake cap reached. Remaining today: $${(remaining / 100).toFixed(2)}. Cap resets at midnight.`,
+        );
+      }
+    }
 
     const session: Session = {
       id: generateId(),

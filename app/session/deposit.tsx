@@ -35,6 +35,7 @@ import {
   withErrorBoundary,
 } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
+import { useFeatureFlagsStore } from "../../src/store/featureFlagsStore";
 import { formatMoney } from "../../src/utils/format";
 import {
   createPaymentIntent,
@@ -230,6 +231,9 @@ function DepositScreenInner() {
   }, [router]);
 
   const paymentsUnavailable = !DEMO_MODE && !isStripePaymentsAvailable;
+  const depositsPaused = !useFeatureFlagsStore(
+    (s) => s.flags.acceptingDeposits,
+  );
 
   const amountInCents = inputValue
     ? Math.round(parseFloat(inputValue) * 100)
@@ -521,22 +525,31 @@ function DepositScreenInner() {
         ) : (
           <Button
             title={
-              paymentsUnavailable
-                ? "Payments unavailable"
-                : isValidAmount
-                  ? `Add ${formatMoney(selectedQuickAmount ?? amountInCents)}`
-                  : "Enter an amount"
+              depositsPaused
+                ? "Deposits paused"
+                : paymentsUnavailable
+                  ? "Payments unavailable"
+                  : isValidAmount
+                    ? `Add ${formatMoney(selectedQuickAmount ?? amountInCents)}`
+                    : "Enter an amount"
             }
             onPress={handleDeposit}
-            disabled={!isValidAmount || isLoading || paymentsUnavailable}
+            disabled={
+              !isValidAmount ||
+              isLoading ||
+              paymentsUnavailable ||
+              depositsPaused
+            }
             size="large"
           />
         )}
-        {(DEMO_MODE || paymentsUnavailable) && (
+        {(DEMO_MODE || paymentsUnavailable || depositsPaused) && (
           <Text style={styles.disclaimer}>
-            {DEMO_MODE
-              ? "Demo mode - no real money"
-              : "Payments unavailable in this build"}
+            {depositsPaused
+              ? "Deposits are temporarily paused. Try again soon."
+              : DEMO_MODE
+                ? "Demo mode - no real money"
+                : "Payments unavailable in this build"}
           </Text>
         )}
       </View>

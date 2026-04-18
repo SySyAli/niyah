@@ -199,6 +199,19 @@ export interface WithdrawalResult {
   estimatedArrival: string;
 }
 
+export interface WithdrawalEligibility {
+  completedSessions: number;
+  distinctPartners: number;
+  requiredSessions: number;
+  requiredPartners: number;
+  eligible: boolean;
+}
+
+/** Progress toward unlocking withdrawal (campus-launch anti-gaming gate). */
+export async function getWithdrawalEligibility(): Promise<WithdrawalEligibility> {
+  return callFunction<WithdrawalEligibility>("getWithdrawalEligibility", {});
+}
+
 // method: 'standard' (free, 1-2 days) | 'instant' (1.5% fee, ~30 min) | 'venmo' (manual, ~24h)
 export async function requestWithdrawal(
   amount: number,

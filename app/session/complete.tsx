@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useMemo } from "react";
 import { View, Text, StyleSheet, Animated, Linking, Alert } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   Typography,
   Spacing,
@@ -19,6 +19,7 @@ import {
 import * as Haptics from "expo-haptics";
 import { useAuthStore } from "../../src/store/authStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useSessionStore } from "../../src/store/sessionStore";
 import { formatMoney } from "../../src/utils/format";
 import type { GroupSessionDoc, SessionTransfer } from "../../src/types";
 
@@ -333,6 +334,7 @@ function CompleteScreenInner() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const router = useRouter();
+  const params = useLocalSearchParams<{ type?: string }>();
   const user = useAuthStore((state) => state.user);
   const {
     groupSessionHistory,
@@ -341,6 +343,9 @@ function CompleteScreenInner() {
     markTransferPaid,
     getVenmoPayLink,
   } = useGroupSessionStore();
+  const soloHistory = useSessionStore((s) => s.sessionHistory);
+  const isSolo = params.type === "solo";
+  const lastSolo = soloHistory[0];
 
   // Legacy local history (demo/legacy sessions)
   const lastSession = groupSessionHistory[0];
@@ -353,16 +358,19 @@ function CompleteScreenInner() {
     user?.id && firestoreSession
       ? firestoreSession.participants[user.id]
       : null;
-  const didComplete =
-    myParticipant?.completed || firestoreMyParticipant?.completed;
+  const didComplete = isSolo
+    ? lastSolo?.status === "completed"
+    : myParticipant?.completed || firestoreMyParticipant?.completed;
 
   const activeTransfers =
     lastSession?.transfers.filter((t) => t.status !== "none") ??
     (firestoreSession?.transfers ?? []).filter((t) => t.status !== "none");
 
-  const isSoloSession = lastSession
-    ? (lastSession.participants.length ?? 0) <= 1
-    : Object.keys(firestoreSession?.participants ?? {}).length <= 1;
+  const isSoloSession =
+    isSolo ||
+    (lastSession
+      ? (lastSession.participants.length ?? 0) <= 1
+      : Object.keys(firestoreSession?.participants ?? {}).length <= 1);
 
   // Only celebrate if the current user actually completed.
   // Initialized to false because the Firestore snapshot confirming completion
@@ -505,7 +513,43 @@ function CompleteScreenInner() {
         </Animated.View>
 
         {/* Results: who completed and what they earned */}
-        {lastSession ? (
+        {isSolo && lastSolo ? (
+          <Card style={styles.resultsCard}>
+            <Text style={styles.sectionTitle}>Results</Text>
+            <View style={styles.participantRow}>
+              <View style={styles.participantLeft}>
+                <Text style={styles.participantName}>You</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    didComplete ? styles.badgeCompleted : styles.badgeFailed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      didComplete
+                        ? styles.badgeTextCompleted
+                        : styles.badgeTextFailed,
+                    ]}
+                  >
+                    {didComplete ? "Completed" : "Surrendered"}
+                  </Text>
+                </View>
+              </View>
+              <Text
+                style={[
+                  styles.payoutValue,
+                  didComplete ? styles.payoutGain : styles.payoutNeutral,
+                ]}
+              >
+                {didComplete
+                  ? `${formatMoney(lastSolo.actualPayout ?? lastSolo.stakeAmount)} returned`
+                  : `${formatMoney(lastSolo.stakeAmount)} forfeited`}
+              </Text>
+            </View>
+          </Card>
+        ) : lastSession ? (
           <Card style={styles.resultsCard}>
             <Text style={styles.sectionTitle}>Results</Text>
             {lastSession.participants.map((p) => (
@@ -555,7 +599,8 @@ function CompleteScreenInner() {
           />
         ) : null}
 
-        {/* Payments: who owes who and current state */}
+        {/* Payments: who owes who and current state — skipped for solo sessions (no peer transfers) */}
+        {!isSolo && (
         <View style={styles.paymentsSection}>
           <Text style={styles.sectionTitle}>Payments</Text>
 
@@ -671,6 +716,7 @@ function CompleteScreenInner() {
             })
           )}
         </View>
+        )}
 
         {/* Stats */}
         <View style={styles.statsGrid}>

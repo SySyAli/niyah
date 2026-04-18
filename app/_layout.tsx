@@ -9,6 +9,7 @@ import { BaseFontFamily } from "../src/constants/colors";
 import { useColors } from "../src/hooks/useColors";
 import { useThemeStore } from "../src/store/themeStore";
 import { useAuthStore } from "../src/store/authStore";
+import { useFeatureFlagsStore } from "../src/store/featureFlagsStore";
 import { ErrorBoundary } from "../src/components";
 import { isEmailSignInLink } from "../src/config/firebase";
 import { DEMO_MODE, PENDING_REFERRAL_KEY } from "../src/constants/config";
@@ -87,6 +88,16 @@ export default function RootLayout() {
   useEffect(() => {
     initializeSslPinning();
     ensureAppCheckInitialized();
+  }, []);
+
+  // Subscribe to server-controlled feature flags (kill switches for
+  // acceptingDeposits, acceptingWithdrawals, group/solo sessions). Live
+  // updates via onSnapshot so a Firestore toggle takes effect instantly.
+  useEffect(() => {
+    const unsub = useFeatureFlagsStore.getState().subscribe();
+    return () => {
+      unsub?.();
+    };
   }, []);
 
   // Re-register FCM token on every foreground. First-launch registration

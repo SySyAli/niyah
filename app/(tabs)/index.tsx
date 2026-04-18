@@ -26,6 +26,7 @@ import { useAuthStore } from "../../src/store/authStore";
 import { useWalletStore } from "../../src/store/walletStore";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useSessionStore } from "../../src/store/sessionStore";
 import { formatMoney, formatRelativeTime } from "../../src/utils/format";
 import { generateBlobAvatarPreset } from "../../src/constants/blobAvatar";
 
@@ -160,6 +161,7 @@ function DashboardScreenInner() {
   const { partners } = usePartnerStore();
   const { activeGroupSession, groupSessionHistory, pendingInvites } =
     useGroupSessionStore();
+  const activeSoloSession = useSessionStore((s) => s.currentSession);
 
   const completionRate =
     user && user.totalSessions > 0
@@ -167,6 +169,17 @@ function DashboardScreenInner() {
       : 0;
 
   const totalEarnings = user?.totalEarnings || 0;
+
+  // First-run onboarding callout: visible until the user has completed at
+  // least one session. Steps tick as the user progresses through deposit →
+  // session → completion, so cold installs have a clear path from zero.
+  const hasDeposited = balance > 0;
+  const hasStartedSession =
+    !!activeSoloSession ||
+    !!activeGroupSession ||
+    (user?.totalSessions ?? 0) > 0;
+  const hasCompletedSession = (user?.completedSessions ?? 0) > 0;
+  const showGettingStarted = !hasCompletedSession;
 
   const totalLeaves = groupSessionHistory.filter(
     (s) => s.participants.find((p) => p.userId === user?.id)?.completed,
@@ -296,6 +309,70 @@ function DashboardScreenInner() {
           marginTop: Spacing.xs,
           marginBottom: Spacing.lg,
           textAlign: "center",
+        },
+        onboardingCard: {
+          marginBottom: Spacing.md,
+          padding: Spacing.lg,
+        },
+        onboardingHeader: {
+          marginBottom: Spacing.md,
+        },
+        onboardingTitle: {
+          fontSize: Typography.titleLarge,
+          ...Font.bold,
+          color: Colors.text,
+          marginBottom: Spacing.xs,
+        },
+        onboardingSubtitle: {
+          fontSize: Typography.bodySmall,
+          color: Colors.textSecondary,
+        },
+        onboardingStep: {
+          flexDirection: "row",
+          alignItems: "center",
+          paddingVertical: Spacing.sm,
+          gap: Spacing.md,
+        },
+        onboardingStepInner: {
+          flex: 1,
+        },
+        onboardingStepLabel: {
+          fontSize: Typography.bodyMedium,
+          ...Font.semibold,
+          color: Colors.text,
+        },
+        onboardingStepLabelDone: {
+          color: Colors.textMuted,
+          textDecorationLine: "line-through",
+        },
+        onboardingStepHint: {
+          fontSize: Typography.labelSmall,
+          color: Colors.textSecondary,
+          marginTop: 2,
+        },
+        onboardingStepNumber: {
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          backgroundColor: Colors.primaryMuted,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        onboardingStepNumberDone: {
+          backgroundColor: Colors.gainLight,
+        },
+        onboardingStepNumberText: {
+          fontSize: Typography.labelMedium,
+          ...Font.bold,
+          color: Colors.primary,
+        },
+        onboardingStepNumberTextDone: {
+          color: Colors.gain,
+        },
+        onboardingStepChevron: {
+          fontSize: Typography.bodyLarge,
+          color: Colors.primary,
+          ...Font.bold,
         },
         plantSection: {
           marginBottom: Spacing.lg,
@@ -474,6 +551,118 @@ function DashboardScreenInner() {
             </View>
           </Card>
 
+          {/* Getting Started (first-run onboarding) */}
+          {showGettingStarted && (
+            <Card style={styles.onboardingCard}>
+              <View style={styles.onboardingHeader}>
+                <Text style={styles.onboardingTitle}>Get started</Text>
+                <Text style={styles.onboardingSubtitle}>
+                  Deposit, stake, complete — keep your money.
+                </Text>
+              </View>
+
+              <Pressable
+                style={styles.onboardingStep}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (!hasDeposited) router.push("/session/deposit");
+                }}
+              >
+                <View
+                  style={[
+                    styles.onboardingStepNumber,
+                    hasDeposited && styles.onboardingStepNumberDone,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.onboardingStepNumberText,
+                      hasDeposited && styles.onboardingStepNumberTextDone,
+                    ]}
+                  >
+                    {hasDeposited ? "✓" : "1"}
+                  </Text>
+                </View>
+                <View style={styles.onboardingStepInner}>
+                  <Text
+                    style={[
+                      styles.onboardingStepLabel,
+                      hasDeposited && styles.onboardingStepLabelDone,
+                    ]}
+                  >
+                    Add $5 to your wallet
+                  </Text>
+                  <Text style={styles.onboardingStepHint}>
+                    Staked money you earn back when you complete.
+                  </Text>
+                </View>
+                {!hasDeposited && (
+                  <Text style={styles.onboardingStepChevron}>→</Text>
+                )}
+              </Pressable>
+
+              <Pressable
+                style={styles.onboardingStep}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (!hasDeposited) {
+                    router.push("/session/deposit");
+                  } else if (!hasStartedSession) {
+                    router.push(
+                      "/session/select?type=solo" as RelativePathString,
+                    );
+                  }
+                }}
+              >
+                <View
+                  style={[
+                    styles.onboardingStepNumber,
+                    hasStartedSession && styles.onboardingStepNumberDone,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.onboardingStepNumberText,
+                      hasStartedSession && styles.onboardingStepNumberTextDone,
+                    ]}
+                  >
+                    {hasStartedSession ? "✓" : "2"}
+                  </Text>
+                </View>
+                <View style={styles.onboardingStepInner}>
+                  <Text
+                    style={[
+                      styles.onboardingStepLabel,
+                      hasStartedSession && styles.onboardingStepLabelDone,
+                    ]}
+                  >
+                    Start a solo focus session
+                  </Text>
+                  <Text style={styles.onboardingStepHint}>
+                    Stake $2 – $25. Apps get blocked. Timer runs.
+                  </Text>
+                </View>
+                {hasDeposited && !hasStartedSession && (
+                  <Text style={styles.onboardingStepChevron}>→</Text>
+                )}
+              </Pressable>
+
+              <Pressable style={styles.onboardingStep}>
+                <View style={styles.onboardingStepNumber}>
+                  <Text style={styles.onboardingStepNumberText}>3</Text>
+                </View>
+                <View style={styles.onboardingStepInner}>
+                  <Text style={styles.onboardingStepLabel}>
+                    Complete it — keep your stake
+                  </Text>
+                  <Text style={styles.onboardingStepHint}>
+                    Surrender early and the stake is forfeit.
+                  </Text>
+                </View>
+              </Pressable>
+            </Card>
+          )}
+
           {/* Active Session Banner */}
           {activeGroupSession && (
             <Pressable
@@ -506,8 +695,38 @@ function DashboardScreenInner() {
             </Pressable>
           )}
 
+          {/* Active Solo Session Banner */}
+          {!activeGroupSession && activeSoloSession && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push(
+                  "/session/active?mode=solo_staked" as RelativePathString,
+                );
+              }}
+            >
+              <Card style={styles.activeSessionCard}>
+                <View style={styles.activeSessionIndicator} />
+                <View style={styles.activeSessionContent}>
+                  <Text style={styles.activeSessionLabel}>
+                    SOLO SESSION IN PROGRESS
+                  </Text>
+                  <Text style={styles.activeSessionText}>
+                    {activeSoloSession.cadence.charAt(0).toUpperCase() +
+                      activeSoloSession.cadence.slice(1)}{" "}
+                    Focus Session
+                  </Text>
+                  <Text style={styles.activeSessionPayout}>
+                    Stake: {formatMoney(activeSoloSession.stakeAmount)}
+                  </Text>
+                </View>
+                <Text style={styles.activeSessionArrow}>View</Text>
+              </Card>
+            </Pressable>
+          )}
+
           {/* Quick Start CTA */}
-          {!activeGroupSession && (
+          {!activeGroupSession && !activeSoloSession && (
             <Card style={styles.ctaCard}>
               <Text style={styles.ctaTitle}>Ready to focus?</Text>
               <Text style={styles.ctaSubtitle}>
@@ -518,6 +737,16 @@ function DashboardScreenInner() {
                   title="Block Apps Now"
                   onPress={() => router.push("/session/quick-block")}
                   size="large"
+                />
+                <Button
+                  title="Solo Focus (Staked)"
+                  onPress={() =>
+                    router.push(
+                      "/session/select?type=solo" as RelativePathString,
+                    )
+                  }
+                  size="large"
+                  variant="outline"
                 />
                 <Button
                   title="Group Challenge"

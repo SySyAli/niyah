@@ -278,6 +278,7 @@ function SelectCadenceScreenInner() {
   const [selectedCadence, setSelectedCadence] = useState<CadenceType>(
     (params.cadence as CadenceType) || "focus",
   );
+  const sessionType = params.type === "solo" ? "solo" : undefined;
 
   const config = CADENCES[selectedCadence];
   const canAfford = balance >= config.stake;
@@ -285,7 +286,8 @@ function SelectCadenceScreenInner() {
   const handleContinue = () => {
     if (canAfford) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      router.push(`/session/confirm?cadence=${selectedCadence}`);
+      const typeQuery = sessionType ? `&type=${sessionType}` : "";
+      router.push(`/session/confirm?cadence=${selectedCadence}${typeQuery}`);
     }
   };
 
@@ -293,8 +295,8 @@ function SelectCadenceScreenInner() {
     <SessionScreenScaffold
       headerVariant="back"
       backLabel="Cancel"
-      title="Choose Your Session"
-      subtitle="Higher stakes, higher rewards"
+      title={sessionType === "solo" ? "Choose Your Solo Session" : "Choose Your Session"}
+      subtitle={sessionType === "solo" ? "Stake on yourself. Complete to earn more." : "Higher stakes, higher rewards"}
       centerTitle={false}
       footer={
         <>

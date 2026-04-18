@@ -246,8 +246,11 @@ function WaitingRoomScreenInner() {
   } = useGroupSessionStore();
 
   const [countdownMs, setCountdownMs] = useState<number | null>(null);
-  // Prevent calling markOnline more than once per session
+  const [isStarting, setIsStarting] = useState(false);
+  // Prevent calling markOnline more than once per session (set only on success).
   const hasMarkedOnlineRef = useRef(false);
+  // Prevents re-entry while a markOnline call is in flight.
+  const markOnlineInFlightRef = useRef(false);
 
   // Subscribe to Firestore session on mount.
   // subscribeToSession manages its own unsubscribe token in the store;
@@ -260,17 +263,41 @@ function WaitingRoomScreenInner() {
   // markOnlineForSession CF requires status === "ready" (all participants accepted).
   // Call it when the session first reaches "ready" status, not on mount — the session
   // may still be "pending" (awaiting other accepts) when we first land here.
+  // Retries with backoff so a transient CF failure doesn't leave the user
+  // permanently "accepted but not online" — previously the ref was flipped
+  // before success, so a single failure locked the retry out.
   useEffect(() => {
-    if (
-      activeSession?.status === "ready" &&
-      sessionId &&
-      !hasMarkedOnlineRef.current
-    ) {
-      hasMarkedOnlineRef.current = true;
-      markOnline(sessionId).catch(() => {
-        // Non-critical: status will show as not online, user can try again
-      });
-    }
+    if (activeSession?.status !== "ready") return;
+    if (!sessionId) return;
+    if (hasMarkedOnlineRef.current) return;
+    if (markOnlineInFlightRef.current) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const tryMark = async () => {
+      if (cancelled || hasMarkedOnlineRef.current) return;
+      markOnlineInFlightRef.current = true;
+      attempts += 1;
+      try {
+        await markOnline(sessionId);
+        if (!cancelled) hasMarkedOnlineRef.current = true;
+      } catch {
+        if (!cancelled && attempts < 5) {
+          timeoutId = setTimeout(tryMark, 1000 * attempts);
+        }
+      } finally {
+        markOnlineInFlightRef.current = false;
+      }
+    };
+
+    tryMark();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [activeSession?.status, sessionId, markOnline]);
 
   // Use .getTime() so the effect compares by value, not by reference.
@@ -339,15 +366,21 @@ function WaitingRoomScreenInner() {
 
   const handleStart = useCallback(async () => {
     if (!sessionId) return;
+    if (isStarting) return;
+    setIsStarting(true);
     try {
       await startSession(sessionId);
+      // Leave isStarting=true until the status effect navigates away — prevents
+      // a double-tap after a successful CF call but before Firestore snapshot
+      // updates the subscription and triggers router.replace.
     } catch (err) {
+      setIsStarting(false);
       Alert.alert(
         "Could Not Start Session",
         getFunctionErrorMessage(err, "Please try again."),
       );
     }
-  }, [sessionId, startSession]);
+  }, [sessionId, startSession, isStarting]);
 
   const handleCancel = useCallback(() => {
     if (!sessionId) return;
@@ -514,7 +547,13 @@ function WaitingRoomScreenInner() {
       {/* Footer Actions */}
       <View style={styles.footer}>
         {isProposer && allOnline && (
-          <Button title="Start Session" onPress={handleStart} size="large" />
+          <Button
+            title={isStarting ? "Starting..." : "Start Session"}
+            onPress={handleStart}
+            size="large"
+            loading={isStarting}
+            disabled={isStarting}
+          />
         )}
         <View style={styles.cancelRow}>
           <View style={styles.shareButton}>

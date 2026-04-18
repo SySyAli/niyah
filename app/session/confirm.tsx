@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   Typography,
@@ -18,6 +18,7 @@ import {
 import * as Haptics from "expo-haptics";
 import { usePartnerStore } from "../../src/store/partnerStore";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useSessionStore } from "../../src/store/sessionStore";
 import { useAuthStore } from "../../src/store/authStore";
 import {
   CADENCES,
@@ -249,14 +250,32 @@ function ConfirmSessionScreenInner() {
   const params = useLocalSearchParams();
   const { currentPartner } = usePartnerStore();
   const { startGroupSession } = useGroupSessionStore();
+  const startSoloSession = useSessionStore((s) => s.startSession);
   const user = useAuthStore((state) => state.user);
 
   const cadence = (params.cadence as CadenceType) || "daily";
   const config = CADENCES[cadence];
+  const isSolo = params.type === "solo";
+  const showPartner = !isSolo && !!currentPartner;
 
   const handleConfirm = async () => {
     if (!user) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    if (isSolo) {
+      try {
+        startSoloSession(cadence);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Could not start session.";
+        logger.warn("startSoloSession failed:", error);
+        Alert.alert("Cannot Start Session", message);
+        return;
+      }
+      // startSession() in sessionStore already fires startBlocking() internally.
+      router.replace("/session/active?mode=solo_staked");
+      return;
+    }
 
     const participants: Parameters<typeof startGroupSession>[1] = currentPartner
       ? [
@@ -314,14 +333,14 @@ function ConfirmSessionScreenInner() {
       headerVariant="back"
       title="Ready to Focus?"
       subtitle={
-        currentPartner
+        showPartner
           ? "Review your duo session details"
           : "Review your session details"
       }
       footer={
         <>
           <Button
-            title={currentPartner ? "Start Duo Session" : "Start Solo Session"}
+            title={showPartner ? "Start Duo Session" : "Start Solo Session"}
             onPress={handleConfirm}
             size="large"
           />
@@ -332,7 +351,7 @@ function ConfirmSessionScreenInner() {
       }
     >
       {/* Partner Card */}
-      {currentPartner && (
+      {showPartner && currentPartner && (
         <Card style={styles.partnerCard}>
           <Text style={styles.partnerLabel}>With Partner</Text>
           <View style={styles.partnerInfo}>
@@ -376,7 +395,7 @@ function ConfirmSessionScreenInner() {
           <Text style={styles.detailLabel}>Your Stake</Text>
           <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
         </View>
-        {currentPartner && (
+        {showPartner && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Partner's Stake</Text>
             <Text style={styles.stakeValue}>{formatMoney(config.stake)}</Text>
@@ -384,12 +403,18 @@ function ConfirmSessionScreenInner() {
         )}
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>
-            {currentPartner ? "Your Potential Earn" : "Earn on Completion"}
+            {showPartner
+              ? "Your Potential Earn"
+              : isSolo
+                ? "On Completion"
+                : "Earn on Completion"}
           </Text>
           <Text style={[styles.stakeValue, { color: Colors.gain }]}>
-            {currentPartner
+            {showPartner
               ? `Up to ${formatMoney(config.stake * 2)}`
-              : formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)}
+              : isSolo
+                ? `Keep ${formatMoney(config.stake)}`
+                : formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)}
           </Text>
         </View>
       </Card>
@@ -401,9 +426,11 @@ function ConfirmSessionScreenInner() {
           <View style={[styles.outcomeDot, { backgroundColor: Colors.gain }]} />
           <Text style={styles.outcomeText}>
             <Text style={styles.outcomeHighlight}>Complete the session:</Text>{" "}
-            {currentPartner
+            {showPartner
               ? `Earn your share of the pool — up to ${formatMoney(config.stake * 2)}`
-              : `Earn ${formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)} (${SOLO_COMPLETION_MULTIPLIER}× your stake)`}
+              : isSolo
+                ? `Keep your ${formatMoney(config.stake)} stake — proof you followed through`
+                : `Earn ${formatMoney(config.stake * SOLO_COMPLETION_MULTIPLIER)} (${SOLO_COMPLETION_MULTIPLIER}× your stake)`}
           </Text>
         </View>
         <View style={styles.outcomeRow}>
@@ -413,7 +440,7 @@ function ConfirmSessionScreenInner() {
             forfeit your {formatMoney(config.stake)} stake
           </Text>
         </View>
-        {currentPartner && (
+        {showPartner && (
           <View style={styles.outcomeRow}>
             <View style={styles.outcomeDot} />
             <Text style={styles.outcomeText}>
@@ -428,7 +455,7 @@ function ConfirmSessionScreenInner() {
       <Card style={styles.warningCard}>
         <Text style={styles.warningTitle}>Important</Text>
         <Text style={styles.warningText}>
-          {currentPartner
+          {showPartner
             ? `Once you start, distracting apps will be blocked. Surrendering forfeits your ${formatMoney(config.stake)} stake. Your reputation score is affected by payment reliability.`
             : `Once you start, distracting apps will be blocked. Surrendering forfeits your ${formatMoney(config.stake)} stake — no refunds.`}
         </Text>

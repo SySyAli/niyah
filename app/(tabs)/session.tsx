@@ -345,6 +345,35 @@ function SessionTabScreenInner() {
             </Pressable>
           ))}
 
+        {/* Solo Focus */}
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push(
+              "/session/select?type=solo" as RelativePathString,
+            );
+          }}
+        >
+          <View style={styles.challengeCard}>
+            <View style={styles.challengeTitleRow}>
+              <Text style={styles.challengeTitle}>Solo Focus</Text>
+              <Text style={styles.challengeArrow}>→</Text>
+            </View>
+            <Text style={styles.challengeSubtitle}>
+              Stake on yourself. Complete to keep your money.
+            </Text>
+            <View style={styles.challengeTags}>
+              {["No friends needed", "Keep your stake", "Start instantly"].map(
+                (tag) => (
+                  <View key={tag} style={styles.challengeTag}>
+                    <Text style={styles.challengeTagText}>{tag}</Text>
+                  </View>
+                ),
+              )}
+            </View>
+          </View>
+        </Pressable>
+
         {/* Challenge a Friend */}
         <Pressable
           onPress={() => {

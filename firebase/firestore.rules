@@ -165,6 +165,19 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
+    // config/featureFlags
+    // -------------------------------------------------------------------------
+    // Public read-only server-controlled kill switches. Fields:
+    //   acceptingDeposits, acceptingWithdrawals, groupSessionsEnabled,
+    //   soloSessionsEnabled
+    // Any authenticated user can read so the client can honor a toggle live.
+    // Writes are console-only (admin console, or gcloud) — never client.
+    match /config/featureFlags {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------------------
     // Default deny
     // -------------------------------------------------------------------------
     // Any collection not explicitly matched above is denied by default.

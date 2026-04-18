@@ -35,12 +35,15 @@ import {
 } from "../../src/components";
 import { useWalletStore } from "../../src/store/walletStore";
 import { useAuthStore } from "../../src/store/authStore";
+import { useFeatureFlagsStore } from "../../src/store/featureFlagsStore";
 import { formatMoney } from "../../src/utils/format";
 import {
   requestWithdrawal,
   createConnectAccount,
   createAccountLink,
   getConnectAccountStatus,
+  getWithdrawalEligibility,
+  type WithdrawalEligibility,
 } from "../../src/config/functions";
 import { logger } from "../../src/utils/logger";
 import { getFunctionErrorMessage } from "../../src/utils/errors";
@@ -58,6 +61,9 @@ function WithdrawScreenInner() {
   const router = useRouter();
   const balance = useWalletStore((s) => s.balance);
   const withdrawFn = useWalletStore((s) => s.withdraw);
+  const withdrawalsPaused = !useFeatureFlagsStore(
+    (s) => s.flags.acceptingWithdrawals,
+  );
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const [inputValue, setInputValue] = useState("");
@@ -67,6 +73,9 @@ function WithdrawScreenInner() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [eligibility, setEligibility] = useState<WithdrawalEligibility | null>(
+    null,
+  );
 
   // Guard against setState after unmount + double navigation, which crashes
   // "every other time" when Stripe modal dismiss races with React unmount.
@@ -77,6 +86,23 @@ function WithdrawScreenInner() {
     hasNavigatedBackRef.current = false;
     return () => {
       isMountedRef.current = false;
+    };
+  }, []);
+
+  // Fetch withdrawal eligibility (campus-launch friend-session gate) so the UI
+  // can show progress before the user even taps Continue.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const stats = await getWithdrawalEligibility();
+        if (!cancelled && isMountedRef.current) setEligibility(stats);
+      } catch (err) {
+        logger.warn("getWithdrawalEligibility failed:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -481,11 +507,47 @@ function WithdrawScreenInner() {
 
       <View style={styles.footer}>
         <Button
-          title={isValidAmount ? "Continue" : "Enter amount (min $10)"}
+          title={
+            withdrawalsPaused
+              ? "Withdrawals paused"
+              : eligibility && !eligibility.eligible
+                ? "Complete more sessions to unlock"
+                : isValidAmount
+                  ? "Continue"
+                  : "Enter amount (min $10)"
+          }
           onPress={handleContinue}
-          disabled={!isValidAmount}
+          disabled={
+            !isValidAmount ||
+            withdrawalsPaused ||
+            (eligibility ? !eligibility.eligible : false)
+          }
           size="large"
         />
+        {withdrawalsPaused && (
+          <Text style={styles.errorText}>
+            Withdrawals are temporarily paused. Try again soon.
+          </Text>
+        )}
+        {eligibility && !eligibility.eligible && !withdrawalsPaused && (
+          <Text style={styles.errorText}>
+            {`Complete ${Math.max(
+              0,
+              eligibility.requiredSessions - eligibility.completedSessions,
+            )} more session${
+              eligibility.requiredSessions - eligibility.completedSessions === 1
+                ? ""
+                : "s"
+            } and play with ${Math.max(
+              0,
+              eligibility.requiredPartners - eligibility.distinctPartners,
+            )} more friend${
+              eligibility.requiredPartners - eligibility.distinctPartners === 1
+                ? ""
+                : "s"
+            } to unlock withdrawal.`}
+          </Text>
+        )}
       </View>
     </SessionScreenScaffold>
   );

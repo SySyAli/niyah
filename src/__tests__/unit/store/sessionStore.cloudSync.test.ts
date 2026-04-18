@@ -15,6 +15,9 @@
 jest.mock("../../../constants/config", () => ({
   ...jest.requireActual("../../../constants/config"),
   DEMO_MODE: false,
+  // Raise cap so tests using the $100 monthly cadence don't trip the
+  // per-user daily stake guard. The cap itself is exercised elsewhere.
+  DAILY_STAKE_CAP_CENTS: Number.MAX_SAFE_INTEGER,
 }));
 
 jest.mock("../../../config/functions", () => ({

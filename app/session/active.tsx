@@ -15,9 +15,11 @@ import {
   Timer,
   SessionScreenScaffold,
   withErrorBoundary,
+  HoldToConfirmModal,
 } from "../../src/components";
 import * as Haptics from "expo-haptics";
 import { useGroupSessionStore } from "../../src/store/groupSessionStore";
+import { useSessionStore } from "../../src/store/sessionStore";
 import { useAuthStore } from "../../src/store/authStore";
 import { useCountdown } from "../../src/hooks/useCountdown";
 import { formatMoney } from "../../src/utils/format";
@@ -33,12 +35,13 @@ import {
 import { reportShieldViolation as reportShieldViolationCF } from "../../src/config/functions";
 import { logger } from "../../src/utils/logger";
 
-type SessionMode = "solo_quick" | "solo_scheduled" | "group";
+type SessionMode = "solo_quick" | "solo_scheduled" | "solo_staked" | "group";
 
 function ActiveSessionScreenInner() {
   const Colors = useColors();
   const params = useLocalSearchParams<{ mode?: SessionMode }>();
   const mode: SessionMode = params.mode ?? "group";
+  const isSoloStaked = mode === "solo_staked";
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -247,11 +250,14 @@ function ActiveSessionScreenInner() {
     reportSurrender,
     subscribeToSession,
   } = useGroupSessionStore();
+  const soloSession = useSessionStore((s) => s.currentSession);
+  const soloViolationCount = useSessionStore((s) => s.violationCount);
   const currentUserId = useAuthStore((s) => s.user?.id);
   // Tracks intentional navigation away (complete or surrender) so the
   // useEffect guard doesn't redirect home when activeGroupSession clears.
   const isNavigatingAwayRef = useRef(false);
   const [violationCount, setViolationCount] = useState(0);
+  const [surrenderModalVisible, setSurrenderModalVisible] = useState(false);
 
   // Only use activeSession if it's currently running. A stale completed/cancelled
   // session must not poison derived values — especially sessionEndsAtMs, which
@@ -260,21 +266,29 @@ function ActiveSessionScreenInner() {
     activeSession?.status === "active" ? activeSession : null;
 
   // Normalize data from whichever session source is active
-  const sessionEndsAtMs =
-    effectiveFirestoreSession?.endsAt?.getTime() ??
-    activeGroupSession?.endsAt?.getTime();
-  const sessionStartedAtMs =
-    effectiveFirestoreSession?.startedAt?.getTime() ??
-    activeGroupSession?.startedAt?.getTime();
-  const stakeAmount =
-    effectiveFirestoreSession?.stakePerParticipant ??
-    activeGroupSession?.stakePerParticipant ??
-    0;
-  const poolTotal =
-    effectiveFirestoreSession?.poolTotal ?? activeGroupSession?.poolTotal ?? 0;
-  const participantCount = effectiveFirestoreSession
-    ? Object.keys(effectiveFirestoreSession.participants).length
-    : (activeGroupSession?.participants.length ?? 0);
+  const sessionEndsAtMs = isSoloStaked
+    ? soloSession?.endsAt?.getTime()
+    : (effectiveFirestoreSession?.endsAt?.getTime() ??
+      activeGroupSession?.endsAt?.getTime());
+  const sessionStartedAtMs = isSoloStaked
+    ? soloSession?.startedAt?.getTime()
+    : (effectiveFirestoreSession?.startedAt?.getTime() ??
+      activeGroupSession?.startedAt?.getTime());
+  const stakeAmount = isSoloStaked
+    ? (soloSession?.stakeAmount ?? 0)
+    : (effectiveFirestoreSession?.stakePerParticipant ??
+      activeGroupSession?.stakePerParticipant ??
+      0);
+  const poolTotal = isSoloStaked
+    ? (soloSession?.stakeAmount ?? 0) * SOLO_COMPLETION_MULTIPLIER
+    : (effectiveFirestoreSession?.poolTotal ??
+      activeGroupSession?.poolTotal ??
+      0);
+  const participantCount = isSoloStaked
+    ? 1
+    : effectiveFirestoreSession
+      ? Object.keys(effectiveFirestoreSession.participants).length
+      : (activeGroupSession?.participants.length ?? 0);
 
   // Live leaderboard rows. For Firestore sessions we read participant status
   // (active/completed/surrendered) and violation counts directly from the
@@ -326,6 +340,13 @@ function ActiveSessionScreenInner() {
       }
       // Delay one render cycle so the drain animation reaches 100% before navigating.
       setTimeout(async () => {
+        if (isSoloStaked) {
+          // sessionStore.completeSession handles payout + Firestore + CF call
+          useSessionStore.getState().completeSession();
+          router.replace("/session/complete?type=solo");
+          return;
+        }
+
         const store = useGroupSessionStore.getState();
         const firestoreSession =
           store.activeSession?.status === "active" ? store.activeSession : null;
@@ -375,16 +396,22 @@ function ActiveSessionScreenInner() {
   );
   // Group sessions arrive here via Firestore status change without going through
   // sessionStore.startSession(), so we re-start blocking here to cover both paths.
+  // Solo staked sessions already call startBlocking() inside sessionStore.startSession,
+  // so skip to avoid redundant calls.
   useEffect(() => {
+    if (isSoloStaked) return;
     if (!isScreenTimeAvailable || !hasActiveSession) return;
     startBlocking().catch(() => {});
-  }, [hasActiveSession]);
+  }, [hasActiveSession, isSoloStaked]);
 
   // Stable ref so the violation listener doesn't re-subscribe when the
   // Firestore session updates (would race with rapid violations).
   const firestoreSessionIdRef = useRef<string | undefined>(undefined);
   firestoreSessionIdRef.current = effectiveFirestoreSession?.id;
   useEffect(() => {
+    // Solo staked: sessionStore.startSession already subscribes to onShieldViolation
+    // and increments its own violationCount — skip here to avoid double counting.
+    if (isSoloStaked) return;
     if (!isScreenTimeAvailable || !hasActiveSession) return;
     const unsubscribe = onShieldViolation(() => {
       setViolationCount((prev) => prev + 1);
@@ -400,7 +427,7 @@ function ActiveSessionScreenInner() {
       }
     });
     return unsubscribe;
-  }, [hasActiveSession]);
+  }, [hasActiveSession, isSoloStaked]);
 
   // Subscribe to Firestore session for real-time participant updates
   useEffect(() => {
@@ -433,6 +460,18 @@ function ActiveSessionScreenInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionEndsAtMs, router]);
 
+  // Solo staked: if the session clears externally (e.g. user tapped "Surrender"
+  // on the native shield screen, which routes through sessionStore listener),
+  // navigate forward so the user sees the complete screen instead of being
+  // stuck on an active screen with no session.
+  useEffect(() => {
+    if (!isSoloStaked) return;
+    if (soloSession) return;
+    if (isNavigatingAwayRef.current) return;
+    isNavigatingAwayRef.current = true;
+    router.replace("/session/complete?type=solo");
+  }, [isSoloStaked, soloSession, router]);
+
   // Shared surrender handler — called from the in-app Surrender button (after
   // user confirms via Alert) and from the shield screen's "Surrender Session"
   // button (no extra confirmation since the user already tapped on the shield).
@@ -446,6 +485,11 @@ function ActiveSessionScreenInner() {
     isNavigatingAwayRef.current = true;
     if (isScreenTimeAvailable) {
       stopBlocking().catch(() => {});
+    }
+    if (isSoloStaked) {
+      useSessionStore.getState().surrenderSession();
+      router.replace("/session/complete?type=solo");
+      return;
     }
     if (mode === "solo_quick") {
       completeGroupSession(
@@ -467,6 +511,7 @@ function ActiveSessionScreenInner() {
     }
   }, [
     mode,
+    isSoloStaked,
     activeGroupSession,
     completeGroupSession,
     effectiveFirestoreSession,
@@ -484,6 +529,10 @@ function ActiveSessionScreenInner() {
   const performSurrenderRef = useRef(performSurrender);
   performSurrenderRef.current = performSurrender;
   useEffect(() => {
+    // Solo staked: sessionStore.startSession already subscribes to
+    // onSurrenderRequested. If we also subscribe here, both listeners fire
+    // and surrenderSession gets called twice.
+    if (isSoloStaked) return;
     if (!isScreenTimeAvailable || !hasActiveSession) return;
     const unsubscribe = onSurrenderRequested(() => {
       performSurrenderRef.current();
@@ -493,9 +542,9 @@ function ActiveSessionScreenInner() {
     // before this listener was attached. Check the flag manually.
     checkPendingSurrender();
     return unsubscribe;
-  }, [hasActiveSession]);
+  }, [hasActiveSession, isSoloStaked]);
 
-  if (!activeGroupSession && !effectiveFirestoreSession) {
+  if (!activeGroupSession && !effectiveFirestoreSession && !soloSession) {
     return null;
   }
 
@@ -519,20 +568,22 @@ function ActiveSessionScreenInner() {
           <Button
             title={mode === "solo_quick" ? "End Session" : "Surrender"}
             onPress={() => {
-              Alert.alert(
-                mode === "solo_quick" ? "End Blocking?" : "Surrender Session?",
-                mode === "solo_quick"
-                  ? "Are you sure you want to stop blocking apps?"
-                  : `You will forfeit your ${formatMoney(stakeAmount)} stake. This cannot be undone.`,
-                [
-                  { text: "Keep Going", style: "cancel" },
-                  {
-                    text: mode === "solo_quick" ? "End" : "Surrender",
-                    style: "destructive",
-                    onPress: performSurrender,
-                  },
-                ],
-              );
+              if (mode === "solo_quick") {
+                Alert.alert(
+                  "End Blocking?",
+                  "Are you sure you want to stop blocking apps?",
+                  [
+                    { text: "Keep Going", style: "cancel" },
+                    {
+                      text: "End",
+                      style: "destructive",
+                      onPress: performSurrender,
+                    },
+                  ],
+                );
+              } else {
+                setSurrenderModalVisible(true);
+              }
             }}
             variant="outline"
             size="large"
@@ -543,6 +594,17 @@ function ActiveSessionScreenInner() {
               stake
             </Text>
           )}
+          <HoldToConfirmModal
+            visible={surrenderModalVisible}
+            title="Surrender session?"
+            body={`You staked ${formatMoney(stakeAmount)} so your future self couldn't weasel out. Your future self is trying to weasel out. Surrender now and your ${formatMoney(stakeAmount)} is gone — no refunds.`}
+            holdLabel={`Hold to forfeit ${formatMoney(stakeAmount)}`}
+            onCancel={() => setSurrenderModalVisible(false)}
+            onConfirm={() => {
+              setSurrenderModalVisible(false);
+              performSurrender();
+            }}
+          />
         </>
       }
     >
@@ -579,11 +641,15 @@ function ActiveSessionScreenInner() {
       {/* Payout Card — hidden for solo quick-block (no money involved) */}
       {mode !== "solo_quick" && (
         <Card style={styles.payoutCard}>
-          <Text style={styles.payoutLabel}>Complete to earn</Text>
+          <Text style={styles.payoutLabel}>
+            {isSoloStaked ? "Complete to keep" : "Complete to earn"}
+          </Text>
           <Text style={styles.payoutAmount}>
-            {participantCount <= 1
-              ? formatMoney(stakeAmount * SOLO_COMPLETION_MULTIPLIER)
-              : `Up to ${formatMoney(poolTotal)}`}
+            {isSoloStaked
+              ? formatMoney(soloSession?.potentialPayout ?? stakeAmount)
+              : participantCount <= 1
+                ? formatMoney(stakeAmount * SOLO_COMPLETION_MULTIPLIER)
+                : `Up to ${formatMoney(poolTotal)}`}
           </Text>
         </Card>
       )}
@@ -633,12 +699,15 @@ function ActiveSessionScreenInner() {
       )}
 
       {/* Standalone violation counter — only for solo (no leaderboard) */}
-      {leaderboard.length < 2 && violationCount > 0 && (
-        <Card style={styles.violationCard}>
-          <Text style={styles.violationLabel}>Blocked app attempts</Text>
-          <Text style={styles.violationCount}>{violationCount}</Text>
-        </Card>
-      )}
+      {leaderboard.length < 2 &&
+        (isSoloStaked ? soloViolationCount : violationCount) > 0 && (
+          <Card style={styles.violationCard}>
+            <Text style={styles.violationLabel}>Blocked app attempts</Text>
+            <Text style={styles.violationCount}>
+              {isSoloStaked ? soloViolationCount : violationCount}
+            </Text>
+          </Card>
+        )}
 
       {/* Tips */}
       <View style={styles.tipsSection}>

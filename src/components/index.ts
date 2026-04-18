@@ -1,4 +1,5 @@
 export { Button } from "./Button";
+export { HoldToConfirmModal } from "./HoldToConfirmModal";
 export { Card } from "./Card";
 export { Balance, CompactBalance, AnimatedDigit } from "./Balance";
 export { Timer, InlineTimer } from "./Timer";

@@ -108,6 +108,144 @@ function sendError(res: Response, code: number, message: string): void {
   res.status(code).json({ error: message });
 }
 
+// Per-user daily stake cap (cents). Overridable via env for gradual lift
+// during campus launch. Default $25/day for the first week of launch.
+const DAILY_STAKE_CAP_CENTS: number = (() => {
+  const raw = process.env.DAILY_STAKE_CAP_CENTS;
+  if (!raw) return 2500;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 2500;
+})();
+
+/**
+ * Sum of absolute stake amounts the user committed today (UTC day window).
+ * Aggregates from two sources:
+ *   1. `transactions` where type="stake" — group session stakes (written by
+ *      createGroupSession / respondToGroupInvite).
+ *   2. `sessions` started today — solo session stakes (written client-side
+ *      via writeSession; no transactions doc exists at start time).
+ */
+async function getDailyStakeTotalCents(uid: string): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const startTs = admin.firestore.Timestamp.fromDate(startOfDay);
+
+  const [txnSnap, sessionSnap] = await Promise.all([
+    db
+      .collection("transactions")
+      .where("userId", "==", uid)
+      .where("type", "==", "stake")
+      .where("createdAt", ">=", startTs)
+      .get(),
+    db
+      .collection("sessions")
+      .where("userId", "==", uid)
+      .where("startedAt", ">=", startTs)
+      .get(),
+  ]);
+
+  let total = 0;
+  txnSnap.forEach((doc) => {
+    const amount = doc.data().amount;
+    if (typeof amount === "number") total += Math.abs(amount);
+  });
+  sessionSnap.forEach((doc) => {
+    const stake = doc.data().stakeAmount;
+    if (typeof stake === "number") total += stake;
+  });
+  return total;
+}
+
+async function assertDailyStakeCap(
+  uid: string,
+  newStakeCents: number,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const current = await getDailyStakeTotalCents(uid);
+  if (current + newStakeCents > DAILY_STAKE_CAP_CENTS) {
+    const remaining = Math.max(0, DAILY_STAKE_CAP_CENTS - current);
+    return {
+      ok: false,
+      message: `Daily stake cap reached. Remaining today: $${(remaining / 100).toFixed(2)}. Cap resets at midnight UTC.`,
+    };
+  }
+  return { ok: true };
+}
+
+// Campus-launch withdrawal eligibility. Blocks cash-out until the user has
+// shown real engagement — specifically, completed sessions across multiple
+// distinct partners. Prevents the obvious exploit of two friends cycling
+// promo money between themselves and cashing out.
+const WITHDRAWAL_MIN_COMPLETED_SESSIONS: number = (() => {
+  const raw = process.env.WITHDRAWAL_MIN_COMPLETED_SESSIONS;
+  const parsed = raw ? parseInt(raw, 10) : 5;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 5;
+})();
+
+const WITHDRAWAL_MIN_DISTINCT_PARTNERS: number = (() => {
+  const raw = process.env.WITHDRAWAL_MIN_DISTINCT_PARTNERS;
+  const parsed = raw ? parseInt(raw, 10) : 2;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 2;
+})();
+
+export interface WithdrawalEligibilityStats {
+  completedSessions: number;
+  distinctPartners: number;
+  requiredSessions: number;
+  requiredPartners: number;
+}
+
+async function getWithdrawalEligibilityStats(
+  uid: string,
+): Promise<WithdrawalEligibilityStats> {
+  const [userSnap, groupSnap] = await Promise.all([
+    db.collection("users").doc(uid).get(),
+    db
+      .collection("groupSessions")
+      .where("participantIds", "array-contains", uid)
+      .where("status", "==", "completed")
+      .get(),
+  ]);
+  const completedSessions: number =
+    userSnap.data()?.completedSessions ?? 0;
+
+  const distinctPartners = new Set<string>();
+  groupSnap.forEach((doc) => {
+    const data = doc.data();
+    const myRec = data.participants?.[uid];
+    // Only count sessions the user actually completed (not surrendered)
+    if (myRec?.completed !== true) return;
+    for (const pid of Object.keys(data.participants ?? {})) {
+      if (pid !== uid) distinctPartners.add(pid);
+    }
+  });
+
+  return {
+    completedSessions,
+    distinctPartners: distinctPartners.size,
+    requiredSessions: WITHDRAWAL_MIN_COMPLETED_SESSIONS,
+    requiredPartners: WITHDRAWAL_MIN_DISTINCT_PARTNERS,
+  };
+}
+
+async function assertWithdrawalEligibility(
+  uid: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const stats = await getWithdrawalEligibilityStats(uid);
+  if (stats.completedSessions < stats.requiredSessions) {
+    return {
+      ok: false,
+      message: `Withdrawal unlocks after ${stats.requiredSessions} completed sessions. You have ${stats.completedSessions}.`,
+    };
+  }
+  if (stats.distinctPartners < stats.requiredPartners) {
+    return {
+      ok: false,
+      message: `Withdrawal requires completed sessions with at least ${stats.requiredPartners} different friends. You've completed with ${stats.distinctPartners}.`,
+    };
+  }
+  return { ok: true };
+}
+
 async function recordGroupSessionPayout(
   sessionId: string,
   payout: { userId: string; amount: number },
@@ -1446,6 +1584,47 @@ export const handleSessionForfeit = onRequest(
   },
 );
 
+// ─── getWithdrawalEligibility ───────────────────────────────────────────────
+/**
+ * Returns the current user's progress toward unlocking withdrawal. The client
+ * uses this to show "X of 5 sessions completed" hints on the wallet/withdraw
+ * screens before the user attempts to withdraw.
+ *
+ * Returns: {
+ *   completedSessions, distinctPartners,
+ *   requiredSessions, requiredPartners,
+ *   eligible: boolean,
+ * }
+ */
+export const getWithdrawalEligibility = onRequest(
+  PUBLIC_HTTP_OPTIONS,
+  async (req, res) => {
+    if (req.method !== "POST" && req.method !== "GET") {
+      sendError(res, 405, "Method not allowed");
+      return;
+    }
+
+    let uid: string;
+    try {
+      uid = await verifyAuth(req);
+    } catch {
+      sendError(res, 401, "Unauthorized");
+      return;
+    }
+
+    try {
+      const stats = await getWithdrawalEligibilityStats(uid);
+      const eligible =
+        stats.completedSessions >= stats.requiredSessions &&
+        stats.distinctPartners >= stats.requiredPartners;
+      res.json({ ...stats, eligible });
+    } catch (err) {
+      console.error("getWithdrawalEligibility error:", err);
+      sendError(res, 500, "Failed to compute eligibility");
+    }
+  },
+);
+
 // ─── requestWithdrawal ──────────────────────────────────────────────────────
 /**
  * Transfers funds from Niyah's platform account to the user's Stripe Connect
@@ -1503,6 +1682,15 @@ export const requestWithdrawal = onRequest(
     }
     if (amount > 1_000_000) {
       sendError(res, 400, "Maximum withdrawal is $10,000 per transaction");
+      return;
+    }
+
+    // Campus-launch anti-gaming gate: block withdrawal until the user has
+    // completed enough sessions AND played with enough distinct friends.
+    // See WITHDRAWAL_MIN_* env vars for tuning.
+    const eligibility = await assertWithdrawalEligibility(uid);
+    if (!eligibility.ok) {
+      sendError(res, 403, eligibility.message);
       return;
     }
 
@@ -2429,6 +2617,14 @@ export const createGroupSession = onRequest(
       return;
     }
 
+    // Daily stake cap — blocks proposer if their committed stakes today
+    // (across solo + group) would exceed DAILY_STAKE_CAP_CENTS.
+    const capCheck = await assertDailyStakeCap(uid, stakePerParticipant);
+    if (!capCheck.ok) {
+      sendError(res, 400, capCheck.message);
+      return;
+    }
+
     try {
       // Fetch proposer profile
       const proposerDoc = await db.collection("users").doc(uid).get();
@@ -2652,6 +2848,13 @@ export const respondToGroupInvite = onRequest(
       const sessionData = sessionSnap.data()!;
 
       if (accept) {
+        // Daily stake cap — blocks acceptance if total committed today would exceed cap.
+        const capCheck = await assertDailyStakeCap(uid, inviteData.stake);
+        if (!capCheck.ok) {
+          sendError(res, 400, capCheck.message);
+          return;
+        }
+
         // Deduct stake from user's wallet
         const walletRef = db.collection("wallets").doc(uid);
         const stakeTxnRef = db.collection("transactions").doc();

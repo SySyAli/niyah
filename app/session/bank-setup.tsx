@@ -160,7 +160,7 @@ function BankSetupScreenInner() {
       );
       if (isMountedRef.current) setIsConnecting(false);
     }
-  }, [updateUser, router]);
+  }, [updateUser, safeBack]);
 
   const isLoading = isConnecting || isLinking;
 

@@ -11,7 +11,6 @@ import * as Haptics from "expo-haptics";
 import {
   Typography,
   Spacing,
-  Radius,
   Font,
   type ThemeColors,
 } from "../../src/constants/colors";

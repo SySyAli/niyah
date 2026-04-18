@@ -136,6 +136,13 @@ export default function ScreenTimeSetupScreen() {
             </View>
             <View style={styles.explanationItem}>
               <Text style={styles.bulletText}>
+                Enforced at the OS level by Apple — uninstalling Niyah, turning
+                off Wi-Fi, or restarting your phone won't unlock the block. The
+                only way out is to surrender your stake.
+              </Text>
+            </View>
+            <View style={styles.explanationItem}>
+              <Text style={styles.bulletText}>
                 Track focus streaks — never read personal data
               </Text>
             </View>

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useColors } from "../src/hooks/useColors";
 import { useAuthStore } from "../src/store/authStore";
-import { Typography, Spacing, Font } from "../src/constants/colors";
+import { Typography, Font } from "../src/constants/colors";
 import { logger } from "../src/utils/logger";
 
 export default function NotFoundScreen() {

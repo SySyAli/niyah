@@ -16,17 +16,33 @@ service cloud.firestore {
       allow read: if request.auth != null;
 
       // Owner: full write access (profile setup, profile updates) EXCEPT
-      // legal acceptance fields which must go through the acceptLegalTerms
-      // Cloud Function for tamper-resistant server-side timestamping.
+      // tamper-resistant fields written only by Cloud Functions:
+      //   - legal acceptance (acceptLegalTerms CF)
+      //   - KYC / Stripe account fields (createConnectAccount + linkBankAccount CFs)
+      //   - forgiveness + promo flags (handleSessionForfeit, maybeAwardFinalsPromo)
       allow write: if request.auth != null
         && request.auth.uid == uid
         && !request.resource.data.diff(resource.data).affectedKeys()
-              .hasAny(['legalAcceptanceVersion', 'legalAcceptedAt']);
+              .hasAny([
+                'legalAcceptanceVersion', 'legalAcceptedAt',
+                'stripeAccountId', 'stripeAccountStatus', 'stripeKycProvidedAt',
+                'legalFirstName', 'legalLastName',
+                'linkedBank', 'plaidAccessToken', 'plaidItemId', 'plaidAccountId',
+                'firstSurrenderForgiven', 'firstSurrenderForgivenAt',
+                'finalsPromoAwarded', 'finalsPromoAwardedAt'
+              ]);
 
       // Initial profile creation (no existing doc — resource is null)
       allow create: if request.auth != null
         && request.auth.uid == uid
-        && !request.resource.data.keys().hasAny(['legalAcceptanceVersion', 'legalAcceptedAt']);
+        && !request.resource.data.keys().hasAny([
+             'legalAcceptanceVersion', 'legalAcceptedAt',
+             'stripeAccountId', 'stripeAccountStatus', 'stripeKycProvidedAt',
+             'legalFirstName', 'legalLastName',
+             'linkedBank', 'plaidAccessToken', 'plaidItemId', 'plaidAccountId',
+             'firstSurrenderForgiven', 'firstSurrenderForgivenAt',
+             'finalsPromoAwarded', 'finalsPromoAwardedAt'
+           ]);
     }
 
     // -------------------------------------------------------------------------
@@ -161,6 +177,31 @@ service cloud.firestore {
             || resource.data.fromUserId == request.auth.uid);
 
       // No client-side writes — all managed by Cloud Functions
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // analytics_events/{eventId}
+    // -------------------------------------------------------------------------
+    // Authenticated users append their own milestone events. No reads — the
+    // aggregateDailyMetrics Cloud Function reads server-side. userId may be
+    // null for pre-auth events (e.g. install/app_open before sign-in).
+    match /analytics_events/{eventId} {
+      allow read: if false;
+      allow create: if request.auth != null
+        && request.resource.data.name is string
+        && (request.resource.data.userId == null
+            || request.resource.data.userId == request.auth.uid);
+      allow update, delete: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // metrics/{YYYY-MM-DD}
+    // -------------------------------------------------------------------------
+    // Daily rollup written by aggregateDailyMetrics. Readable by any signed-in
+    // user (for an in-app dashboard later). No client writes.
+    match /metrics/{dateId} {
+      allow read: if request.auth != null;
       allow write: if false;
     }
 

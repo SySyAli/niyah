@@ -101,6 +101,17 @@ async function verifyAuth(req: Request): Promise<string> {
   if (!token) throw new Error("Missing auth token");
 
   const decoded = await admin.auth().verifyIdToken(token);
+
+  // App Check soft-enforcement: log whether the call included an attestation
+  // token. After campus launch validates tokens flow in from real clients we
+  // flip Firebase Console to "Enforced" mode so unattested calls get rejected.
+  const appCheckToken = req.headers["x-firebase-appcheck"];
+  if (!appCheckToken) {
+    console.warn(
+      `app_check_missing uid=${decoded.uid} path=${req.path ?? "?"}`,
+    );
+  }
+
   return decoded.uid;
 }
 
@@ -205,8 +216,7 @@ async function getWithdrawalEligibilityStats(
       .where("status", "==", "completed")
       .get(),
   ]);
-  const completedSessions: number =
-    userSnap.data()?.completedSessions ?? 0;
+  const completedSessions: number = userSnap.data()?.completedSessions ?? 0;
 
   const distinctPartners = new Set<string>();
   groupSnap.forEach((doc) => {
@@ -810,20 +820,35 @@ export const createConnectAccount = onRequest(
         return;
       }
 
+      // Parse optional native-KYC payload. If the client provides DOB +
+      // address + legal name, pre-populate the Stripe individual object so
+      // the hosted onboarding form only asks for SSN + phone verification.
+      const kyc = parseKycPayload(req.body);
+      if (kyc && !kyc.ok) {
+        sendError(res, 400, kyc.message);
+        return;
+      }
+      const kycData = kyc?.ok ? kyc.data : null;
+
       const validEmail =
         typeof userData.email === "string" && userData.email.includes("@")
           ? userData.email
           : undefined;
 
-      // Pre-fill user info to reduce onboarding friction
+      // Client-provided legal names win over the profile display name, which
+      // may be a nickname. Fallback to profile data as a last resort.
       const displayName =
         typeof userData.displayName === "string"
           ? userData.displayName.trim()
           : "";
       const nameParts = displayName.split(/\s+/);
-      const firstName = nameParts[0] || undefined;
-      const lastName =
-        nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
+      const fallbackFirst =
+        (userData.firstName as string | undefined) || nameParts[0] || undefined;
+      const fallbackLast =
+        (userData.lastName as string | undefined) ||
+        (nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined);
+      const firstName = kycData?.legalFirstName || fallbackFirst;
+      const lastName = kycData?.legalLastName || fallbackLast;
       const phone =
         typeof userData.phone === "string" && userData.phone
           ? userData.phone
@@ -843,14 +868,40 @@ export const createConnectAccount = onRequest(
           ...(lastName ? { last_name: lastName } : {}),
           ...(phone ? { phone } : {}),
           ...(validEmail ? { email: validEmail } : {}),
+          ...(kycData
+            ? {
+                dob: kycData.dob,
+                address: {
+                  line1: kycData.address.line1,
+                  ...(kycData.address.line2
+                    ? { line2: kycData.address.line2 }
+                    : {}),
+                  city: kycData.address.city,
+                  state: kycData.address.state,
+                  postal_code: kycData.address.postalCode,
+                  country: "US",
+                },
+              }
+            : {}),
         },
         metadata: { firebaseUid: uid },
       });
 
-      await db.collection("users").doc(uid).update({
-        stripeAccountId: account.id,
-        stripeAccountStatus: "pending",
-      });
+      await db
+        .collection("users")
+        .doc(uid)
+        .update({
+          stripeAccountId: account.id,
+          stripeAccountStatus: "pending",
+          ...(kycData
+            ? {
+                legalFirstName: kycData.legalFirstName,
+                legalLastName: kycData.legalLastName,
+                stripeKycProvidedAt:
+                  admin.firestore.FieldValue.serverTimestamp(),
+              }
+            : {}),
+        });
 
       res.json({ accountId: account.id });
     } catch (err) {
@@ -859,6 +910,130 @@ export const createConnectAccount = onRequest(
     }
   },
 );
+
+// ─── KYC payload parsing/validation ─────────────────────────────────────────
+// Optional body accepted by createConnectAccount. When present, pre-populates
+// the Stripe Express individual.* fields so the hosted form only needs SSN +
+// phone verification. DOB + address are NEVER written to Firestore — Stripe
+// is the sole source of truth for those fields.
+
+interface KycData {
+  legalFirstName: string;
+  legalLastName: string;
+  dob: { day: number; month: number; year: number };
+  address: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  };
+}
+
+type KycParseResult =
+  | { ok: true; data: KycData }
+  | { ok: false; message: string };
+
+function parseKycPayload(body: unknown): KycParseResult | null {
+  if (!body || typeof body !== "object") return null;
+  const b = body as Record<string, unknown>;
+  if (
+    b.legalFirstName === undefined &&
+    b.dob === undefined &&
+    b.address === undefined
+  ) {
+    return null; // No KYC provided — not an error, just skip pre-fill.
+  }
+
+  const legalFirstName =
+    typeof b.legalFirstName === "string" ? b.legalFirstName.trim() : "";
+  const legalLastName =
+    typeof b.legalLastName === "string" ? b.legalLastName.trim() : "";
+  if (legalFirstName.length < 1 || legalLastName.length < 1) {
+    return { ok: false, message: "Legal first and last name are required." };
+  }
+
+  const dobRaw = b.dob as Record<string, unknown> | undefined;
+  const day = Number(dobRaw?.day);
+  const month = Number(dobRaw?.month);
+  const year = Number(dobRaw?.year);
+  if (
+    !Number.isInteger(day) ||
+    day < 1 ||
+    day > 31 ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12 ||
+    !Number.isInteger(year) ||
+    year < 1900 ||
+    year > 2100
+  ) {
+    return { ok: false, message: "Invalid date of birth." };
+  }
+  // 18+ check (rough: today - dob >= 18 years). Stripe enforces this too but
+  // a client-bypass attempt should never reach Stripe.
+  const today = new Date();
+  const eighteenYearsAgo = new Date(
+    today.getUTCFullYear() - 18,
+    today.getUTCMonth(),
+    today.getUTCDate(),
+  );
+  const dob = new Date(Date.UTC(year, month - 1, day));
+  if (dob > eighteenYearsAgo) {
+    return {
+      ok: false,
+      message: "You must be at least 18 to enable payouts.",
+    };
+  }
+
+  const addrRaw = b.address as Record<string, unknown> | undefined;
+  const line1 =
+    typeof addrRaw?.line1 === "string" ? (addrRaw.line1 as string).trim() : "";
+  const line2Raw =
+    typeof addrRaw?.line2 === "string" ? (addrRaw.line2 as string).trim() : "";
+  const city =
+    typeof addrRaw?.city === "string" ? (addrRaw.city as string).trim() : "";
+  const state =
+    typeof addrRaw?.state === "string"
+      ? (addrRaw.state as string).trim().toUpperCase()
+      : "";
+  const postalCode =
+    typeof addrRaw?.postalCode === "string"
+      ? (addrRaw.postalCode as string).trim()
+      : "";
+
+  if (line1.length < 3) {
+    return { ok: false, message: "Street address is required." };
+  }
+  if (city.length < 2) {
+    return { ok: false, message: "City is required." };
+  }
+  if (!/^[A-Z]{2}$/.test(state)) {
+    return {
+      ok: false,
+      message: "State must be a 2-letter US code (e.g. TN).",
+    };
+  }
+  if (!/^\d{5}$/.test(postalCode)) {
+    return { ok: false, message: "ZIP code must be 5 digits." };
+  }
+
+  return {
+    ok: true,
+    data: {
+      legalFirstName,
+      legalLastName,
+      dob: { day, month, year },
+      address: {
+        line1,
+        ...(line2Raw ? { line2: line2Raw } : {}),
+        city,
+        state,
+        postalCode,
+      },
+    },
+  };
+}
 
 // ─── createAccountLink ──────────────────────────────────────────────────────
 /**
@@ -1443,6 +1618,12 @@ export const handleSessionComplete = onRequest(
         return { newBalance: updatedBalance, payout };
       });
 
+      // Check finals-promo eligibility after every session completion.
+      // Idempotent via user.finalsPromoAwarded flag; safe to run on every call.
+      await maybeAwardFinalsPromo(uid).catch((err) =>
+        console.warn("maybeAwardFinalsPromo (solo) failed:", err),
+      );
+
       res.json({ newBalance, payout });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -1508,66 +1689,134 @@ export const handleSessionForfeit = onRequest(
 
     try {
       const sessionRef = db.collection("sessions").doc(sessionId);
+      const userRef = db.collection("users").doc(uid);
+      const walletRef = db.collection("wallets").doc(uid);
       const txnRef = db.collection("transactions").doc();
       const revenueRef = db.collection("revenue").doc();
+      const forgivenessTxnRef = db
+        .collection("transactions")
+        .doc(`first_surrender_forgiven_${uid}`);
 
-      await db.runTransaction(async (txn) => {
-        // Read session doc — authoritative source of truth
+      const outcome = await db.runTransaction(async (txn) => {
+        // Reads must come before any writes inside a transaction.
         const sessionSnap = await txn.get(sessionRef);
         if (!sessionSnap.exists) {
           throw new Error("Session not found");
         }
         const sessionData = sessionSnap.data()!;
 
-        // Verify ownership
         if (sessionData.userId !== uid) {
           throw new Error("Session does not belong to this user");
         }
-
-        // Verify status (prevents double-forfeit)
         if (sessionData.status !== "active") {
           throw new Error(
             `Session is not active (current status: ${sessionData.status})`,
           );
         }
 
-        // Read stakeAmount from session doc — NEVER trust client
+        const userSnap = await txn.get(userRef);
+        const userData = userSnap.data() ?? {};
+        const walletSnap = await txn.get(walletRef);
+
         const stakeAmount: number = sessionData.stakeAmount;
 
-        // Update user stats
-        txn.update(db.collection("users").doc(uid), {
+        // First-surrender forgiveness: refund min(stake, cap) once per user.
+        // Framed as a tutorial lesson — user sees the commitment mechanism work
+        // without losing real money on the first attempt. Gated by an atomic
+        // flag so double-RPC cannot double-credit.
+        const alreadyForgiven = userData.firstSurrenderForgiven === true;
+        let refundedCents = 0;
+        if (
+          !alreadyForgiven &&
+          stakeAmount > 0 &&
+          FIRST_SURRENDER_FORGIVENESS_CENTS > 0
+        ) {
+          refundedCents = Math.min(
+            stakeAmount,
+            FIRST_SURRENDER_FORGIVENESS_CENTS,
+          );
+        }
+
+        // Stats (always)
+        txn.update(userRef, {
           totalSessions: admin.firestore.FieldValue.increment(1),
           currentStreak: 0,
+          ...(refundedCents > 0
+            ? {
+                firstSurrenderForgiven: true,
+                firstSurrenderForgivenAt:
+                  admin.firestore.FieldValue.serverTimestamp(),
+              }
+            : {}),
         });
 
-        // Record forfeit transaction
+        // Session status
+        txn.update(sessionRef, {
+          status: "surrendered",
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          actualPayout: refundedCents,
+        });
+
+        // Forfeit transaction record
         txn.set(txnRef, {
           userId: uid,
           type: "forfeit",
-          amount: 0, // Already deducted at session start
+          amount: 0,
           description: "Session surrendered — stake forfeited",
           sessionId,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        // Mark session as surrendered
-        txn.update(sessionRef, {
-          status: "surrendered",
-          completedAt: admin.firestore.FieldValue.serverTimestamp(),
-          actualPayout: 0,
-        });
+        // Forgiveness credit to wallet + ledger
+        if (refundedCents > 0) {
+          const currentBalance: number = walletSnap.data()?.balance ?? 0;
+          const nextBalance = currentBalance + refundedCents;
+          if (walletSnap.exists) {
+            txn.update(walletRef, {
+              balance: nextBalance,
+              lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          } else {
+            txn.set(
+              walletRef,
+              {
+                balance: nextBalance,
+                pendingBalance: 0,
+                lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            );
+          }
+          txn.set(forgivenessTxnRef, {
+            userId: uid,
+            type: "forgiveness",
+            amount: refundedCents,
+            description: "First surrender forgiven",
+            sessionId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
 
-        // Track forfeit as revenue (using server-side stakeAmount)
-        txn.set(revenueRef, {
-          userId: uid,
-          amount: stakeAmount,
-          sessionId,
-          type: "forfeit",
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        // Revenue: forfeit minus any forgiveness refund.
+        const revenueAmount = stakeAmount - refundedCents;
+        if (revenueAmount > 0) {
+          txn.set(revenueRef, {
+            userId: uid,
+            amount: revenueAmount,
+            sessionId,
+            type: "forfeit",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+
+        return { forgiven: refundedCents > 0, refundedCents };
       });
 
-      res.json({ success: true });
+      res.json({
+        success: true,
+        forgiven: outcome.forgiven,
+        refundedCents: outcome.refundedCents,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
       if (
@@ -3459,6 +3708,14 @@ export const reportSessionStatus = onRequest(
             { type: "session_complete", sessionId },
           );
         }
+
+        // Award finals promo to every completer in the session — they may
+        // have just crossed the 5-sessions / 2-partners gate.
+        for (const pid of outcome.participantIds) {
+          maybeAwardFinalsPromo(pid).catch((err) =>
+            console.warn("maybeAwardFinalsPromo (group) failed:", err),
+          );
+        }
       }
 
       console.log(
@@ -3847,6 +4104,187 @@ export const autoTimeoutGroupSessions = onSchedule(
       }
     } catch (err) {
       console.error("autoTimeoutGroupSessions error:", err);
+    }
+  },
+);
+
+// ─── Finals promo bonus ──────────────────────────────────────────────────────
+// Campus-launch promo: when a user crosses the same gate that unlocks
+// withdrawal (>=5 completed sessions + >=2 distinct group partners) they get
+// a one-time $5 credit. Same mechanism as the "first 100 signups" promo on
+// niyah.live, but gated so two friends can't cycle money and cash out.
+
+const FINALS_PROMO_CENTS: number = (() => {
+  const raw = process.env.FINALS_PROMO_CENTS;
+  const parsed = raw ? parseInt(raw, 10) : 500;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 500;
+})();
+
+// One-time refund applied the first time a user surrenders (solo sessions
+// only). Capped at this value even if stake is larger — frames the
+// commitment mechanism as a tutorial lesson rather than a punitive first
+// experience, which prevents support DMs from first-time forfeiters.
+const FIRST_SURRENDER_FORGIVENESS_CENTS: number = (() => {
+  const raw = process.env.FIRST_SURRENDER_FORGIVENESS_CENTS;
+  const parsed = raw ? parseInt(raw, 10) : 500;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 500;
+})();
+
+async function maybeAwardFinalsPromo(uid: string): Promise<void> {
+  if (!isValidFirebaseUid(uid)) return;
+  if (FINALS_PROMO_CENTS <= 0) return;
+
+  const userRef = db.collection("users").doc(uid);
+  const userSnap = await userRef.get();
+  if (userSnap.data()?.finalsPromoAwarded === true) return;
+
+  const stats = await getWithdrawalEligibilityStats(uid);
+  if (stats.completedSessions < stats.requiredSessions) return;
+  if (stats.distinctPartners < stats.requiredPartners) return;
+
+  const walletRef = db.collection("wallets").doc(uid);
+  const txnRef = db.collection("transactions").doc(`finals_promo_${uid}`);
+
+  const awarded = await db.runTransaction(async (txn) => {
+    const freshUser = await txn.get(userRef);
+    if (freshUser.data()?.finalsPromoAwarded === true) return false;
+
+    const walletSnap = await txn.get(walletRef);
+    const currentBalance: number = walletSnap.data()?.balance ?? 0;
+    const newBalance = currentBalance + FINALS_PROMO_CENTS;
+
+    if (walletSnap.exists) {
+      txn.update(walletRef, {
+        balance: newBalance,
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      txn.set(
+        walletRef,
+        {
+          balance: newBalance,
+          pendingBalance: 0,
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    }
+
+    txn.update(userRef, {
+      finalsPromoAwarded: true,
+      finalsPromoAwardedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    txn.set(txnRef, {
+      userId: uid,
+      type: "promo",
+      amount: FINALS_PROMO_CENTS,
+      description: "Finals beta bonus — 5 sessions with 2+ friends",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return true;
+  });
+
+  if (awarded) {
+    sendPushToUsers(
+      [uid],
+      {
+        title: `You earned $${(FINALS_PROMO_CENTS / 100).toFixed(0)} 🎉`,
+        body: "Finals beta bonus unlocked. Keep stacking focused sessions.",
+      },
+      { type: "finals_promo_awarded" },
+    );
+    console.log(`finals_promo_awarded uid=${uid} cents=${FINALS_PROMO_CENTS}`);
+  }
+}
+
+// ─── aggregateDailyMetrics ──────────────────────────────────────────────────
+// Rolls up yesterday's analytics_events into metrics/{YYYY-MM-DD} once per
+// day at 00:05 UTC. Doc contains: dau (distinct userIds), eventCount, counts
+// (per event name), sums (cent totals per money-bearing event).
+//
+// Investor dashboard + daily review read metrics/* directly — never the raw
+// analytics_events collection, which grows unbounded.
+
+export const aggregateDailyMetrics = onSchedule(
+  {
+    schedule: "5 0 * * *",
+    timeZone: "UTC",
+    region: "us-central1",
+  },
+  async () => {
+    try {
+      const now = new Date();
+      const endOfYesterday = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          0,
+          0,
+          0,
+          0,
+        ),
+      );
+      const startOfYesterday = new Date(
+        endOfYesterday.getTime() - 24 * 60 * 60 * 1000,
+      );
+      const dateId = startOfYesterday.toISOString().slice(0, 10);
+
+      const snap = await db
+        .collection("analytics_events")
+        .where(
+          "createdAt",
+          ">=",
+          admin.firestore.Timestamp.fromDate(startOfYesterday),
+        )
+        .where(
+          "createdAt",
+          "<",
+          admin.firestore.Timestamp.fromDate(endOfYesterday),
+        )
+        .get();
+
+      const counts: Record<string, number> = {};
+      const sums: Record<string, number> = {};
+      const dau = new Set<string>();
+
+      snap.forEach((doc) => {
+        const d = doc.data();
+        const name: string = typeof d.name === "string" ? d.name : "unknown";
+        counts[name] = (counts[name] ?? 0) + 1;
+
+        if (typeof d.userId === "string") dau.add(d.userId);
+
+        const props = (d.props as Record<string, unknown> | undefined) ?? {};
+        const money = ["amountCents", "stakeAmount", "payoutAmount"] as const;
+        for (const key of money) {
+          const v = props[key];
+          if (typeof v === "number" && Number.isFinite(v)) {
+            const bucket = `${name}_${key}`;
+            sums[bucket] = (sums[bucket] ?? 0) + v;
+          }
+        }
+      });
+
+      await db.collection("metrics").doc(dateId).set(
+        {
+          dateId,
+          dau: dau.size,
+          eventCount: snap.size,
+          counts,
+          sums,
+          computedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      console.log(
+        `aggregateDailyMetrics: date=${dateId}, dau=${dau.size}, events=${snap.size}`,
+      );
+    } catch (err) {
+      console.error("aggregateDailyMetrics error:", err);
     }
   },
 );

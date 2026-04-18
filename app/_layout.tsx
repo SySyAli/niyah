@@ -20,11 +20,16 @@ import {
   registerFCMToken,
 } from "../src/config/notifications";
 import { ensureAppCheckInitialized } from "../src/config/appCheck";
+import { initSentry } from "../src/config/sentry";
+import { logEvent } from "../src/utils/analytics";
 import { AppState } from "react-native";
 
 // Firebase requires the background message handler to be registered at the
 // module level (outside any component) before the app renders.
 setupBackgroundHandler();
+
+// Sentry init before any other side effect so startup crashes get captured.
+initSentry();
 
 // Set in .env as EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
 // Use pk_test_... for development, pk_live_... for production
@@ -88,6 +93,7 @@ export default function RootLayout() {
   useEffect(() => {
     initializeSslPinning();
     ensureAppCheckInitialized();
+    logEvent("app_open");
   }, []);
 
   // Subscribe to server-controlled feature flags (kill switches for

@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { getFirestore, doc, onSnapshot } from "@react-native-firebase/firestore";
+import {
+  getFirestore,
+  doc,
+  onSnapshot,
+} from "@react-native-firebase/firestore";
 import { logger } from "../utils/logger";
 
 // Server-controlled kill switches. Fail open (all true) until Firestore

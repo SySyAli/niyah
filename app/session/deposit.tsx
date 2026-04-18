@@ -43,6 +43,7 @@ import {
 } from "../../src/config/functions";
 import { DEMO_MODE } from "../../src/constants/config";
 import { logger } from "../../src/utils/logger";
+import { logEvent } from "../../src/utils/analytics";
 import {
   getErrorMessage,
   getFunctionErrorMessage,
@@ -314,6 +315,7 @@ function DepositScreenInner() {
 
     setIsLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    logEvent("deposit_initiated", { amountCents: finalAmount });
 
     try {
       const { clientSecret, paymentIntentId } =
@@ -392,6 +394,7 @@ function DepositScreenInner() {
       } else {
         deposit(finalAmount, result.newBalance);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        logEvent("deposit_completed", { amountCents: finalAmount });
         Alert.alert(
           "Funds Added",
           `${formatMoney(finalAmount)} added to your Niyah balance.`,

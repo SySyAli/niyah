@@ -251,6 +251,42 @@ const makeStyles = (Colors: ThemeColors) =>
       textAlign: "center",
       lineHeight: 18,
     },
+    forgivenessCard: {
+      backgroundColor: Colors.gainLight,
+      borderWidth: 1,
+      borderColor: Colors.gain,
+      marginBottom: Spacing.sm,
+      paddingVertical: Spacing.sm,
+    },
+    forgivenessTitle: {
+      fontSize: Typography.bodyMedium,
+      ...Font.bold,
+      color: Colors.gain,
+      marginBottom: Spacing.xs,
+    },
+    forgivenessBody: {
+      fontSize: Typography.bodySmall,
+      color: Colors.text,
+      lineHeight: 18,
+    },
+    receiptCard: {
+      backgroundColor: Colors.backgroundCard,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      marginBottom: Spacing.sm,
+      paddingVertical: Spacing.sm,
+    },
+    receiptTitle: {
+      fontSize: Typography.bodyMedium,
+      ...Font.semibold,
+      color: Colors.text,
+      marginBottom: Spacing.xs,
+    },
+    receiptBody: {
+      fontSize: Typography.bodySmall,
+      color: Colors.textSecondary,
+      lineHeight: 18,
+    },
   });
 
 // ─── FirestoreResultsCard ─────────────────────────────────────────────────────
@@ -344,6 +380,7 @@ function CompleteScreenInner() {
     getVenmoPayLink,
   } = useGroupSessionStore();
   const soloHistory = useSessionStore((s) => s.sessionHistory);
+  const lastForgivenCents = useSessionStore((s) => s.lastForgivenCents);
   const isSolo = params.type === "solo";
   const lastSolo = soloHistory[0];
 
@@ -514,41 +551,60 @@ function CompleteScreenInner() {
 
         {/* Results: who completed and what they earned */}
         {isSolo && lastSolo ? (
-          <Card style={styles.resultsCard}>
-            <Text style={styles.sectionTitle}>Results</Text>
-            <View style={styles.participantRow}>
-              <View style={styles.participantLeft}>
-                <Text style={styles.participantName}>You</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    didComplete ? styles.badgeCompleted : styles.badgeFailed,
-                  ]}
-                >
-                  <Text
+          <>
+            <Card style={styles.resultsCard}>
+              <Text style={styles.sectionTitle}>Results</Text>
+              <View style={styles.participantRow}>
+                <View style={styles.participantLeft}>
+                  <Text style={styles.participantName}>You</Text>
+                  <View
                     style={[
-                      styles.statusBadgeText,
-                      didComplete
-                        ? styles.badgeTextCompleted
-                        : styles.badgeTextFailed,
+                      styles.statusBadge,
+                      didComplete ? styles.badgeCompleted : styles.badgeFailed,
                     ]}
                   >
-                    {didComplete ? "Completed" : "Surrendered"}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.statusBadgeText,
+                        didComplete
+                          ? styles.badgeTextCompleted
+                          : styles.badgeTextFailed,
+                      ]}
+                    >
+                      {didComplete ? "Completed" : "Surrendered"}
+                    </Text>
+                  </View>
                 </View>
+                <Text
+                  style={[
+                    styles.payoutValue,
+                    didComplete ? styles.payoutGain : styles.payoutNeutral,
+                  ]}
+                >
+                  {didComplete
+                    ? `${formatMoney(lastSolo.actualPayout ?? lastSolo.stakeAmount)} returned`
+                    : `${formatMoney(lastSolo.stakeAmount)} forfeited`}
+                </Text>
               </View>
-              <Text
-                style={[
-                  styles.payoutValue,
-                  didComplete ? styles.payoutGain : styles.payoutNeutral,
-                ]}
-              >
-                {didComplete
-                  ? `${formatMoney(lastSolo.actualPayout ?? lastSolo.stakeAmount)} returned`
-                  : `${formatMoney(lastSolo.stakeAmount)} forfeited`}
-              </Text>
-            </View>
-          </Card>
+            </Card>
+            {!didComplete && lastForgivenCents && lastForgivenCents > 0 ? (
+              <Card style={styles.forgivenessCard}>
+                <Text style={styles.forgivenessTitle}>
+                  First surrender forgiven
+                </Text>
+                <Text style={styles.forgivenessBody}>
+                  {`We put ${formatMoney(lastForgivenCents)} back in your wallet so you can try again. Next time the stake is real.`}
+                </Text>
+              </Card>
+            ) : !didComplete ? (
+              <Card style={styles.receiptCard}>
+                <Text style={styles.receiptTitle}>Where your stake went</Text>
+                <Text style={styles.receiptBody}>
+                  {`${formatMoney(lastSolo.stakeAmount)} forfeited to the Niyah pool. It funds future payouts and keeps the commitment real. You staked this money so your future self couldn't weasel out.`}
+                </Text>
+              </Card>
+            ) : null}
+          </>
         ) : lastSession ? (
           <Card style={styles.resultsCard}>
             <Text style={styles.sectionTitle}>Results</Text>
@@ -601,121 +657,127 @@ function CompleteScreenInner() {
 
         {/* Payments: who owes who and current state — skipped for solo sessions (no peer transfers) */}
         {!isSolo && (
-        <View style={styles.paymentsSection}>
-          <Text style={styles.sectionTitle}>Payments</Text>
+          <View style={styles.paymentsSection}>
+            <Text style={styles.sectionTitle}>Payments</Text>
 
-          {activeTransfers.length === 0 && !firestoreSession?.payouts ? (
-            <Card style={styles.noPaymentsCard}>
-              <Text style={styles.noPaymentsText}>No payments needed</Text>
-              <Text style={styles.noPaymentsSubtext}>
-                Everyone's stake has been settled automatically.
-              </Text>
-            </Card>
-          ) : activeTransfers.length === 0 && firestoreSession?.payouts ? (
-            <Card style={styles.noPaymentsCard}>
-              <Text style={styles.noPaymentsText}>Settled via Stripe</Text>
-              <Text style={styles.noPaymentsSubtext}>
-                {firestoreSession.payouts[user?.id ?? ""]
-                  ? `${formatMoney(firestoreSession.payouts[user?.id ?? ""] ?? 0)} credited to your balance.`
-                  : "Your stake was forfeited."}
-              </Text>
-            </Card>
-          ) : (
-            activeTransfers.map((transfer) => {
-              const iAmPayer = transfer.fromUserId === user?.id;
-              const iAmRecipient = transfer.toUserId === user?.id;
-              const counterparty = lastSession?.participants.find(
-                (p) =>
-                  p.userId ===
-                  (iAmPayer ? transfer.toUserId : transfer.fromUserId),
-              );
+            {activeTransfers.length === 0 && !firestoreSession?.payouts ? (
+              <Card style={styles.noPaymentsCard}>
+                <Text style={styles.noPaymentsText}>No payments needed</Text>
+                <Text style={styles.noPaymentsSubtext}>
+                  Everyone's stake has been settled automatically.
+                </Text>
+              </Card>
+            ) : activeTransfers.length === 0 && firestoreSession?.payouts ? (
+              <Card style={styles.noPaymentsCard}>
+                <Text style={styles.noPaymentsText}>Settled via Stripe</Text>
+                <Text style={styles.noPaymentsSubtext}>
+                  {firestoreSession.payouts[user?.id ?? ""]
+                    ? `${formatMoney(firestoreSession.payouts[user?.id ?? ""] ?? 0)} credited to your balance.`
+                    : "Your stake was forfeited."}
+                </Text>
+              </Card>
+            ) : (
+              activeTransfers.map((transfer) => {
+                const iAmPayer = transfer.fromUserId === user?.id;
+                const iAmRecipient = transfer.toUserId === user?.id;
+                const counterparty = lastSession?.participants.find(
+                  (p) =>
+                    p.userId ===
+                    (iAmPayer ? transfer.toUserId : transfer.fromUserId),
+                );
 
-              return (
-                <Card
-                  key={transfer.id}
-                  style={[
-                    styles.transferCard,
-                    transfer.status === "overdue" && styles.transferCardOverdue,
-                    transfer.status === "settled" && styles.transferCardSettled,
-                    transfer.status === "disputed" &&
-                      styles.transferCardDisputed,
-                  ]}
-                >
-                  <View style={styles.transferRow}>
-                    <Text style={styles.transferDirection}>
-                      {iAmPayer
-                        ? `You owe ${counterparty?.name ?? transfer.toUserName}`
-                        : iAmRecipient
-                          ? `${counterparty?.name ?? transfer.fromUserName} owes you`
-                          : `${transfer.fromUserName} → ${transfer.toUserName}`}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.transferAmount,
-                        iAmPayer ? styles.amountOwed : styles.amountIncoming,
-                      ]}
-                    >
-                      {formatMoney(transfer.amount)}
-                    </Text>
-                  </View>
+                return (
+                  <Card
+                    key={transfer.id}
+                    style={[
+                      styles.transferCard,
+                      transfer.status === "overdue" &&
+                        styles.transferCardOverdue,
+                      transfer.status === "settled" &&
+                        styles.transferCardSettled,
+                      transfer.status === "disputed" &&
+                        styles.transferCardDisputed,
+                    ]}
+                  >
+                    <View style={styles.transferRow}>
+                      <Text style={styles.transferDirection}>
+                        {iAmPayer
+                          ? `You owe ${counterparty?.name ?? transfer.toUserName}`
+                          : iAmRecipient
+                            ? `${counterparty?.name ?? transfer.fromUserName} owes you`
+                            : `${transfer.fromUserName} → ${transfer.toUserName}`}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.transferAmount,
+                          iAmPayer ? styles.amountOwed : styles.amountIncoming,
+                        ]}
+                      >
+                        {formatMoney(transfer.amount)}
+                      </Text>
+                    </View>
 
-                  {counterparty?.venmoHandle && (
-                    <Text style={styles.venmoHandle}>
-                      {counterparty.venmoHandle}
-                    </Text>
-                  )}
-
-                  <View style={styles.transferAction}>
-                    {(transfer.status === "pending" ||
-                      transfer.status === "overdue") &&
-                      iAmPayer && (
-                        <Button
-                          title={
-                            transfer.status === "overdue"
-                              ? "Pay Now (Overdue)"
-                              : "Pay via Venmo"
-                          }
-                          onPress={() => handlePayVenmo(transfer)}
-                          disabled={isPending(transfer.id)}
-                          variant={
-                            transfer.status === "overdue" ? "danger" : "primary"
-                          }
-                          size="small"
-                        />
-                      )}
-                    {transfer.status === "pending" && iAmRecipient && (
-                      <Text style={styles.awaitingText}>Awaiting payment</Text>
-                    )}
-                    {transfer.status === "overdue" && iAmRecipient && (
-                      <Text style={styles.overdueText}>Payment overdue</Text>
-                    )}
-                    {transfer.status === "payment_indicated" &&
-                      iAmRecipient && (
-                        <Button
-                          title="Mark as Received"
-                          onPress={() => handleMarkReceived(transfer.id)}
-                          disabled={isPending(transfer.id)}
-                          variant="secondary"
-                          size="small"
-                        />
-                      )}
-                    {transfer.status === "payment_indicated" && iAmPayer && (
-                      <Text style={styles.awaitingText}>
-                        Sent — awaiting confirmation
+                    {counterparty?.venmoHandle && (
+                      <Text style={styles.venmoHandle}>
+                        {counterparty.venmoHandle}
                       </Text>
                     )}
-                    {transfer.status === "settled" && (
-                      <Text style={styles.settledText}>Settled ✓</Text>
-                    )}
-                    {transfer.status === "disputed" && (
-                      <Text style={styles.disputedText}>Disputed</Text>
-                    )}
-                  </View>
-                </Card>
-              );
-            })
-          )}
-        </View>
+
+                    <View style={styles.transferAction}>
+                      {(transfer.status === "pending" ||
+                        transfer.status === "overdue") &&
+                        iAmPayer && (
+                          <Button
+                            title={
+                              transfer.status === "overdue"
+                                ? "Pay Now (Overdue)"
+                                : "Pay via Venmo"
+                            }
+                            onPress={() => handlePayVenmo(transfer)}
+                            disabled={isPending(transfer.id)}
+                            variant={
+                              transfer.status === "overdue"
+                                ? "danger"
+                                : "primary"
+                            }
+                            size="small"
+                          />
+                        )}
+                      {transfer.status === "pending" && iAmRecipient && (
+                        <Text style={styles.awaitingText}>
+                          Awaiting payment
+                        </Text>
+                      )}
+                      {transfer.status === "overdue" && iAmRecipient && (
+                        <Text style={styles.overdueText}>Payment overdue</Text>
+                      )}
+                      {transfer.status === "payment_indicated" &&
+                        iAmRecipient && (
+                          <Button
+                            title="Mark as Received"
+                            onPress={() => handleMarkReceived(transfer.id)}
+                            disabled={isPending(transfer.id)}
+                            variant="secondary"
+                            size="small"
+                          />
+                        )}
+                      {transfer.status === "payment_indicated" && iAmPayer && (
+                        <Text style={styles.awaitingText}>
+                          Sent — awaiting confirmation
+                        </Text>
+                      )}
+                      {transfer.status === "settled" && (
+                        <Text style={styles.settledText}>Settled ✓</Text>
+                      )}
+                      {transfer.status === "disputed" && (
+                        <Text style={styles.disputedText}>Disputed</Text>
+                      )}
+                    </View>
+                  </Card>
+                );
+              })
+            )}
+          </View>
         )}
 
         {/* Stats */}

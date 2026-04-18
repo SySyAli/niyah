@@ -24,6 +24,7 @@ export default function SessionLayout() {
       <Stack.Screen name="deposit" options={{ presentation: "modal" }} />
       <Stack.Screen name="withdraw" options={{ presentation: "modal" }} />
       <Stack.Screen name="stripe-onboarding" />
+      <Stack.Screen name="verify-identity" />
       <Stack.Screen name="bank-setup" />
     </Stack>
   );

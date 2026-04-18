@@ -129,20 +129,53 @@ export async function handleSessionComplete(
   );
 }
 
-/** Stake is retained as Niyah revenue. Server reads amount from session doc. */
+export interface SessionForfeitResult {
+  success: boolean;
+  forgiven?: boolean;
+  refundedCents?: number;
+}
+
+/**
+ * Stake is retained as Niyah revenue unless first-surrender forgiveness
+ * applies (up to $5 refund). Server reads amount from session doc.
+ */
 export async function handleSessionForfeit(
   sessionId: string,
   _stakeAmount?: number,
-): Promise<{ success: boolean }> {
-  return callFunction<{ success: boolean }>("handleSessionForfeit", {
+): Promise<SessionForfeitResult> {
+  return callFunction<SessionForfeitResult>("handleSessionForfeit", {
     sessionId,
   });
 }
 
 // ─── Stripe Connect functions ────────────────────────────────────────────────
 
-export async function createConnectAccount(): Promise<{ accountId: string }> {
-  return callFunction<{ accountId: string }>("createConnectAccount", {});
+export interface ConnectAccountKycPayload {
+  legalFirstName: string;
+  legalLastName: string;
+  dob: { day: number; month: number; year: number };
+  address: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  };
+}
+
+/**
+ * Creates a Stripe Express connected account for payouts. If a KYC payload
+ * is provided, server-side pre-populates the Stripe individual.* fields so
+ * the hosted onboarding flow only asks for SSN + phone verification. DOB +
+ * address are never stored in Firestore — Stripe holds the sensitive data.
+ */
+export async function createConnectAccount(
+  payload?: ConnectAccountKycPayload,
+): Promise<{ accountId: string }> {
+  return callFunction<{ accountId: string }>(
+    "createConnectAccount",
+    (payload ?? {}) as Record<string, unknown>,
+  );
 }
 
 /**

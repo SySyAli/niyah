@@ -28,6 +28,8 @@ import {
   type BlobAvatarConfig,
 } from "../constants/blobAvatar";
 import { logger } from "../utils/logger";
+import { logEvent } from "../utils/analytics";
+import { setSentryUser } from "../config/sentry";
 
 // Lazy import to break circular dependency (walletStore imports authStore)
 const hydrateWallet = (uid: string) => {
@@ -227,9 +229,18 @@ const buildUser = (
         | string
         | undefined,
       legalAcceptedAt: toDateSafe(firestoreData.legalAcceptedAt),
+      legalFirstName: firestoreData.legalFirstName as string | undefined,
+      legalLastName: firestoreData.legalLastName as string | undefined,
+      stripeKycProvidedAt: toDateSafe(firestoreData.stripeKycProvidedAt),
       linkedBank: firestoreData.linkedBank as
         | { institutionName: string; bankName: string; mask: string }
         | undefined,
+      firstSurrenderForgiven: firestoreData.firstSurrenderForgiven === true,
+      firstSurrenderForgivenAt: toDateSafe(
+        firestoreData.firstSurrenderForgivenAt,
+      ),
+      finalsPromoAwarded: firestoreData.finalsPromoAwarded === true,
+      finalsPromoAwardedAt: toDateSafe(firestoreData.finalsPromoAwardedAt),
     };
   }
 
@@ -282,6 +293,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isLoading: false,
           });
 
+          setSentryUser({ id: user.id, email: user.email });
+          logEvent("auth_complete", {
+            provider: user.authProvider ?? "unknown",
+            profileComplete,
+          });
+
           // Hydrate wallet and recover any active session (non-blocking)
           hydrateWallet(firebaseUser.uid);
           recoverSession(firebaseUser.uid);
@@ -316,6 +333,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           recoverGroupSessions(firebaseUser.uid);
         }
       } else {
+        setSentryUser(null);
         set({
           firebaseUser: null,
           user: null,
@@ -544,6 +562,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isNewUser: false,
         isLoading: false,
       });
+
+      logEvent("profile_complete", { authProvider });
     } catch (error) {
       set({ isLoading: false });
       throw error;

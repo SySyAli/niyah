@@ -39,13 +39,13 @@ import { useFeatureFlagsStore } from "../../src/store/featureFlagsStore";
 import { formatMoney } from "../../src/utils/format";
 import {
   requestWithdrawal,
-  createConnectAccount,
   createAccountLink,
   getConnectAccountStatus,
   getWithdrawalEligibility,
   type WithdrawalEligibility,
 } from "../../src/config/functions";
 import { logger } from "../../src/utils/logger";
+import { logEvent } from "../../src/utils/analytics";
 import { getFunctionErrorMessage } from "../../src/utils/errors";
 
 type WithdrawMethod = "standard" | "instant";
@@ -189,13 +189,18 @@ function WithdrawScreenInner() {
   }, [checkStripeStatus]);
 
   const handleSetupStripe = useCallback(async () => {
+    // First-time setup collects DOB + legal name + address natively via the
+    // verify-identity screen so Stripe's hosted form only needs SSN + phone.
+    if (stripeStatus === "none") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.push("/session/verify-identity" as any);
+      return;
+    }
+
     setIsSettingUp(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      if (stripeStatus === "none") {
-        await createConnectAccount();
-        updateUser({ stripeAccountStatus: "pending" });
-      }
       const { url } = await createAccountLink();
       await Linking.openURL(url);
     } catch (err) {
@@ -210,7 +215,7 @@ function WithdrawScreenInner() {
     } finally {
       if (isMountedRef.current) setIsSettingUp(false);
     }
-  }, [stripeStatus, updateUser]);
+  }, [stripeStatus, router]);
 
   const handleKeyPress = useCallback(
     (key: string) => {
@@ -251,6 +256,10 @@ function WithdrawScreenInner() {
   const handleStripeWithdraw = async () => {
     setIsLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    logEvent("withdrawal_requested", {
+      amountCents: amountInCents,
+      method: selectedMethod,
+    });
     try {
       const result = await requestWithdrawal(amountInCents, selectedMethod);
       withdrawFn(amountInCents);

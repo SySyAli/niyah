@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
 const GOOGLE_FORM_URL = "https://forms.gle/qCWMrbPuzEQRR4xC6";
+const TESTFLIGHT_URL = process.env.NEXT_PUBLIC_TESTFLIGHT_URL || "";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const HAS_TF = TESTFLIGHT_URL.length > 0;
+const PRIMARY_CTA_URL = HAS_TF ? TESTFLIGHT_URL : GOOGLE_FORM_URL;
+const PRIMARY_CTA_LABEL = HAS_TF ? "Download Finals Beta" : "Join the Waitlist";
 
 const screenshots = [
   { src: `${BASE_PATH}/app-screen-1.svg`, alt: "Welcome to Niyah" },
@@ -50,21 +54,25 @@ export function Hero() {
 
             <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
               <a
-                href={GOOGLE_FORM_URL}
+                href={PRIMARY_CTA_URL}
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 <Button size="lg" className="gap-2">
-                  Join the Waitlist
+                  {PRIMARY_CTA_LABEL}
                   <ArrowRight className="h-5 w-5" />
                 </Button>
               </a>
               <div className="flex items-center gap-3">
                 <a
-                  href={GOOGLE_FORM_URL}
+                  href={PRIMARY_CTA_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Scan QR to open Niyah waitlist form"
+                  aria-label={
+                    HAS_TF
+                      ? "Scan QR to install the Niyah Finals Beta"
+                      : "Scan QR to open Niyah waitlist form"
+                  }
                 >
                   <img
                     src={`${BASE_PATH}/waitlist-qr.png`}

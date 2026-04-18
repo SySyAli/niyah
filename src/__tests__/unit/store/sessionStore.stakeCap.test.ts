@@ -32,6 +32,10 @@ jest.mock("../../../config/functions", () => ({
   handleSessionForfeit: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock("../../../utils/analytics", () => ({
+  logEvent: jest.fn(),
+}));
+
 import { useSessionStore } from "../../../store/sessionStore";
 import { useWalletStore } from "../../../store/walletStore";
 import { useAuthStore } from "../../../store/authStore";
@@ -69,7 +73,9 @@ describe("sessionStore — daily stake cap", () => {
 
   it("allows a session within the cap", () => {
     // focus cadence stakes $2 (200 cents), well under $10 cap
-    expect(() => useSessionStore.getState().startSession("focus")).not.toThrow();
+    expect(() =>
+      useSessionStore.getState().startSession("focus"),
+    ).not.toThrow();
   });
 
   it("blocks a single session that exceeds the cap", () => {

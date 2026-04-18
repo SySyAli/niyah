@@ -25,6 +25,7 @@ import {
 } from "../config/screentime";
 import { generateId } from "../utils/id";
 import { logger } from "../utils/logger";
+import { logEvent } from "../utils/analytics";
 
 // Module-level flag to prevent race between recoverActiveSession and startSession
 let _isRecovering = false;
@@ -36,6 +37,12 @@ interface SessionState {
   sessionHistory: Session[];
   isBlocking: boolean;
   violationCount: number;
+  /**
+   * Cents refunded from the server via first-surrender forgiveness on the
+   * most recent surrender. Read by the Complete screen to show a badge.
+   * Reset to null at the start of every new session.
+   */
+  lastForgivenCents: number | null;
 
   startSession: (cadence: CadenceType) => void;
   surrenderSession: () => void;
@@ -51,6 +58,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   sessionHistory: [],
   isBlocking: false,
   violationCount: 0,
+  lastForgivenCents: null,
 
   startSession: (cadence: CadenceType) => {
     const { currentSession, sessionHistory } = get();
@@ -92,7 +100,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     useWalletStore.getState().deductStake(config.stake, session.id);
 
-    set({ currentSession: session, isBlocking: true });
+    // Clear stale forgiveness flag — only relevant to the most recent surrender.
+    set({ currentSession: session, isBlocking: true, lastForgivenCents: null });
 
     // Start Screen Time blocking (fire-and-forget; no-op on simulator)
     startBlocking().catch((err) =>
@@ -138,6 +147,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         logger.error("Failed to persist session to Firestore:", err),
       );
     }
+
+    logEvent("solo_session_started", {
+      cadence,
+      stakeAmount: session.stakeAmount,
+    });
   },
 
   surrenderSession: () => {
@@ -186,12 +200,26 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       logger.error("Failed to update session in Firestore:", err),
     );
 
-    // Sync to server (non-blocking — local state is source of truth in DEMO_MODE)
+    // Sync to server (non-blocking — local state is source of truth in DEMO_MODE).
+    // On first surrender the server refunds up to $5; when it does, credit the
+    // wallet locally and expose lastForgivenCents for the Complete screen.
     if (!DEMO_MODE) {
-      cloudForfeit(currentSession.id, currentSession.stakeAmount).catch((err) =>
-        logger.error("cloudForfeit failed:", err),
-      );
+      cloudForfeit(currentSession.id, currentSession.stakeAmount)
+        .then((result) => {
+          if (!result?.forgiven) return;
+          const refunded = result.refundedCents ?? 0;
+          if (refunded <= 0) return;
+          useWalletStore.getState().deposit(refunded);
+          useAuthStore.getState().updateUser({ firstSurrenderForgiven: true });
+          set({ lastForgivenCents: refunded });
+        })
+        .catch((err) => logger.error("cloudForfeit failed:", err));
     }
+
+    logEvent("solo_session_surrendered", {
+      cadence: currentSession.cadence,
+      stakeAmount: currentSession.stakeAmount,
+    });
   },
 
   completeSession: () => {
@@ -253,6 +281,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         (err) => logger.error("cloudComplete failed:", err),
       );
     }
+
+    logEvent("solo_session_completed", {
+      cadence: currentSession.cadence,
+      stakeAmount: currentSession.stakeAmount,
+      payoutAmount: payout,
+    });
   },
 
   getTimeRemaining: () => {
@@ -362,6 +396,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       sessionHistory: [],
       isBlocking: false,
       violationCount: 0,
+      lastForgivenCents: null,
     });
   },
 }));

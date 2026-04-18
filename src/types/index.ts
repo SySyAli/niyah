@@ -51,6 +51,11 @@ export interface User {
   stripeAccountId?: string;
   stripeCustomerId?: string;
   stripeAccountStatus?: "pending" | "active" | "restricted";
+  // Native KYC intake (collected in-app before Stripe hosted form).
+  // DOB / address not mirrored to Firestore — Stripe is source of truth.
+  legalFirstName?: string;
+  legalLastName?: string;
+  stripeKycProvidedAt?: Date;
   // Plaid bank connection
   linkedBank?: {
     institutionName: string;
@@ -60,6 +65,12 @@ export interface User {
   // Legal acceptance
   legalAcceptanceVersion?: string;
   legalAcceptedAt?: Date;
+  // First-surrender forgiveness ($5 refund on first-ever surrender)
+  firstSurrenderForgiven?: boolean;
+  firstSurrenderForgivenAt?: Date;
+  // Campus-launch finals promo (one-time $5 credit on gate unlock)
+  finalsPromoAwarded?: boolean;
+  finalsPromoAwardedAt?: Date;
   // Onboarding intake (quality/UX data collected once during signup)
   intake?: {
     focusGoalHoursPerDay?: number; // 1, 2, 3, 4, 6+

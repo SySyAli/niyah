@@ -31,7 +31,6 @@ import {
 } from "../../src/components";
 import { useAuthStore } from "../../src/store/authStore";
 import {
-  createConnectAccount,
   createAccountLink,
   getConnectAccountStatus,
 } from "../../src/config/functions";
@@ -108,32 +107,27 @@ function StripeOnboardingScreenInner() {
   }, [checkStatus]);
 
   const handleStartOnboarding = async () => {
+    // First-time setup goes through the native KYC intake which collects DOB
+    // + address + legal name in-app, then pre-populates the Stripe Express
+    // account so the hosted form only needs SSN + phone.
+    if (!user?.stripeAccountId) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.push("/session/verify-identity" as any);
+      return;
+    }
+
     setIsStarting(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      // Create Connect account if needed
-      let accountId = user?.stripeAccountId;
-      if (!accountId) {
-        const result = await createConnectAccount();
-        accountId = result.accountId;
-        updateUser({
-          stripeAccountId: accountId,
-          stripeAccountStatus: "pending",
-        });
-      }
-
-      // Get onboarding URL
       const { url } = await createAccountLink();
-
-      // Open Stripe's KYC flow in browser
       const result = await WebBrowser.openBrowserAsync(url, {
         dismissButtonStyle: "close",
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       });
 
       if (result.type === "dismiss" || result.type === "opened") {
-        // Re-check status after user returns from Stripe
         await checkStatus();
       }
     } catch (err) {

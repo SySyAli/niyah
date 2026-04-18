@@ -295,8 +295,16 @@ function SelectCadenceScreenInner() {
     <SessionScreenScaffold
       headerVariant="back"
       backLabel="Cancel"
-      title={sessionType === "solo" ? "Choose Your Solo Session" : "Choose Your Session"}
-      subtitle={sessionType === "solo" ? "Stake on yourself. Complete to earn more." : "Higher stakes, higher rewards"}
+      title={
+        sessionType === "solo"
+          ? "Choose Your Solo Session"
+          : "Choose Your Session"
+      }
+      subtitle={
+        sessionType === "solo"
+          ? "Stake on yourself. Complete to earn more."
+          : "Higher stakes, higher rewards"
+      }
       centerTitle={false}
       footer={
         <>

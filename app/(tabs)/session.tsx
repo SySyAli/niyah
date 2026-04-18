@@ -349,9 +349,7 @@ function SessionTabScreenInner() {
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push(
-              "/session/select?type=solo" as RelativePathString,
-            );
+            router.push("/session/select?type=solo" as RelativePathString);
           }}
         >
           <View style={styles.challengeCard}>

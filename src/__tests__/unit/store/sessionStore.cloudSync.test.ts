@@ -25,6 +25,11 @@ jest.mock("../../../config/functions", () => ({
   handleSessionForfeit: jest.fn(),
 }));
 
+// logEvent fires Firestore writes in DEMO_MODE=false; stub to keep tests hermetic.
+jest.mock("../../../utils/analytics", () => ({
+  logEvent: jest.fn(),
+}));
+
 import { useSessionStore } from "../../../store/sessionStore";
 import { useWalletStore } from "../../../store/walletStore";
 import { useAuthStore } from "../../../store/authStore";
